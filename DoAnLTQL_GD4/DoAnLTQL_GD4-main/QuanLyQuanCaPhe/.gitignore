@@ -1,0 +1,47 @@
+# .gitignore for .NET / Visual Studio (WinForms + EF Core)
+# Generated for .NET 10 project
+
+# Visual Studio temporary files, build results, and user-specific files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+bin/
+obj/
+[Bb]uild/
+
+# NuGet
+*.nupkg
+packages/
+
+# Rider & IDE
+.idea/
+.vscode/
+*.sln.iml
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Database files
+*.mdf
+*.ldf
+*.sqlite
+*.db
+
+# Publish output
+publish/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Others
+*.vsconfig
+
+# Keep App.config and other source files tracked
