@@ -11,6 +11,8 @@ namespace QuanLyQuanCaPhe.Forms
     {
         private readonly bool _isEmbedded;
         private readonly BanBUS _banBUS = new();
+        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
+        private bool _isAutoRefreshing;
 
         public frmQuanLiBan(bool isEmbedded = false)
         {
@@ -30,6 +32,7 @@ namespace QuanLyQuanCaPhe.Forms
             cboTrangThai.SelectedIndexChanged += FilterControl_Changed;
             txtSearch.TextChanged += FilterControl_Changed;
             dgvDanhSachBan.KeyDown += dgvDanhSachBan_KeyDown;
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
         }
 
         private void InitializePlaceholders()
@@ -67,6 +70,8 @@ namespace QuanLyQuanCaPhe.Forms
                 {
                     cboTrangThai.SelectedIndex = 0;
                 }
+
+                _autoRefreshTimer.Start();
             }
             catch
             {
@@ -103,21 +108,22 @@ namespace QuanLyQuanCaPhe.Forms
             LoadDanhSachBanLenGrid();
         }
 
-        private void btnLamMoi_Click(object? sender, EventArgs e)
+        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
         {
-            txtSearch.Clear();
-
-            if (cboKhuVuc.Items.Count > 0)
+            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
             {
-                cboKhuVuc.SelectedIndex = 0;
+                return;
             }
 
-            if (cboTrangThai.Items.Count > 0)
+            try
             {
-                cboTrangThai.SelectedIndex = 0;
+                _isAutoRefreshing = true;
+                RefreshView();
             }
-
-            RefreshView();
+            finally
+            {
+                _isAutoRefreshing = false;
+            }
         }
 
         private void LoadSoDoBanDong()
@@ -344,6 +350,13 @@ namespace QuanLyQuanCaPhe.Forms
             LoadThongKe();
             LoadSoDoBanDong();
             LoadDanhSachBanLenGrid();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _autoRefreshTimer.Stop();
+            _autoRefreshTimer.Dispose();
+            base.OnFormClosed(e);
         }
 
     }

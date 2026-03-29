@@ -62,7 +62,6 @@
             lblCoDiaChiIcon = new Label();
             tableCenter = new TableLayoutPanel();
             panelThongTinKhach = new Panel();
-            btnLamMoi = new Button();
             btnXoaKhach = new Button();
             btnCapNhatKhach = new Button();
             btnThemKhach = new Button();
@@ -333,6 +332,7 @@
             // 
             // panelContent
             // 
+            panelContent.AutoScroll = true;
             panelContent.Controls.Add(tableMain);
             panelContent.Dock = DockStyle.Fill;
             panelContent.Location = new Point(0, 80);
@@ -530,8 +530,8 @@
             // 
             // panelThongTinKhach
             // 
+            panelThongTinKhach.AutoScroll = true;
             panelThongTinKhach.BackColor = Color.White;
-            panelThongTinKhach.Controls.Add(btnLamMoi);
             panelThongTinKhach.Controls.Add(btnXoaKhach);
             panelThongTinKhach.Controls.Add(btnCapNhatKhach);
             panelThongTinKhach.Controls.Add(btnThemKhach);
@@ -554,21 +554,6 @@
             panelThongTinKhach.Padding = new Padding(16, 14, 16, 14);
             panelThongTinKhach.Size = new Size(338, 512);
             panelThongTinKhach.TabIndex = 0;
-            // 
-            // btnLamMoi
-            // 
-            btnLamMoi.BackColor = Color.FromArgb(94, 64, 47);
-            btnLamMoi.FlatAppearance.BorderSize = 0;
-            btnLamMoi.FlatStyle = FlatStyle.Flat;
-            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnLamMoi.ForeColor = Color.White;
-            btnLamMoi.Location = new Point(176, 431);
-            btnLamMoi.Name = "btnLamMoi";
-            btnLamMoi.Size = new Size(146, 38);
-            btnLamMoi.TabIndex = 14;
-            btnLamMoi.Text = "Làm mới";
-            btnLamMoi.UseVisualStyleBackColor = false;
-            btnLamMoi.Click += btnLamMoi_Click;
             // 
             // btnXoaKhach
             // 
@@ -960,6 +945,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(246, 242, 236);
             ClientSize = new Size(1364, 760);
+            AutoScroll = true;
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
             Font = new Font("Segoe UI", 9F);
@@ -1028,7 +1014,6 @@
         private Label lblCoDiaChiIcon;
         private TableLayoutPanel tableCenter;
         private Panel panelThongTinKhach;
-        private Button btnLamMoi;
         private Button btnXoaKhach;
         private Button btnCapNhatKhach;
         private Button btnThemKhach;

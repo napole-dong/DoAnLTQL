@@ -1,8 +1,8 @@
-﻿namespace QuanLyQuanCaPhe.Data;
+namespace QuanLyQuanCaPhe.DTO;
 
-public class dtaNguyenLieu
+public class NguyenLieuDTO
 {
-    public int ID { get; set; }
+    public int MaNguyenLieu { get; set; }
     public string TenNguyenLieu { get; set; } = string.Empty;
     public string DonViTinh { get; set; } = string.Empty;
     public decimal SoLuongTon { get; set; }

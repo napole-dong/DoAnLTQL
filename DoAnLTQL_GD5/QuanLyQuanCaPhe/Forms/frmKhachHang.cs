@@ -16,6 +16,8 @@ namespace QuanLyQuanCaPhe.Forms
     {
         private readonly bool _isEmbedded;
         private readonly KhachHangBUS _khachHangBUS = new();
+        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
+        private bool _isAutoRefreshing;
 
         public frmKhachHang(bool isEmbedded = false)
         {
@@ -32,6 +34,7 @@ namespace QuanLyQuanCaPhe.Forms
             txtTimKhach.KeyDown += txtTimKhach_KeyDown;
             dgvDanhSachKhach.SelectionChanged += dgvDanhSachKhach_SelectionChanged;
             btnTimKhach.Click += btnTimKhach_Click;
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
         }
 
         private void frmKhachHang_Load(object? sender, EventArgs e)
@@ -45,6 +48,7 @@ namespace QuanLyQuanCaPhe.Forms
 
             LoadDanhSachKhach();
             ResetForm();
+            _autoRefreshTimer.Start();
         }
 
         private void LoadDanhSachKhach()
@@ -132,11 +136,22 @@ namespace QuanLyQuanCaPhe.Forms
             ResetForm();
         }
 
-        private void btnLamMoi_Click(object? sender, EventArgs e)
+        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
         {
-            txtTimKhach.Clear();
-            LoadDanhSachKhach();
-            ResetForm();
+            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            try
+            {
+                _isAutoRefreshing = true;
+                LoadDanhSachKhach();
+            }
+            finally
+            {
+                _isAutoRefreshing = false;
+            }
         }
 
         private void btnNhapKhach_Click(object? sender, EventArgs e)
@@ -293,6 +308,13 @@ namespace QuanLyQuanCaPhe.Forms
             txtHoVaTen.Text = khach.HoVaTen;
             txtDienThoai.Text = khach.DienThoai ?? string.Empty;
             txtDiaChi.Text = khach.DiaChi ?? string.Empty;
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _autoRefreshTimer.Stop();
+            _autoRefreshTimer.Dispose();
+            base.OnFormClosed(e);
         }
     }
 }

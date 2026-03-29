@@ -64,7 +64,6 @@
             panelThongTinNhanVien = new Panel();
             cboQuyenHan = new ComboBox();
             lblQuyenHan = new Label();
-            btnLamMoi = new Button();
             btnXoaNhanVien = new Button();
             btnCapNhatNhanVien = new Button();
             btnThemNhanVien = new Button();
@@ -341,6 +340,7 @@
             // 
             // panelContent
             // 
+            panelContent.AutoScroll = true;
             panelContent.Controls.Add(tableMain);
             panelContent.Dock = DockStyle.Fill;
             panelContent.Location = new Point(0, 80);
@@ -538,10 +538,10 @@
             // 
             // panelThongTinNhanVien
             // 
+            panelThongTinNhanVien.AutoScroll = true;
             panelThongTinNhanVien.BackColor = Color.White;
             panelThongTinNhanVien.Controls.Add(cboQuyenHan);
             panelThongTinNhanVien.Controls.Add(lblQuyenHan);
-            panelThongTinNhanVien.Controls.Add(btnLamMoi);
             panelThongTinNhanVien.Controls.Add(btnXoaNhanVien);
             panelThongTinNhanVien.Controls.Add(btnCapNhatNhanVien);
             panelThongTinNhanVien.Controls.Add(btnThemNhanVien);
@@ -590,21 +590,6 @@
             lblQuyenHan.Size = new Size(86, 21);
             lblQuyenHan.TabIndex = 13;
             lblQuyenHan.Text = "Quyền hạn";
-            // 
-            // btnLamMoi
-            // 
-            btnLamMoi.BackColor = Color.FromArgb(211, 229, 255);
-            btnLamMoi.FlatAppearance.BorderSize = 0;
-            btnLamMoi.FlatStyle = FlatStyle.Flat;
-            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnLamMoi.ForeColor = Color.FromArgb(36, 70, 128);
-            btnLamMoi.Location = new Point(294, 398);
-            btnLamMoi.Name = "btnLamMoi";
-            btnLamMoi.Size = new Size(90, 36);
-            btnLamMoi.TabIndex = 18;
-            btnLamMoi.Text = "Làm mới";
-            btnLamMoi.UseVisualStyleBackColor = false;
-            btnLamMoi.Click += btnLamMoi_Click;
             // 
             // btnXoaNhanVien
             // 
@@ -1029,6 +1014,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(246, 242, 236);
             ClientSize = new Size(1364, 760);
+            AutoScroll = true;
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
             Font = new Font("Segoe UI", 9F);
@@ -1099,7 +1085,6 @@
         private Panel panelThongTinNhanVien;
         private ComboBox cboQuyenHan;
         private Label lblQuyenHan;
-        private Button btnLamMoi;
         private Button btnXoaNhanVien;
         private Button btnCapNhatNhanVien;
         private Button btnThemNhanVien;

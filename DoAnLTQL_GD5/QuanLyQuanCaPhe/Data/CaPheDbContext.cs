@@ -22,6 +22,7 @@ public class CaPheDbContext : DbContext
     public DbSet<dtaKhachHang> KhachHang { get; set; } = null!;
     public DbSet<dtaHoadon> HoaDon { get; set; } = null!;
     public DbSet<dtHoaDon_ChiTiet> HoaDon_ChiTiet { get; set; } = null!;
+    public DbSet<dtaNguyenLieu> NguyenLieu { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

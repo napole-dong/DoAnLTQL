@@ -13,6 +13,8 @@ namespace QuanLyQuanCaPhe.Forms
     {
         private readonly bool _isEmbedded;
         private readonly NhanVienBUS _nhanVienBUS = new();
+        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
+        private bool _isAutoRefreshing;
 
         public frmNhanVien(bool isEmbedded = false)
         {
@@ -34,10 +36,10 @@ namespace QuanLyQuanCaPhe.Forms
             btnThemNhanVien.Click += btnThemNhanVien_Click;
             btnCapNhatNhanVien.Click += btnCapNhatNhanVien_Click;
             btnXoaNhanVien.Click += btnXoaNhanVien_Click;
-            btnLamMoi.Click += btnLamMoi_Click;
             btnTimNhanVien.Click += btnTimNhanVien_Click;
             btnNhapNhanVien.Click += btnNhapNhanVien_Click;
             btnXuatNhanVien.Click += btnXuatNhanVien_Click;
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
 
             btnDashboard.Click += (_, _) => OpenStandaloneForm(new frmBanHang());
             btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan());
@@ -60,6 +62,7 @@ namespace QuanLyQuanCaPhe.Forms
 
             LoadDanhSachNhanVien();
             ResetForm();
+            _autoRefreshTimer.Start();
         }
 
         private void LoadDanhSachNhanVien()
@@ -148,11 +151,22 @@ namespace QuanLyQuanCaPhe.Forms
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void btnLamMoi_Click(object? sender, EventArgs e)
+        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
         {
-            txtTimNhanVien.Clear();
-            LoadDanhSachNhanVien();
-            ResetForm();
+            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            try
+            {
+                _isAutoRefreshing = true;
+                LoadDanhSachNhanVien();
+            }
+            finally
+            {
+                _isAutoRefreshing = false;
+            }
         }
 
         private void btnTimNhanVien_Click(object? sender, EventArgs e)
@@ -363,6 +377,13 @@ namespace QuanLyQuanCaPhe.Forms
             Hide();
             targetForm.FormClosed += (_, _) => Close();
             targetForm.Show();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _autoRefreshTimer.Stop();
+            _autoRefreshTimer.Dispose();
+            base.OnFormClosed(e);
         }
     }
 }

@@ -18,6 +18,8 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly LoaiMonBUS _loaiMonBUS = new();
         private readonly MonInputValidator _monInputValidator = new();
         private readonly MonCsvService _monCsvService = new();
+        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
+        private bool _isAutoRefreshing;
         private string? _selectedImagePath;
         private int? _selectedLoaiMonId;
 
@@ -43,6 +45,7 @@ namespace QuanLyQuanCaPhe.Forms
             txtDuongDanAnh.Leave += txtDuongDanAnh_Leave;
             btnNhapMon.Click += btnNhapMon_Click;
             btnXuatMon.Click += btnXuatMon_Click;
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
         }
 
         private void frmQuanLiMon_Load(object? sender, EventArgs e)
@@ -59,6 +62,7 @@ namespace QuanLyQuanCaPhe.Forms
             LoadDanhSachLoaiMon();
             LoadLoaiMonCombobox();
             ResetForm();
+            _autoRefreshTimer.Start();
         }
 
         private void SetPreviewImage(string? imagePath)
@@ -248,12 +252,22 @@ namespace QuanLyQuanCaPhe.Forms
             ResetForm();
         }
 
-        private void btnLamMoi_Click(object? sender, EventArgs e)
+        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
         {
-            txtSearch.Clear();
-            txtTimMon.Clear();
-            LoadDanhSachMon();
-            ResetForm();
+            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            try
+            {
+                _isAutoRefreshing = true;
+                LoadDanhSachMon();
+            }
+            finally
+            {
+                _isAutoRefreshing = false;
+            }
         }
 
         private void btnXuatMon_Click(object? sender, EventArgs e)
@@ -621,6 +635,13 @@ namespace QuanLyQuanCaPhe.Forms
             _selectedImagePath = mon.HinhAnh;
             txtDuongDanAnh.Text = mon.HinhAnh ?? string.Empty;
             SetPreviewImage(mon.HinhAnh);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _autoRefreshTimer.Stop();
+            _autoRefreshTimer.Dispose();
+            base.OnFormClosed(e);
         }
 
     }

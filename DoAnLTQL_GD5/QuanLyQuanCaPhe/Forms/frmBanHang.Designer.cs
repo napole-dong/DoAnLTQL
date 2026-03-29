@@ -347,6 +347,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // panelContent
             // 
+            panelContent.AutoScroll = true;
             panelContent.Controls.Add(tableMain);
             panelContent.Dock = DockStyle.Fill;
             panelContent.Location = new Point(0, 80);
@@ -1073,6 +1074,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // txtSearch
             // 
+            txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtSearch.BackColor = Color.FromArgb(248, 245, 241);
             txtSearch.BorderStyle = BorderStyle.FixedSingle;
             txtSearch.Font = new Font("Segoe UI", 10F);
@@ -1100,6 +1102,7 @@ namespace QuanLyQuanCaPhe.Forms
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(246, 242, 236);
             ClientSize = new Size(1364, 760);
+            AutoScroll = true;
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
             Font = new Font("Segoe UI", 9F);

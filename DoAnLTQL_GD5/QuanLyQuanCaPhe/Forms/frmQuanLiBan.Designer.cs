@@ -66,7 +66,6 @@
             lblDatTruocIcon = new Label();
             tableCenter = new TableLayoutPanel();
             panelFilter = new Panel();
-            btnLamMoi = new Button();
             btnGopBan = new Button();
             btnXoaBan = new Button();
             btnThemBan = new Button();
@@ -333,6 +332,7 @@
             // 
             // panelContent
             // 
+            panelContent.AutoScroll = true;
             panelContent.Controls.Add(tableMain);
             panelContent.Dock = DockStyle.Fill;
             panelContent.Location = new Point(0, 80);
@@ -577,7 +577,6 @@
             // panelFilter
             // 
             panelFilter.BackColor = Color.White;
-            panelFilter.Controls.Add(btnLamMoi);
             panelFilter.Controls.Add(btnGopBan);
             panelFilter.Controls.Add(btnXoaBan);
             panelFilter.Controls.Add(btnThemBan);
@@ -593,21 +592,6 @@
             panelFilter.Padding = new Padding(16, 14, 16, 14);
             panelFilter.Size = new Size(319, 308);
             panelFilter.TabIndex = 0;
-            // 
-            // btnLamMoi
-            // 
-            btnLamMoi.BackColor = Color.FromArgb(94, 64, 47);
-            btnLamMoi.FlatAppearance.BorderSize = 0;
-            btnLamMoi.FlatStyle = FlatStyle.Flat;
-            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnLamMoi.ForeColor = Color.White;
-            btnLamMoi.Location = new Point(16, 272);
-            btnLamMoi.Name = "btnLamMoi";
-            btnLamMoi.Size = new Size(287, 30);
-            btnLamMoi.TabIndex = 8;
-            btnLamMoi.Text = "Làm mới layout";
-            btnLamMoi.UseVisualStyleBackColor = false;
-            btnLamMoi.Click += btnLamMoi_Click;
             // 
             // btnGopBan
             // 
@@ -917,6 +901,7 @@
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
+            AutoScroll = true;
             BackColor = Color.FromArgb(246, 242, 236);
             ClientSize = new Size(1364, 760);
             Controls.Add(panelMain);
@@ -994,7 +979,6 @@
         private Label lblDatTruocIcon;
         private TableLayoutPanel tableCenter;
         private Panel panelFilter;
-        private Button btnLamMoi;
         private Button btnGopBan;
         private Button btnXoaBan;
         private Button btnThemBan;
