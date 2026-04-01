@@ -18,7 +18,7 @@ public class LoaiMonBUS
         return _loaiMonDAL.GetNextLoaiMonId();
     }
 
-    public (bool ThanhCong, string ThongBao, LoaiMonDTO? LoaiMoi) ThemLoai(string tenLoai)
+    public (bool ThanhCong, string ThongBao, LoaiMonDTO? LoaiMoi) ThemLoai(string tenLoai, string? moTa)
     {
         tenLoai = tenLoai.Trim();
         if (string.IsNullOrWhiteSpace(tenLoai))
@@ -31,11 +31,11 @@ public class LoaiMonBUS
             return (false, "Tên loại món đã tồn tại.", null);
         }
 
-        var loai = _loaiMonDAL.ThemLoai(tenLoai);
+        var loai = _loaiMonDAL.ThemLoai(tenLoai, moTa);
         return (true, "Thêm loại món thành công.", loai);
     }
 
-    public (bool ThanhCong, string ThongBao) CapNhatLoai(int id, string tenLoai)
+    public (bool ThanhCong, string ThongBao) CapNhatLoai(int id, string tenLoai, string? moTa)
     {
         tenLoai = tenLoai.Trim();
         if (id <= 0)
@@ -53,7 +53,7 @@ public class LoaiMonBUS
             return (false, "Tên loại món đã tồn tại.");
         }
 
-        var daCapNhat = _loaiMonDAL.CapNhatLoai(id, tenLoai);
+        var daCapNhat = _loaiMonDAL.CapNhatLoai(id, tenLoai, moTa);
         return daCapNhat
             ? (true, "Cập nhật loại món thành công.")
             : (false, "Không tìm thấy loại món để cập nhật.");
@@ -107,7 +107,7 @@ public class LoaiMonBUS
             return new LoaiMonImportResultDTO { SoBoQua = 1 };
         }
 
-        var dsTenLoai = new List<string>();
+        var dsLoaiNhap = new List<LoaiMonDTO>();
         var soBoQua = 0;
         var startIndex = lines[0].Contains("TenLoai", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
 
@@ -120,16 +120,31 @@ public class LoaiMonBUS
 
             var cot = SplitCsvLine(lines[i]);
             var tenLoai = cot.Count >= 2 ? cot[1].Trim() : cot[0].Trim();
+            var moTa = string.Empty;
+
+            if (cot.Count >= 4)
+            {
+                moTa = cot[3].Trim();
+            }
+            else if (cot.Count == 3 && !int.TryParse(cot[2], out _))
+            {
+                moTa = cot[2].Trim();
+            }
+
             if (string.IsNullOrWhiteSpace(tenLoai))
             {
                 soBoQua++;
                 continue;
             }
 
-            dsTenLoai.Add(tenLoai);
+            dsLoaiNhap.Add(new LoaiMonDTO
+            {
+                TenLoai = tenLoai,
+                MoTa = moTa
+            });
         }
 
-        var result = _loaiMonDAL.NhapLoaiMon(dsTenLoai);
+        var result = _loaiMonDAL.NhapLoaiMon(dsLoaiNhap);
         result.SoBoQua += soBoQua;
         return result;
     }

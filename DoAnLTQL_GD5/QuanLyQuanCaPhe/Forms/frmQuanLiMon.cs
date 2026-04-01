@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,162 +14,128 @@ namespace QuanLyQuanCaPhe.Forms
 {
     public partial class frmQuanLiMon : Form
     {
-        private readonly bool _isEmbedded;
         private readonly MonBUS _monBUS = new();
         private readonly LoaiMonBUS _loaiMonBUS = new();
         private readonly MonInputValidator _monInputValidator = new();
         private readonly MonCsvService _monCsvService = new();
-        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
-        private bool _isAutoRefreshing;
-        private string? _selectedImagePath;
-        private int? _selectedLoaiMonId;
 
-        public frmQuanLiMon(bool isEmbedded = false)
+        public frmQuanLiMon()
         {
-            _isEmbedded = isEmbedded;
             InitializeComponent();
 
             dgvDanhSachMon.AutoGenerateColumns = false;
-            colIDMon.DataPropertyName = nameof(MonDTO.ID);
+            colMaMon.DataPropertyName = nameof(MonDTO.ID);
             colTenMon.DataPropertyName = nameof(MonDTO.TenMon);
             colLoaiMon.DataPropertyName = nameof(MonDTO.TenLoaiMon);
             colDonGia.DataPropertyName = nameof(MonDTO.DonGiaHienThi);
-            colMoTa.DataPropertyName = nameof(MonDTO.MoTa);
+            colTrangThai.DataPropertyName = nameof(MonDTO.TrangThai);
+            colMoTaMon.DataPropertyName = nameof(MonDTO.MoTa);
 
-            dgvLoaiMon.AutoGenerateColumns = false;
-            colIDLoaiMon.DataPropertyName = nameof(LoaiMonDTO.ID);
+            dgvDanhSachLoaiMon.AutoGenerateColumns = false;
+            colMaLoaiMon.DataPropertyName = nameof(LoaiMonDTO.ID);
             colTenLoaiMon.DataPropertyName = nameof(LoaiMonDTO.TenLoai);
+            colSoLuongMon.DataPropertyName = nameof(LoaiMonDTO.SoMon);
+            colMoTaLoaiMon.DataPropertyName = nameof(LoaiMonDTO.MoTa);
 
-            Load += frmQuanLiMon_Load;
-            txtTimMon.TextChanged += FilterChanged;
-            txtSearch.TextChanged += FilterChanged;
-            txtDuongDanAnh.Leave += txtDuongDanAnh_Leave;
-            btnNhapMon.Click += btnNhapMon_Click;
-            btnXuatMon.Click += btnXuatMon_Click;
-            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+            Load += FrmQuanLiMon_Load;
+            SizeChanged += FrmQuanLiMon_SizeChanged;
+
+            txtTimKiem.TextChanged += txtTimKiem_TextChanged;
+            tabDanhSach.SelectedIndexChanged += tabDanhSach_SelectedIndexChanged;
+
+            dgvDanhSachMon.SelectionChanged += dgvDanhSachMon_SelectionChanged;
+            dgvDanhSachLoaiMon.SelectionChanged += dgvDanhSachLoaiMon_SelectionChanged;
+
+            btnThemMon.Click += btnThemMon_Click;
+            btnCapNhatMon.Click += btnCapNhatMon_Click;
+            btnXoaMon.Click += btnXoaMon_Click;
+            btnThemLoaiMon.Click += btnThemLoaiMon_Click;
+            btnCapNhatLoaiMon.Click += btnCapNhatLoaiMon_Click;
+            btnXoaLoaiMon.Click += btnXoaLoaiMon_Click;
+            btnNhap.Click += btnNhap_Click;
+            btnXuat.Click += btnXuat_Click;
         }
 
-        private void frmQuanLiMon_Load(object? sender, EventArgs e)
+        private void FrmQuanLiMon_Load(object? sender, EventArgs e)
         {
-            if (_isEmbedded)
-            {
-                panelSidebar.Visible = false;
-                panelTopbar.Visible = false;
-                panelMain.Dock = DockStyle.Fill;
-            }
-
-            picCardAnhMon.Image = null;
-            btnLoaiMon.Visible = false;
-            LoadDanhSachLoaiMon();
-            LoadLoaiMonCombobox();
-            ResetForm();
-            _autoRefreshTimer.Start();
+            ApplyRoundedUi();
+            LoadLoaiMonComboBox();
+            RefreshAllData();
+            ResetFormMon();
+            ResetFormLoai();
         }
 
-        private void SetPreviewImage(string? imagePath)
+        private void FrmQuanLiMon_SizeChanged(object? sender, EventArgs e)
         {
-            var oldImage = picCardAnhMon.Image;
-            picCardAnhMon.Image = null;
-            oldImage?.Dispose();
-
-            if (string.IsNullOrWhiteSpace(imagePath))
-            {
-                return;
-            }
-
-            try
-            {
-                if (Uri.TryCreate(imagePath, UriKind.Absolute, out var uri)
-                    && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
-                {
-                    picCardAnhMon.LoadAsync(imagePath);
-                    return;
-                }
-
-                if (!File.Exists(imagePath))
-                {
-                    return;
-                }
-
-                using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
-                using var buffer = new MemoryStream();
-                stream.CopyTo(buffer);
-                buffer.Position = 0;
-                picCardAnhMon.Image = Image.FromStream(buffer);
-            }
-            catch
-            {
-                picCardAnhMon.Image = null;
-            }
+            ApplyRoundedUi();
         }
 
-        private void LoadDanhSachLoaiMon(int? selectedLoaiMonId = null)
+        private void ApplyRoundedUi()
         {
-            var dsLoai = _loaiMonBUS.LayDanhSachLoai(null, null);
-            dgvLoaiMon.DataSource = dsLoai;
+            ApplyRoundRegion(panelThongTin, 14);
+            ApplyRoundRegion(panelDanhSach, 14);
 
-            if (dsLoai.Count == 0)
-            {
-                _selectedLoaiMonId = null;
-                txtMaLoaiMon.Clear();
-                txtTenLoaiMon.Clear();
-                LoadDanhSachMon();
-                return;
-            }
+            ApplyRoundRegion(cardTongMon, 14);
+            ApplyRoundRegion(cardDangBan, 14);
+            ApplyRoundRegion(cardTongLoai, 14);
+            ApplyRoundRegion(cardNgungBan, 14);
 
-            var idCanChon = selectedLoaiMonId ?? _selectedLoaiMonId ?? dsLoai[0].ID;
-            SelectLoaiMonRow(idCanChon);
+            ApplyRoundRegion(btnThemMon, 8);
+            ApplyRoundRegion(btnCapNhatMon, 8);
+            ApplyRoundRegion(btnXoaMon, 8);
+            ApplyRoundRegion(btnThemLoaiMon, 8);
+            ApplyRoundRegion(btnCapNhatLoaiMon, 8);
+            ApplyRoundRegion(btnXoaLoaiMon, 8);
+            ApplyRoundRegion(btnNhap, 8);
+            ApplyRoundRegion(btnXuat, 8);
         }
 
-        private void LoadLoaiMonCombobox()
+        private void LoadLoaiMonComboBox()
         {
-            var dsLoai = _loaiMonBUS.LayDanhSachLoai(null, null);
-
-            cboLoaiMon.DataSource = dsLoai;
+            var dsLoaiMon = _monBUS.LayDanhSachLoaiMon();
+            cboLoaiMon.DataSource = dsLoaiMon;
             cboLoaiMon.DisplayMember = nameof(LoaiMonDTO.TenLoai);
             cboLoaiMon.ValueMember = nameof(LoaiMonDTO.ID);
+            cboLoaiMon.SelectedIndex = dsLoaiMon.Count > 0 ? 0 : -1;
 
-            if (_selectedLoaiMonId.HasValue && dsLoai.Any(x => x.ID == _selectedLoaiMonId.Value))
+            if (cboTrangThai.Items.Count > 0)
             {
-                cboLoaiMon.SelectedValue = _selectedLoaiMonId.Value;
-            }
-            else
-            {
-                cboLoaiMon.SelectedIndex = dsLoai.Count > 0 ? 0 : -1;
+                cboTrangThai.SelectedIndex = 0;
             }
         }
 
-        private void LoadDanhSachMon()
+        private void RefreshAllData()
         {
-            var dsMon = _monBUS.LayDanhSachMon(txtSearch.Text, txtTimMon.Text, _selectedLoaiMonId);
+            var tuKhoa = txtTimKiem.Text.Trim();
+            var dsMon = _monBUS.LayDanhSachMon(tuKhoa, null);
+            var dsLoai = _loaiMonBUS.LayDanhSachLoai(tuKhoa, null);
 
             dgvDanhSachMon.DataSource = dsMon;
+            dgvDanhSachLoaiMon.DataSource = dsLoai;
 
             lblTongMonValue.Text = dsMon.Count.ToString();
-            lblLoaiMonValue.Text = (dgvLoaiMon.DataSource as List<LoaiMonDTO>)?.Count.ToString() ?? "0";
-            lblGiaTrungBinhValue.Text = dsMon.Count == 0
-                ? "0đ"
-                : $"{Math.Round(dsMon.Average(x => x.DonGia), 0):N0}đ";
+            lblDangBanValue.Text = dsMon.Count(x => x.TrangThai.Equals("Đang kinh doanh", StringComparison.OrdinalIgnoreCase)).ToString();
+            lblTongLoaiValue.Text = dsLoai.Count.ToString();
+            lblNgungBanValue.Text = dsMon.Count(x => x.TrangThai.Equals("Ngừng bán", StringComparison.OrdinalIgnoreCase)).ToString();
 
             txtMaMon.Text = _monBUS.LayMaMonTiepTheo().ToString();
+            txtMaLoai.Text = _loaiMonBUS.LayMaLoaiTiepTheo().ToString();
         }
 
-        private void btnChonHinh_Click(object? sender, EventArgs e)
+        private void txtTimKiem_TextChanged(object? sender, EventArgs e)
         {
-            using var dialog = new OpenFileDialog
-            {
-                Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp;*.webp",
-                Title = "Chọn hình ảnh món"
-            };
+            RefreshAllData();
+        }
 
-            if (dialog.ShowDialog(this) != DialogResult.OK)
+        private void tabDanhSach_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (tabDanhSach.SelectedTab == tabMon)
             {
+                ResetFormLoai();
                 return;
             }
 
-            _selectedImagePath = dialog.FileName;
-            txtDuongDanAnh.Text = _selectedImagePath;
-            SetPreviewImage(_selectedImagePath);
+            ResetFormMon();
         }
 
         private void btnThemMon_Click(object? sender, EventArgs e)
@@ -185,16 +152,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            LoadDanhSachLoaiMon(_selectedLoaiMonId);
-            LoadLoaiMonCombobox();
-            LoadDanhSachMon();
-            SelectRow(result.MonMoi.ID);
+            RefreshAllData();
+            SelectMonRow(result.MonMoi.ID);
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnCapNhatMon_Click(object? sender, EventArgs e)
         {
-            if (!int.TryParse(txtMaMon.Text, out var id))
+            if (!int.TryParse(txtMaMon.Text, out var maMon))
             {
                 MessageBox.Show("Vui lòng chọn món cần cập nhật.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -205,7 +170,7 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            monDTO.ID = id;
+            monDTO.ID = maMon;
             var result = _monBUS.CapNhatMon(monDTO);
             if (!result.ThanhCong)
             {
@@ -213,16 +178,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            LoadDanhSachLoaiMon(_selectedLoaiMonId);
-            LoadLoaiMonCombobox();
-            LoadDanhSachMon();
-            SelectRow(id);
+            RefreshAllData();
+            SelectMonRow(maMon);
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnXoaMon_Click(object? sender, EventArgs e)
         {
-            if (!int.TryParse(txtMaMon.Text, out var id))
+            if (!int.TryParse(txtMaMon.Text, out var maMon))
             {
                 MessageBox.Show("Vui lòng chọn món cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -239,145 +202,74 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            var result = _monBUS.XoaMon(id);
+            var result = _monBUS.XoaMon(maMon);
             if (!result.ThanhCong)
             {
                 MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            LoadDanhSachLoaiMon(_selectedLoaiMonId);
-            LoadLoaiMonCombobox();
-            LoadDanhSachMon();
-            ResetForm();
-        }
-
-        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
-        {
-            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
-            {
-                return;
-            }
-
-            try
-            {
-                _isAutoRefreshing = true;
-                LoadDanhSachMon();
-            }
-            finally
-            {
-                _isAutoRefreshing = false;
-            }
-        }
-
-        private void btnXuatMon_Click(object? sender, EventArgs e)
-        {
-            if (dgvDanhSachMon.DataSource is not List<MonDTO> dsMon || dsMon.Count == 0)
-            {
-                MessageBox.Show("Không có dữ liệu để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using var dialog = new SaveFileDialog
-            {
-                Filter = "CSV (*.csv)|*.csv",
-                FileName = $"DanhSachMon_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
-                Title = "Xuất danh sách món"
-            };
-
-            if (dialog.ShowDialog(this) != DialogResult.OK)
-            {
-                return;
-            }
-
-            _monCsvService.XuatCsv(dialog.FileName, dsMon);
-            MessageBox.Show("Xuất danh sách món thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void btnNhapMon_Click(object? sender, EventArgs e)
-        {
-            using var dialog = new OpenFileDialog
-            {
-                Filter = "CSV (*.csv)|*.csv",
-                Title = "Nhập danh sách món"
-            };
-
-            if (dialog.ShowDialog(this) != DialogResult.OK)
-            {
-                return;
-            }
-
-            var lines = _monCsvService.DocCsv(dialog.FileName);
-            if (lines.Length == 0)
-            {
-                MessageBox.Show("Tệp nhập không có dữ liệu.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var result = _monBUS.NhapMonTuCsv(lines);
-            LoadDanhSachMon();
-            ResetForm();
-
-            MessageBox.Show(
-                $"Nhập dữ liệu hoàn tất.\nThêm mới: {result.SoThemMoi}\nCập nhật: {result.SoCapNhat}\nBỏ qua: {result.SoBoQua}",
-                "Thông báo",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            RefreshAllData();
+            ResetFormMon();
+            MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnThemLoaiMon_Click(object? sender, EventArgs e)
         {
-            var result = _loaiMonBUS.ThemLoai(txtTenLoaiMon.Text);
+            var result = _loaiMonBUS.ThemLoai(txtTenLoai.Text, txtMoTaLoai.Text);
             if (!result.ThanhCong || result.LoaiMoi == null)
             {
                 MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtTenLoaiMon.Focus();
                 return;
             }
 
-            LoadDanhSachLoaiMon(result.LoaiMoi.ID);
-            LoadLoaiMonCombobox();
-            ResetForm();
+            RefreshAllData();
+            SelectLoaiRow(result.LoaiMoi.ID);
+            LoadLoaiMonComboBox();
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void btnSuaLoaiMon_Click(object? sender, EventArgs e)
+        private void btnCapNhatLoaiMon_Click(object? sender, EventArgs e)
         {
-            if (!int.TryParse(txtMaLoaiMon.Text, out var id))
+            if (!int.TryParse(txtMaLoai.Text, out var maLoai))
             {
-                MessageBox.Show("Vui lòng chọn loại món cần sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn loại món cần cập nhật.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var result = _loaiMonBUS.CapNhatLoai(id, txtTenLoaiMon.Text);
+            var result = _loaiMonBUS.CapNhatLoai(maLoai, txtTenLoai.Text, txtMoTaLoai.Text);
             if (!result.ThanhCong)
             {
                 MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                txtTenLoaiMon.Focus();
                 return;
             }
 
-            LoadDanhSachLoaiMon(id);
-            LoadLoaiMonCombobox();
-            ResetForm();
+            RefreshAllData();
+            SelectLoaiRow(maLoai);
+            LoadLoaiMonComboBox();
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnXoaLoaiMon_Click(object? sender, EventArgs e)
         {
-            if (!int.TryParse(txtMaLoaiMon.Text, out var id))
+            if (!int.TryParse(txtMaLoai.Text, out var maLoai))
             {
                 MessageBox.Show("Vui lòng chọn loại món cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var tenLoai = txtTenLoaiMon.Text.Trim();
-            if (MessageBox.Show($"Xóa loại món '{tenLoai}'?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (dgvDanhSachLoaiMon.CurrentRow?.DataBoundItem is not LoaiMonDTO loai)
+            {
+                MessageBox.Show("Không tìm thấy loại món để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (MessageBox.Show($"Xóa loại món '{loai.TenLoai}'?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             {
                 return;
             }
 
-            var result = _loaiMonBUS.XoaLoai(id);
+            var result = _loaiMonBUS.XoaLoai(maLoai);
             if (!result.ThanhCong)
             {
                 if (result.ThongBao.Contains("đang được sử dụng", StringComparison.OrdinalIgnoreCase))
@@ -390,30 +282,29 @@ namespace QuanLyQuanCaPhe.Forms
 
                     if (xacNhanChuyen == DialogResult.Yes)
                     {
-                        var loaiDichId = ChonLoaiMonDich(id);
+                        var loaiDichId = ChonLoaiMonDich(maLoai);
                         if (!loaiDichId.HasValue)
                         {
                             return;
                         }
 
-                        var chuyenResult = _loaiMonBUS.ChuyenMonSangLoaiKhac(id, loaiDichId.Value);
+                        var chuyenResult = _loaiMonBUS.ChuyenMonSangLoaiKhac(maLoai, loaiDichId.Value);
                         if (!chuyenResult.ThanhCong)
                         {
                             MessageBox.Show(chuyenResult.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
 
-                        var xoaSauKhiChuyen = _loaiMonBUS.XoaLoai(id);
+                        var xoaSauKhiChuyen = _loaiMonBUS.XoaLoai(maLoai);
                         if (!xoaSauKhiChuyen.ThanhCong)
                         {
                             MessageBox.Show(xoaSauKhiChuyen.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
 
-                        _selectedLoaiMonId = loaiDichId.Value;
-                        LoadDanhSachLoaiMon(_selectedLoaiMonId);
-                        LoadLoaiMonCombobox();
-                        ResetForm();
+                        RefreshAllData();
+                        LoadLoaiMonComboBox();
+                        SelectLoaiRow(loaiDichId.Value);
                         MessageBox.Show("Đã chuyển món sang loại mới và xóa loại món cũ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
@@ -423,10 +314,9 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            _selectedLoaiMonId = null;
-            LoadDanhSachLoaiMon();
-            LoadLoaiMonCombobox();
-            ResetForm();
+            RefreshAllData();
+            ResetFormLoai();
+            LoadLoaiMonComboBox();
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -498,43 +388,113 @@ namespace QuanLyQuanCaPhe.Forms
                 : null;
         }
 
-        private void FilterChanged(object? sender, EventArgs e)
+        private void btnNhap_Click(object? sender, EventArgs e)
         {
-            LoadDanhSachMon();
-        }
-
-        private void txtDuongDanAnh_Leave(object? sender, EventArgs e)
-        {
-            _selectedImagePath = string.IsNullOrWhiteSpace(txtDuongDanAnh.Text)
-                ? null
-                : txtDuongDanAnh.Text.Trim();
-            SetPreviewImage(_selectedImagePath);
-        }
-
-        private void dgvLoaiMon_SelectionChanged(object? sender, EventArgs e)
-        {
-            if (dgvLoaiMon.CurrentRow?.DataBoundItem is not LoaiMonDTO loai)
+            using var dialog = new OpenFileDialog
             {
-                _selectedLoaiMonId = null;
-                txtMaLoaiMon.Clear();
-                txtTenLoaiMon.Clear();
-                lblDanhSachMonTitle.Text = "Danh sách món";
-                LoadDanhSachMon();
+                Filter = "CSV (*.csv)|*.csv",
+                Title = tabDanhSach.SelectedTab == tabMon ? "Nhập danh sách món" : "Nhập danh sách loại món"
+            };
+
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+            {
                 return;
             }
 
-            _selectedLoaiMonId = loai.ID;
-            txtMaLoaiMon.Text = loai.ID.ToString();
-            txtTenLoaiMon.Text = loai.TenLoai;
-            lblDanhSachMonTitle.Text = $"Danh sách món - {loai.TenLoai}";
+            var lines = File.ReadAllLines(dialog.FileName, Encoding.UTF8)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToArray();
 
-            if (cboLoaiMon.DataSource is List<LoaiMonDTO> dsLoai && dsLoai.Any(x => x.ID == loai.ID))
+            if (lines.Length == 0)
             {
-                cboLoaiMon.SelectedValue = loai.ID;
+                MessageBox.Show("Tệp nhập không có dữ liệu.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            LoadDanhSachMon();
-            ResetForm();
+            if (tabDanhSach.SelectedTab == tabMon)
+            {
+                var resultMon = _monBUS.NhapMonTuCsv(lines);
+                RefreshAllData();
+                ResetFormMon();
+
+                MessageBox.Show(
+                    $"Nhập dữ liệu món hoàn tất.\nThêm mới: {resultMon.SoThemMoi}\nCập nhật: {resultMon.SoCapNhat}\nBỏ qua: {resultMon.SoBoQua}",
+                    "Thông báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            var resultLoai = _loaiMonBUS.NhapLoaiMonTuCsv(lines);
+            RefreshAllData();
+            ResetFormLoai();
+            LoadLoaiMonComboBox();
+
+            MessageBox.Show(
+                $"Nhập dữ liệu loại món hoàn tất.\nThêm mới: {resultLoai.SoThemMoi}\nCập nhật: {resultLoai.SoCapNhat}\nBỏ qua: {resultLoai.SoBoQua}",
+                "Thông báo",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        private void btnXuat_Click(object? sender, EventArgs e)
+        {
+            if (tabDanhSach.SelectedTab == tabMon)
+            {
+                if (dgvDanhSachMon.DataSource is not List<MonDTO> dsMon || dsMon.Count == 0)
+                {
+                    MessageBox.Show("Không có dữ liệu món để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using var dialogMon = new SaveFileDialog
+                {
+                    Filter = "CSV (*.csv)|*.csv",
+                    FileName = $"DanhSachMon_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+                    Title = "Xuất danh sách món"
+                };
+
+                if (dialogMon.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                _monCsvService.XuatCsv(dialogMon.FileName, dsMon);
+                MessageBox.Show("Xuất danh sách món thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (dgvDanhSachLoaiMon.DataSource is not List<LoaiMonDTO> dsLoai || dsLoai.Count == 0)
+            {
+                MessageBox.Show("Không có dữ liệu loại món để xuất.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using var dialogLoai = new SaveFileDialog
+            {
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = $"DanhSachLoaiMon_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+                Title = "Xuất danh sách loại món"
+            };
+
+            if (dialogLoai.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            var lines = new List<string>
+            {
+                "ID,TenLoai,SoMon,MoTa"
+            };
+
+            lines.AddRange(dsLoai.Select(x => string.Join(",",
+                x.ID,
+                EscapeCsv(x.TenLoai),
+                x.SoMon,
+                EscapeCsv(x.MoTa))));
+
+            File.WriteAllLines(dialogLoai.FileName, lines, Encoding.UTF8);
+            MessageBox.Show("Xuất danh sách loại món thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private bool TryGetValidatedMon(out MonDTO monDTO)
@@ -542,11 +502,12 @@ namespace QuanLyQuanCaPhe.Forms
             var validation = _monInputValidator.Validate(
                 txtTenMon.Text,
                 cboLoaiMon.SelectedValue,
+                cboTrangThai.SelectedItem,
                 txtDonGia.Text,
-                txtMoTa.Text,
-                txtDuongDanAnh.Text);
+                string.Empty,
+                string.Empty);
 
-            if (validation.HopLe && validation.Mon is not null)
+            if (validation.HopLe && validation.Mon != null)
             {
                 monDTO = validation.Mon;
                 return true;
@@ -554,95 +515,119 @@ namespace QuanLyQuanCaPhe.Forms
 
             monDTO = new MonDTO();
             MessageBox.Show(validation.ThongBao ?? "Dữ liệu không hợp lệ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            FocusInvalidField(validation.TruongLoi);
             return false;
-        }
-
-        private void FocusInvalidField(MonInputField truongLoi)
-        {
-            switch (truongLoi)
-            {
-                case MonInputField.TenMon:
-                    txtTenMon.Focus();
-                    break;
-                case MonInputField.DonGia:
-                    txtDonGia.Focus();
-                    break;
-                case MonInputField.LoaiMon:
-                    cboLoaiMon.Focus();
-                    break;
-            }
-        }
-
-        private void SelectRow(int id)
-        {
-            foreach (DataGridViewRow row in dgvDanhSachMon.Rows)
-            {
-                if (row.DataBoundItem is MonDTO mon && mon.ID == id)
-                {
-                    row.Selected = true;
-                    dgvDanhSachMon.CurrentCell = row.Cells[0];
-                    break;
-                }
-            }
-        }
-
-        private void SelectLoaiMonRow(int loaiMonId)
-        {
-            foreach (DataGridViewRow row in dgvLoaiMon.Rows)
-            {
-                if (row.DataBoundItem is not LoaiMonDTO loai || loai.ID != loaiMonId)
-                {
-                    continue;
-                }
-
-                row.Selected = true;
-                dgvLoaiMon.CurrentCell = row.Cells[0];
-                break;
-            }
-        }
-
-        private void ResetForm()
-        {
-            txtTenMon.Clear();
-            txtDonGia.Clear();
-            txtMoTa.Clear();
-            txtDuongDanAnh.Clear();
-            _selectedImagePath = null;
-            SetPreviewImage(null);
-
-            if (_selectedLoaiMonId.HasValue && cboLoaiMon.Items.Count > 0)
-            {
-                cboLoaiMon.SelectedValue = _selectedLoaiMonId.Value;
-            }
-
-            txtMaMon.Text = _monBUS.LayMaMonTiepTheo().ToString();
         }
 
         private void dgvDanhSachMon_SelectionChanged(object? sender, EventArgs e)
         {
             if (dgvDanhSachMon.CurrentRow?.DataBoundItem is not MonDTO mon)
             {
-                SetPreviewImage(null);
                 return;
             }
 
             txtMaMon.Text = mon.ID.ToString();
             txtTenMon.Text = mon.TenMon;
             txtDonGia.Text = mon.DonGia.ToString();
-            txtMoTa.Text = mon.MoTa;
             cboLoaiMon.SelectedValue = mon.LoaiMonID;
-            _selectedImagePath = mon.HinhAnh;
-            txtDuongDanAnh.Text = mon.HinhAnh ?? string.Empty;
-            SetPreviewImage(mon.HinhAnh);
+
+            var trangThaiIndex = cboTrangThai.FindStringExact(mon.TrangThai);
+            cboTrangThai.SelectedIndex = trangThaiIndex >= 0 ? trangThaiIndex : 0;
         }
 
-        protected override void OnFormClosed(FormClosedEventArgs e)
+        private void dgvDanhSachLoaiMon_SelectionChanged(object? sender, EventArgs e)
         {
-            _autoRefreshTimer.Stop();
-            _autoRefreshTimer.Dispose();
-            base.OnFormClosed(e);
+            if (dgvDanhSachLoaiMon.CurrentRow?.DataBoundItem is not LoaiMonDTO loaiMon)
+            {
+                return;
+            }
+
+            txtMaLoai.Text = loaiMon.ID.ToString();
+            txtTenLoai.Text = loaiMon.TenLoai;
+            txtMoTaLoai.Text = loaiMon.MoTa;
         }
 
+        private void SelectMonRow(int maMon)
+        {
+            foreach (DataGridViewRow row in dgvDanhSachMon.Rows)
+            {
+                if (row.DataBoundItem is not MonDTO mon || mon.ID != maMon)
+                {
+                    continue;
+                }
+
+                row.Selected = true;
+                dgvDanhSachMon.CurrentCell = row.Cells[0];
+                break;
+            }
+        }
+
+        private void SelectLoaiRow(int maLoai)
+        {
+            foreach (DataGridViewRow row in dgvDanhSachLoaiMon.Rows)
+            {
+                if (row.DataBoundItem is not LoaiMonDTO loaiMon || loaiMon.ID != maLoai)
+                {
+                    continue;
+                }
+
+                row.Selected = true;
+                dgvDanhSachLoaiMon.CurrentCell = row.Cells[0];
+                break;
+            }
+        }
+
+        private void ResetFormMon()
+        {
+            txtMaMon.Text = _monBUS.LayMaMonTiepTheo().ToString();
+            txtTenMon.Clear();
+            txtDonGia.Text = "0";
+
+            if (cboLoaiMon.Items.Count > 0)
+            {
+                cboLoaiMon.SelectedIndex = 0;
+            }
+
+            if (cboTrangThai.Items.Count > 0)
+            {
+                cboTrangThai.SelectedIndex = 0;
+            }
+        }
+
+        private void ResetFormLoai()
+        {
+            txtMaLoai.Text = _loaiMonBUS.LayMaLoaiTiepTheo().ToString();
+            txtTenLoai.Clear();
+            txtMoTaLoai.Clear();
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (!value.Contains(',') && !value.Contains('"') && !value.Contains('\n') && !value.Contains('\r'))
+            {
+                return value;
+            }
+
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+
+        private static void ApplyRoundRegion(Control? control, int radius)
+        {
+            if (control == null || control.Width <= 0 || control.Height <= 0)
+            {
+                return;
+            }
+
+            using var path = new GraphicsPath();
+            var rect = new Rectangle(0, 0, control.Width, control.Height);
+            var diameter = radius * 2;
+
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+
+            control.Region = new Region(path);
+        }
     }
 }

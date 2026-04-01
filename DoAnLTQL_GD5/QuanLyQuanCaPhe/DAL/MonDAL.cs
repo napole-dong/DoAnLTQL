@@ -15,7 +15,8 @@ public class MonDAL
             .Select(x => new LoaiMonDTO
             {
                 ID = x.ID,
-                TenLoai = x.TenLoai
+                TenLoai = x.TenLoai,
+                MoTa = x.MoTa ?? string.Empty
             })
             .ToList();
     }
@@ -39,6 +40,7 @@ public class MonDAL
                 x.ID.ToString().Contains(tuKhoa)
                 || x.TenMon.Contains(tuKhoa)
                 || x.LoaiMon.TenLoai.Contains(tuKhoa)
+                || (x.TrangThai ?? (x.DonGia <= 0 ? "Ngừng bán" : "Đang kinh doanh")).Contains(tuKhoa)
                 || (x.MoTa ?? string.Empty).Contains(tuKhoa));
         }
 
@@ -51,6 +53,7 @@ public class MonDAL
                 LoaiMonID = x.LoaiMonID,
                 TenLoaiMon = x.LoaiMon.TenLoai,
                 DonGia = x.DonGia,
+                TrangThai = x.TrangThai ?? (x.DonGia <= 0 ? "Ngừng bán" : "Đang kinh doanh"),
                 MoTa = x.MoTa ?? string.Empty,
                 HinhAnh = x.HinhAnh
             })
@@ -77,6 +80,7 @@ public class MonDAL
                 LoaiMonID = x.LoaiMonID,
                 TenLoaiMon = x.LoaiMon.TenLoai,
                 DonGia = x.DonGia,
+                TrangThai = x.TrangThai ?? (x.DonGia <= 0 ? "Ngừng bán" : "Đang kinh doanh"),
                 MoTa = x.MoTa ?? string.Empty,
                 HinhAnh = x.HinhAnh
             })
@@ -91,6 +95,7 @@ public class MonDAL
             TenMon = monDTO.TenMon,
             LoaiMonID = monDTO.LoaiMonID,
             DonGia = monDTO.DonGia,
+            TrangThai = string.IsNullOrWhiteSpace(monDTO.TrangThai) ? "Đang kinh doanh" : monDTO.TrangThai,
             MoTa = string.IsNullOrWhiteSpace(monDTO.MoTa) ? null : monDTO.MoTa,
             HinhAnh = string.IsNullOrWhiteSpace(monDTO.HinhAnh) ? null : monDTO.HinhAnh
         };
@@ -114,6 +119,7 @@ public class MonDAL
         mon.TenMon = monDTO.TenMon;
         mon.LoaiMonID = monDTO.LoaiMonID;
         mon.DonGia = monDTO.DonGia;
+        mon.TrangThai = string.IsNullOrWhiteSpace(monDTO.TrangThai) ? "Đang kinh doanh" : monDTO.TrangThai;
         mon.MoTa = string.IsNullOrWhiteSpace(monDTO.MoTa) ? null : monDTO.MoTa;
         mon.HinhAnh = string.IsNullOrWhiteSpace(monDTO.HinhAnh) ? null : monDTO.HinhAnh;
 
@@ -163,6 +169,7 @@ public class MonDAL
                     TenMon = monNhap.TenMon,
                     LoaiMonID = monNhap.LoaiMonID,
                     DonGia = monNhap.DonGia,
+                    TrangThai = string.IsNullOrWhiteSpace(monNhap.TrangThai) ? "Đang kinh doanh" : monNhap.TrangThai,
                     MoTa = string.IsNullOrWhiteSpace(monNhap.MoTa) ? null : monNhap.MoTa,
                     HinhAnh = string.IsNullOrWhiteSpace(monNhap.HinhAnh) ? null : monNhap.HinhAnh
                 });
@@ -171,6 +178,7 @@ public class MonDAL
             else
             {
                 mon.DonGia = monNhap.DonGia;
+                mon.TrangThai = string.IsNullOrWhiteSpace(monNhap.TrangThai) ? mon.TrangThai : monNhap.TrangThai;
                 mon.MoTa = string.IsNullOrWhiteSpace(monNhap.MoTa) ? null : monNhap.MoTa;
                 mon.HinhAnh = string.IsNullOrWhiteSpace(monNhap.HinhAnh) ? null : monNhap.HinhAnh;
                 result.SoCapNhat++;

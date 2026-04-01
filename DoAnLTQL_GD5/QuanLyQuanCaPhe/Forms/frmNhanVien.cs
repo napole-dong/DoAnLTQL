@@ -41,10 +41,9 @@ namespace QuanLyQuanCaPhe.Forms
             btnXuatNhanVien.Click += btnXuatNhanVien_Click;
             _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
 
-            btnDashboard.Click += (_, _) => OpenStandaloneForm(new frmBanHang());
+            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang());
             btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan());
             btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon());
-            btnLoaiMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon());
             btnKhachHang.Click += (_, _) => OpenStandaloneForm(new frmKhachHang());
             btnThongKe.Click += (_, _) => MessageBox.Show("Chức năng thống kê đang được phát triển.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
             btnHoaDon.Click += (_, _) => MessageBox.Show("Chức năng hóa đơn đang được phát triển.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);

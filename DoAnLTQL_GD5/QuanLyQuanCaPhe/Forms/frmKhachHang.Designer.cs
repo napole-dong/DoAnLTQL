@@ -33,10 +33,9 @@
             panelSidebar = new Panel();
             btnDangXuat = new Button();
             flowSidebarMenu = new FlowLayoutPanel();
-            btnDashboard = new Button();
+            btnBanHang = new Button();
             btnQuanLyBan = new Button();
             btnQuanLyMon = new Button();
-            btnLoaiMon = new Button();
             btnHoaDon = new Button();
             btnKhachHang = new Button();
             btnNhanVien = new Button();
@@ -142,10 +141,9 @@
             // 
             // flowSidebarMenu
             // 
-            flowSidebarMenu.Controls.Add(btnDashboard);
+            flowSidebarMenu.Controls.Add(btnBanHang);
             flowSidebarMenu.Controls.Add(btnQuanLyBan);
             flowSidebarMenu.Controls.Add(btnQuanLyMon);
-            flowSidebarMenu.Controls.Add(btnLoaiMon);
             flowSidebarMenu.Controls.Add(btnHoaDon);
             flowSidebarMenu.Controls.Add(btnKhachHang);
             flowSidebarMenu.Controls.Add(btnNhanVien);
@@ -159,21 +157,21 @@
             flowSidebarMenu.TabIndex = 1;
             flowSidebarMenu.WrapContents = false;
             // 
-            // btnDashboard
+            // btnBanHang
             // 
-            btnDashboard.FlatAppearance.BorderSize = 0;
-            btnDashboard.FlatStyle = FlatStyle.Flat;
-            btnDashboard.Font = new Font("Segoe UI", 10F);
-            btnDashboard.ForeColor = Color.Gainsboro;
-            btnDashboard.Location = new Point(0, 14);
-            btnDashboard.Margin = new Padding(0);
-            btnDashboard.Name = "btnDashboard";
-            btnDashboard.Padding = new Padding(20, 0, 0, 0);
-            btnDashboard.Size = new Size(230, 48);
-            btnDashboard.TabIndex = 0;
-            btnDashboard.Text = "🧾  Bán hàng";
-            btnDashboard.TextAlign = ContentAlignment.MiddleLeft;
-            btnDashboard.UseVisualStyleBackColor = true;
+            btnBanHang.FlatAppearance.BorderSize = 0;
+            btnBanHang.FlatStyle = FlatStyle.Flat;
+            btnBanHang.Font = new Font("Segoe UI", 10F);
+            btnBanHang.ForeColor = Color.Gainsboro;
+            btnBanHang.Location = new Point(0, 14);
+            btnBanHang.Margin = new Padding(0);
+            btnBanHang.Name = "btnBanHang";
+            btnBanHang.Padding = new Padding(20, 0, 0, 0);
+            btnBanHang.Size = new Size(230, 48);
+            btnBanHang.TabIndex = 0;
+            btnBanHang.Text = "\U0001f9fe  Bán hàng";
+            btnBanHang.TextAlign = ContentAlignment.MiddleLeft;
+            btnBanHang.UseVisualStyleBackColor = true;
             // 
             // btnQuanLyBan
             // 
@@ -207,29 +205,13 @@
             btnQuanLyMon.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyMon.UseVisualStyleBackColor = true;
             // 
-            // btnLoaiMon
-            // 
-            btnLoaiMon.FlatAppearance.BorderSize = 0;
-            btnLoaiMon.FlatStyle = FlatStyle.Flat;
-            btnLoaiMon.Font = new Font("Segoe UI", 10F);
-            btnLoaiMon.ForeColor = Color.Gainsboro;
-            btnLoaiMon.Location = new Point(0, 158);
-            btnLoaiMon.Margin = new Padding(0);
-            btnLoaiMon.Name = "btnLoaiMon";
-            btnLoaiMon.Padding = new Padding(20, 0, 0, 0);
-            btnLoaiMon.Size = new Size(230, 48);
-            btnLoaiMon.TabIndex = 3;
-            btnLoaiMon.Text = "🏷  Loại món";
-            btnLoaiMon.TextAlign = ContentAlignment.MiddleLeft;
-            btnLoaiMon.UseVisualStyleBackColor = true;
-            // 
             // btnHoaDon
             // 
             btnHoaDon.FlatAppearance.BorderSize = 0;
             btnHoaDon.FlatStyle = FlatStyle.Flat;
             btnHoaDon.Font = new Font("Segoe UI", 10F);
             btnHoaDon.ForeColor = Color.Gainsboro;
-            btnHoaDon.Location = new Point(0, 206);
+            btnHoaDon.Location = new Point(0, 158);
             btnHoaDon.Margin = new Padding(0);
             btnHoaDon.Name = "btnHoaDon";
             btnHoaDon.Padding = new Padding(20, 0, 0, 0);
@@ -246,7 +228,7 @@
             btnKhachHang.FlatStyle = FlatStyle.Flat;
             btnKhachHang.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnKhachHang.ForeColor = Color.White;
-            btnKhachHang.Location = new Point(0, 254);
+            btnKhachHang.Location = new Point(0, 206);
             btnKhachHang.Margin = new Padding(0);
             btnKhachHang.Name = "btnKhachHang";
             btnKhachHang.Padding = new Padding(20, 0, 0, 0);
@@ -256,19 +238,19 @@
             btnKhachHang.TextAlign = ContentAlignment.MiddleLeft;
             btnKhachHang.UseVisualStyleBackColor = false;
             // 
-            // btnThongKe
+            // btnNhanVien
             // 
             btnNhanVien.FlatAppearance.BorderSize = 0;
             btnNhanVien.FlatStyle = FlatStyle.Flat;
             btnNhanVien.Font = new Font("Segoe UI", 10F);
             btnNhanVien.ForeColor = Color.Gainsboro;
-            btnNhanVien.Location = new Point(0, 302);
+            btnNhanVien.Location = new Point(0, 254);
             btnNhanVien.Margin = new Padding(0);
             btnNhanVien.Name = "btnNhanVien";
             btnNhanVien.Padding = new Padding(20, 0, 0, 0);
             btnNhanVien.Size = new Size(230, 48);
             btnNhanVien.TabIndex = 6;
-            btnNhanVien.Text = "🧑‍💼  Nhân viên";
+            btnNhanVien.Text = "\U0001f9d1‍💼  Nhân viên";
             btnNhanVien.TextAlign = ContentAlignment.MiddleLeft;
             btnNhanVien.UseVisualStyleBackColor = true;
             // 
@@ -278,7 +260,7 @@
             btnThongKe.FlatStyle = FlatStyle.Flat;
             btnThongKe.Font = new Font("Segoe UI", 10F);
             btnThongKe.ForeColor = Color.Gainsboro;
-            btnThongKe.Location = new Point(0, 350);
+            btnThongKe.Location = new Point(0, 302);
             btnThongKe.Margin = new Padding(0);
             btnThongKe.Name = "btnThongKe";
             btnThongKe.Padding = new Padding(20, 0, 0, 0);
@@ -943,9 +925,9 @@
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
+            AutoScroll = true;
             BackColor = Color.FromArgb(246, 242, 236);
             ClientSize = new Size(1364, 760);
-            AutoScroll = true;
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
             Font = new Font("Segoe UI", 9F);
@@ -985,10 +967,10 @@
         private Panel panelSidebar;
         private Button btnDangXuat;
         private FlowLayoutPanel flowSidebarMenu;
-        private Button btnDashboard;
+        private Button btnBanHang;
+
         private Button btnQuanLyBan;
         private Button btnQuanLyMon;
-        private Button btnLoaiMon;
         private Button btnHoaDon;
         private Button btnKhachHang;
         private Button btnNhanVien;

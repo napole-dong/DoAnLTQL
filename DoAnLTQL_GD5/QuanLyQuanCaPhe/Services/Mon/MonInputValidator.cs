@@ -4,7 +4,7 @@ namespace QuanLyQuanCaPhe.Services.Mon
 {
     public class MonInputValidator
     {
-        public MonValidationResult Validate(string tenMon, object? loaiMonValue, string donGiaText, string moTa, string duongDanAnh)
+        public MonValidationResult Validate(string tenMon, object? loaiMonValue, object? trangThaiValue, string donGiaText, string moTa, string duongDanAnh)
         {
             if (string.IsNullOrWhiteSpace(tenMon))
             {
@@ -21,11 +21,18 @@ namespace QuanLyQuanCaPhe.Services.Mon
                 return MonValidationResult.ThatBai("Đơn giá không hợp lệ.", MonInputField.DonGia);
             }
 
+            var trangThai = trangThaiValue?.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(trangThai))
+            {
+                return MonValidationResult.ThatBai("Vui lòng chọn trạng thái món.", MonInputField.None);
+            }
+
             var mon = new MonDTO
             {
                 TenMon = tenMon.Trim(),
                 LoaiMonID = loaiId,
                 DonGia = donGia,
+                TrangThai = trangThai,
                 MoTa = moTa.Trim(),
                 HinhAnh = string.IsNullOrWhiteSpace(duongDanAnh) ? null : duongDanAnh.Trim()
             };

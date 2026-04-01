@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuanLyQuanCaPhe.Data;
 
@@ -11,9 +12,11 @@ using QuanLyQuanCaPhe.Data;
 namespace QuanLyQuanCaPhe.Migrations
 {
     [DbContext(typeof(CaPheDbContext))]
-    partial class CaPheDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260401083034_BoSungTrangThaiMonVaMoTaLoaiMon")]
+    partial class BoSungTrangThaiMonVaMoTaLoaiMon
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

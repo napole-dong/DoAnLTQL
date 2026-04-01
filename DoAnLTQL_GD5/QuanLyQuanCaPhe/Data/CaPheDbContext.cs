@@ -26,6 +26,20 @@ public class CaPheDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<dtaLoaiMon>(entity =>
+        {
+            entity.ToTable("LoaiMon");
+            entity.Property(x => x.MoTa).HasDefaultValue(string.Empty);
+        });
+
+        modelBuilder.Entity<dtaMon>(entity =>
+        {
+            entity.ToTable("Mon");
+            entity.Property(x => x.TrangThai)
+                .HasMaxLength(50)
+                .HasDefaultValue("Đang kinh doanh");
+        });
+
         modelBuilder.Entity<dtaUser>(entity =>
         {
             entity.ToTable("User");

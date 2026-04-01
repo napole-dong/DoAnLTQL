@@ -30,14 +30,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
             DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
             panelSidebar = new Panel();
             btnDangXuat = new Button();
             flowSidebarMenu = new FlowLayoutPanel();
-            btnDashboard = new Button();
+            btnBanHang = new Button();
             btnQuanLyBan = new Button();
             btnQuanLyMon = new Button();
-            btnLoaiMon = new Button();
             btnHoaDon = new Button();
             btnKhachHang = new Button();
             btnNhanVien = new Button();
@@ -72,14 +70,14 @@ namespace QuanLyQuanCaPhe.Forms
             tableWorkArea = new TableLayoutPanel();
             panelMenu = new Panel();
             flowMon = new FlowLayoutPanel();
-            panelMon2 = new Panel();
-            lblMon2Gia = new Label();
-            lblMon2Ten = new Label();
-            btnMon2 = new Button();
             panelMon1 = new Panel();
             lblMon1Gia = new Label();
             lblMon1Ten = new Label();
             btnMon1 = new Button();
+            panelMon2 = new Panel();
+            lblMon2Gia = new Label();
+            lblMon2Ten = new Label();
+            btnMon2 = new Button();
             panelMenuFilter = new Panel();
             btnTatCa = new Button();
             btnTra = new Button();
@@ -88,12 +86,12 @@ namespace QuanLyQuanCaPhe.Forms
             lblMenuTitle = new Label();
             panelTables = new Panel();
             flowBan = new FlowLayoutPanel();
-            btnBan06 = new Button();
-            btnBan05 = new Button();
-            btnBan04 = new Button();
-            btnBan03 = new Button();
-            btnBan02 = new Button();
             btnBan01 = new Button();
+            btnBan02 = new Button();
+            btnBan03 = new Button();
+            btnBan04 = new Button();
+            btnBan05 = new Button();
+            btnBan06 = new Button();
             panelTablesHeader = new Panel();
             lblThongTinBan = new Label();
             lblTablesTitle = new Label();
@@ -116,8 +114,8 @@ namespace QuanLyQuanCaPhe.Forms
             tableWorkArea.SuspendLayout();
             panelMenu.SuspendLayout();
             flowMon.SuspendLayout();
-            panelMon2.SuspendLayout();
             panelMon1.SuspendLayout();
+            panelMon2.SuspendLayout();
             panelMenuFilter.SuspendLayout();
             panelTables.SuspendLayout();
             flowBan.SuspendLayout();
@@ -157,10 +155,9 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // flowSidebarMenu
             // 
-            flowSidebarMenu.Controls.Add(btnDashboard);
+            flowSidebarMenu.Controls.Add(btnBanHang);
             flowSidebarMenu.Controls.Add(btnQuanLyBan);
             flowSidebarMenu.Controls.Add(btnQuanLyMon);
-            flowSidebarMenu.Controls.Add(btnLoaiMon);
             flowSidebarMenu.Controls.Add(btnHoaDon);
             flowSidebarMenu.Controls.Add(btnKhachHang);
             flowSidebarMenu.Controls.Add(btnNhanVien);
@@ -174,22 +171,22 @@ namespace QuanLyQuanCaPhe.Forms
             flowSidebarMenu.TabIndex = 1;
             flowSidebarMenu.WrapContents = false;
             // 
-            // btnDashboard
+            // btnBanHang
             // 
-            btnDashboard.BackColor = Color.FromArgb(94, 64, 47);
-            btnDashboard.FlatAppearance.BorderSize = 0;
-            btnDashboard.FlatStyle = FlatStyle.Flat;
-            btnDashboard.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            btnDashboard.ForeColor = Color.White;
-            btnDashboard.Location = new Point(0, 14);
-            btnDashboard.Margin = new Padding(0);
-            btnDashboard.Name = "btnDashboard";
-            btnDashboard.Padding = new Padding(20, 0, 0, 0);
-            btnDashboard.Size = new Size(230, 48);
-            btnDashboard.TabIndex = 0;
-            btnDashboard.Text = "🧾  Bán hàng";
-            btnDashboard.TextAlign = ContentAlignment.MiddleLeft;
-            btnDashboard.UseVisualStyleBackColor = false;
+            btnBanHang.BackColor = Color.FromArgb(94, 64, 47);
+            btnBanHang.FlatAppearance.BorderSize = 0;
+            btnBanHang.FlatStyle = FlatStyle.Flat;
+            btnBanHang.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+            btnBanHang.ForeColor = Color.White;
+            btnBanHang.Location = new Point(0, 14);
+            btnBanHang.Margin = new Padding(0);
+            btnBanHang.Name = "btnBanHang";
+            btnBanHang.Padding = new Padding(20, 0, 0, 0);
+            btnBanHang.Size = new Size(230, 48);
+            btnBanHang.TabIndex = 0;
+            btnBanHang.Text = "\U0001f9fe  Bán hàng";
+            btnBanHang.TextAlign = ContentAlignment.MiddleLeft;
+            btnBanHang.UseVisualStyleBackColor = false;
             // 
             // btnQuanLyBan
             // 
@@ -203,7 +200,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnQuanLyBan.Padding = new Padding(20, 0, 0, 0);
             btnQuanLyBan.Size = new Size(230, 48);
             btnQuanLyBan.TabIndex = 1;
-            btnQuanLyBan.Text = "🪑  Quản lý bàn";
+            btnQuanLyBan.Text = "\U0001fa91  Quản lý bàn";
             btnQuanLyBan.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyBan.UseVisualStyleBackColor = true;
             // 
@@ -223,35 +220,19 @@ namespace QuanLyQuanCaPhe.Forms
             btnQuanLyMon.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyMon.UseVisualStyleBackColor = true;
             // 
-            // btnLoaiMon
-            // 
-            btnLoaiMon.FlatAppearance.BorderSize = 0;
-            btnLoaiMon.FlatStyle = FlatStyle.Flat;
-            btnLoaiMon.Font = new Font("Segoe UI", 10F);
-            btnLoaiMon.ForeColor = Color.Gainsboro;
-            btnLoaiMon.Location = new Point(0, 158);
-            btnLoaiMon.Margin = new Padding(0);
-            btnLoaiMon.Name = "btnLoaiMon";
-            btnLoaiMon.Padding = new Padding(20, 0, 0, 0);
-            btnLoaiMon.Size = new Size(230, 48);
-            btnLoaiMon.TabIndex = 3;
-            btnLoaiMon.Text = "🏷  Loại món";
-            btnLoaiMon.TextAlign = ContentAlignment.MiddleLeft;
-            btnLoaiMon.UseVisualStyleBackColor = true;
-            // 
             // btnHoaDon
             // 
             btnHoaDon.FlatAppearance.BorderSize = 0;
             btnHoaDon.FlatStyle = FlatStyle.Flat;
             btnHoaDon.Font = new Font("Segoe UI", 10F);
             btnHoaDon.ForeColor = Color.Gainsboro;
-            btnHoaDon.Location = new Point(0, 206);
+            btnHoaDon.Location = new Point(0, 158);
             btnHoaDon.Margin = new Padding(0);
             btnHoaDon.Name = "btnHoaDon";
             btnHoaDon.Padding = new Padding(20, 0, 0, 0);
             btnHoaDon.Size = new Size(230, 48);
             btnHoaDon.TabIndex = 4;
-            btnHoaDon.Text = "🧾  Hóa đơn";
+            btnHoaDon.Text = "\U0001f9fe  Hóa đơn";
             btnHoaDon.TextAlign = ContentAlignment.MiddleLeft;
             btnHoaDon.UseVisualStyleBackColor = true;
             // 
@@ -261,7 +242,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnKhachHang.FlatStyle = FlatStyle.Flat;
             btnKhachHang.Font = new Font("Segoe UI", 10F);
             btnKhachHang.ForeColor = Color.Gainsboro;
-            btnKhachHang.Location = new Point(0, 254);
+            btnKhachHang.Location = new Point(0, 206);
             btnKhachHang.Margin = new Padding(0);
             btnKhachHang.Name = "btnKhachHang";
             btnKhachHang.Padding = new Padding(20, 0, 0, 0);
@@ -277,13 +258,13 @@ namespace QuanLyQuanCaPhe.Forms
             btnNhanVien.FlatStyle = FlatStyle.Flat;
             btnNhanVien.Font = new Font("Segoe UI", 10F);
             btnNhanVien.ForeColor = Color.Gainsboro;
-            btnNhanVien.Location = new Point(0, 302);
+            btnNhanVien.Location = new Point(0, 254);
             btnNhanVien.Margin = new Padding(0);
             btnNhanVien.Name = "btnNhanVien";
             btnNhanVien.Padding = new Padding(20, 0, 0, 0);
             btnNhanVien.Size = new Size(230, 48);
             btnNhanVien.TabIndex = 6;
-            btnNhanVien.Text = "🧑‍💼  Nhân viên";
+            btnNhanVien.Text = "\U0001f9d1‍💼  Nhân viên";
             btnNhanVien.TextAlign = ContentAlignment.MiddleLeft;
             btnNhanVien.UseVisualStyleBackColor = true;
             // 
@@ -293,7 +274,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnThongKe.FlatStyle = FlatStyle.Flat;
             btnThongKe.Font = new Font("Segoe UI", 10F);
             btnThongKe.ForeColor = Color.Gainsboro;
-            btnThongKe.Location = new Point(0, 350);
+            btnThongKe.Location = new Point(0, 302);
             btnThongKe.Margin = new Padding(0);
             btnThongKe.Name = "btnThongKe";
             btnThongKe.Padding = new Padding(20, 0, 0, 0);
@@ -379,7 +360,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelOrder.Controls.Add(panelOrderHeader);
             panelOrder.Dock = DockStyle.Fill;
             panelOrder.Location = new Point(664, 0);
-            panelOrder.Margin = new Padding(0, 0, 0, 0);
+            panelOrder.Margin = new Padding(0);
             panelOrder.Name = "panelOrder";
             panelOrder.Padding = new Padding(12);
             panelOrder.Size = new Size(426, 642);
@@ -466,7 +447,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblTongThanhToan.ForeColor = Color.FromArgb(79, 56, 43);
             lblTongThanhToan.Location = new Point(16, 63);
             lblTongThanhToan.Name = "lblTongThanhToan";
-            lblTongThanhToan.Size = new Size(131, 23);
+            lblTongThanhToan.Size = new Size(139, 23);
             lblTongThanhToan.TabIndex = 4;
             lblTongThanhToan.Text = "Tổng thanh toán";
             // 
@@ -489,7 +470,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblGiamGia.ForeColor = Color.DimGray;
             lblGiamGia.Location = new Point(16, 33);
             lblGiamGia.Name = "lblGiamGia";
-            lblGiamGia.Size = new Size(77, 23);
+            lblGiamGia.Size = new Size(78, 23);
             lblGiamGia.TabIndex = 2;
             lblGiamGia.Text = "Giảm giá";
             // 
@@ -512,7 +493,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblTamTinh.ForeColor = Color.DimGray;
             lblTamTinh.Location = new Point(16, 8);
             lblTamTinh.Name = "lblTamTinh";
-            lblTamTinh.Size = new Size(73, 23);
+            lblTamTinh.Size = new Size(78, 23);
             lblTamTinh.TabIndex = 0;
             lblTamTinh.Text = "Tạm tính";
             // 
@@ -636,7 +617,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblOrderMeta.ForeColor = Color.FromArgb(130, 112, 96);
             lblOrderMeta.Location = new Point(3, 33);
             lblOrderMeta.Name = "lblOrderMeta";
-            lblOrderMeta.Size = new Size(100, 20);
+            lblOrderMeta.Size = new Size(118, 20);
             lblOrderMeta.TabIndex = 1;
             lblOrderMeta.Text = "Bàn 01 • 2 khách";
             // 
@@ -647,7 +628,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblOrderTitle.ForeColor = Color.FromArgb(63, 45, 35);
             lblOrderTitle.Location = new Point(3, 5);
             lblOrderTitle.Name = "lblOrderTitle";
-            lblOrderTitle.Size = new Size(134, 25);
+            lblOrderTitle.Size = new Size(136, 25);
             lblOrderTitle.TabIndex = 0;
             lblOrderTitle.Text = "Phiếu gọi món";
             // 
@@ -664,7 +645,7 @@ namespace QuanLyQuanCaPhe.Forms
             tableWorkArea.RowCount = 2;
             tableWorkArea.RowStyles.Add(new RowStyle(SizeType.Percent, 44F));
             tableWorkArea.RowStyles.Add(new RowStyle(SizeType.Percent, 56F));
-            tableWorkArea.Size = new Size(664, 642);
+            tableWorkArea.Size = new Size(652, 642);
             tableWorkArea.TabIndex = 0;
             // 
             // panelMenu
@@ -677,7 +658,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelMenu.Margin = new Padding(0, 0, 12, 0);
             panelMenu.Name = "panelMenu";
             panelMenu.Padding = new Padding(12);
-            panelMenu.Size = new Size(652, 360);
+            panelMenu.Size = new Size(640, 360);
             panelMenu.TabIndex = 1;
             // 
             // flowMon
@@ -689,55 +670,8 @@ namespace QuanLyQuanCaPhe.Forms
             flowMon.Location = new Point(12, 64);
             flowMon.Name = "flowMon";
             flowMon.Padding = new Padding(4);
-            flowMon.Size = new Size(628, 284);
+            flowMon.Size = new Size(616, 284);
             flowMon.TabIndex = 1;
-            // 
-            // panelMon2
-            // 
-            panelMon2.BackColor = Color.FromArgb(250, 247, 243);
-            panelMon2.Controls.Add(lblMon2Gia);
-            panelMon2.Controls.Add(lblMon2Ten);
-            panelMon2.Controls.Add(btnMon2);
-            panelMon2.Location = new Point(215, 7);
-            panelMon2.Name = "panelMon2";
-            panelMon2.Size = new Size(200, 120);
-            panelMon2.TabIndex = 1;
-            // 
-            // lblMon2Gia
-            // 
-            lblMon2Gia.AutoSize = true;
-            lblMon2Gia.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblMon2Gia.ForeColor = Color.FromArgb(119, 63, 27);
-            lblMon2Gia.Location = new Point(14, 68);
-            lblMon2Gia.Name = "lblMon2Gia";
-            lblMon2Gia.Size = new Size(60, 23);
-            lblMon2Gia.TabIndex = 2;
-            lblMon2Gia.Text = "39.000";
-            // 
-            // lblMon2Ten
-            // 
-            lblMon2Ten.AutoSize = true;
-            lblMon2Ten.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblMon2Ten.ForeColor = Color.FromArgb(63, 45, 35);
-            lblMon2Ten.Location = new Point(14, 18);
-            lblMon2Ten.Name = "lblMon2Ten";
-            lblMon2Ten.Size = new Size(111, 23);
-            lblMon2Ten.TabIndex = 1;
-            lblMon2Ten.Text = "Trà đào cam";
-            // 
-            // btnMon2
-            // 
-            btnMon2.BackColor = Color.White;
-            btnMon2.FlatAppearance.BorderColor = Color.FromArgb(230, 220, 210);
-            btnMon2.FlatStyle = FlatStyle.Flat;
-            btnMon2.Font = new Font("Segoe UI", 9F);
-            btnMon2.ForeColor = Color.FromArgb(79, 56, 43);
-            btnMon2.Location = new Point(100, 76);
-            btnMon2.Name = "btnMon2";
-            btnMon2.Size = new Size(86, 32);
-            btnMon2.TabIndex = 0;
-            btnMon2.Text = "+ Thêm";
-            btnMon2.UseVisualStyleBackColor = false;
             // 
             // panelMon1
             // 
@@ -768,7 +702,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblMon1Ten.ForeColor = Color.FromArgb(63, 45, 35);
             lblMon1Ten.Location = new Point(14, 18);
             lblMon1Ten.Name = "lblMon1Ten";
-            lblMon1Ten.Size = new Size(111, 23);
+            lblMon1Ten.Size = new Size(104, 23);
             lblMon1Ten.TabIndex = 1;
             lblMon1Ten.Text = "Latte đá xay";
             // 
@@ -786,6 +720,53 @@ namespace QuanLyQuanCaPhe.Forms
             btnMon1.Text = "+ Thêm";
             btnMon1.UseVisualStyleBackColor = false;
             // 
+            // panelMon2
+            // 
+            panelMon2.BackColor = Color.FromArgb(250, 247, 243);
+            panelMon2.Controls.Add(lblMon2Gia);
+            panelMon2.Controls.Add(lblMon2Ten);
+            panelMon2.Controls.Add(btnMon2);
+            panelMon2.Location = new Point(213, 7);
+            panelMon2.Name = "panelMon2";
+            panelMon2.Size = new Size(200, 120);
+            panelMon2.TabIndex = 1;
+            // 
+            // lblMon2Gia
+            // 
+            lblMon2Gia.AutoSize = true;
+            lblMon2Gia.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+            lblMon2Gia.ForeColor = Color.FromArgb(119, 63, 27);
+            lblMon2Gia.Location = new Point(14, 68);
+            lblMon2Gia.Name = "lblMon2Gia";
+            lblMon2Gia.Size = new Size(59, 23);
+            lblMon2Gia.TabIndex = 2;
+            lblMon2Gia.Text = "39.000";
+            // 
+            // lblMon2Ten
+            // 
+            lblMon2Ten.AutoSize = true;
+            lblMon2Ten.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
+            lblMon2Ten.ForeColor = Color.FromArgb(63, 45, 35);
+            lblMon2Ten.Location = new Point(14, 18);
+            lblMon2Ten.Name = "lblMon2Ten";
+            lblMon2Ten.Size = new Size(104, 23);
+            lblMon2Ten.TabIndex = 1;
+            lblMon2Ten.Text = "Trà đào cam";
+            // 
+            // btnMon2
+            // 
+            btnMon2.BackColor = Color.White;
+            btnMon2.FlatAppearance.BorderColor = Color.FromArgb(230, 220, 210);
+            btnMon2.FlatStyle = FlatStyle.Flat;
+            btnMon2.Font = new Font("Segoe UI", 9F);
+            btnMon2.ForeColor = Color.FromArgb(79, 56, 43);
+            btnMon2.Location = new Point(100, 76);
+            btnMon2.Name = "btnMon2";
+            btnMon2.Size = new Size(86, 32);
+            btnMon2.TabIndex = 0;
+            btnMon2.Text = "+ Thêm";
+            btnMon2.UseVisualStyleBackColor = false;
+            // 
             // panelMenuFilter
             // 
             panelMenuFilter.Controls.Add(btnTatCa);
@@ -796,7 +777,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelMenuFilter.Dock = DockStyle.Top;
             panelMenuFilter.Location = new Point(12, 12);
             panelMenuFilter.Name = "panelMenuFilter";
-            panelMenuFilter.Size = new Size(628, 52);
+            panelMenuFilter.Size = new Size(616, 52);
             panelMenuFilter.TabIndex = 0;
             // 
             // btnTatCa
@@ -807,7 +788,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnTatCa.FlatStyle = FlatStyle.Flat;
             btnTatCa.Font = new Font("Segoe UI", 9F);
             btnTatCa.ForeColor = Color.White;
-            btnTatCa.Location = new Point(559, 10);
+            btnTatCa.Location = new Point(547, 10);
             btnTatCa.Name = "btnTatCa";
             btnTatCa.Size = new Size(66, 30);
             btnTatCa.TabIndex = 4;
@@ -822,7 +803,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnTra.FlatStyle = FlatStyle.Flat;
             btnTra.Font = new Font("Segoe UI", 9F);
             btnTra.ForeColor = Color.FromArgb(79, 56, 43);
-            btnTra.Location = new Point(493, 10);
+            btnTra.Location = new Point(481, 10);
             btnTra.Name = "btnTra";
             btnTra.Size = new Size(60, 30);
             btnTra.TabIndex = 3;
@@ -837,7 +818,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnDaXay.FlatStyle = FlatStyle.Flat;
             btnDaXay.Font = new Font("Segoe UI", 9F);
             btnDaXay.ForeColor = Color.FromArgb(79, 56, 43);
-            btnDaXay.Location = new Point(415, 10);
+            btnDaXay.Location = new Point(403, 10);
             btnDaXay.Name = "btnDaXay";
             btnDaXay.Size = new Size(72, 30);
             btnDaXay.TabIndex = 2;
@@ -852,7 +833,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnCafe.FlatStyle = FlatStyle.Flat;
             btnCafe.Font = new Font("Segoe UI", 9F);
             btnCafe.ForeColor = Color.FromArgb(79, 56, 43);
-            btnCafe.Location = new Point(349, 10);
+            btnCafe.Location = new Point(337, 10);
             btnCafe.Name = "btnCafe";
             btnCafe.Size = new Size(60, 30);
             btnCafe.TabIndex = 1;
@@ -866,7 +847,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblMenuTitle.ForeColor = Color.FromArgb(63, 45, 35);
             lblMenuTitle.Location = new Point(4, 12);
             lblMenuTitle.Name = "lblMenuTitle";
-            lblMenuTitle.Size = new Size(131, 25);
+            lblMenuTitle.Size = new Size(145, 25);
             lblMenuTitle.TabIndex = 0;
             lblMenuTitle.Text = "Danh sách món";
             // 
@@ -880,7 +861,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelTables.Margin = new Padding(0, 0, 12, 12);
             panelTables.Name = "panelTables";
             panelTables.Padding = new Padding(12);
-            panelTables.Size = new Size(652, 282);
+            panelTables.Size = new Size(640, 270);
             panelTables.TabIndex = 0;
             // 
             // flowBan
@@ -896,83 +877,8 @@ namespace QuanLyQuanCaPhe.Forms
             flowBan.Location = new Point(12, 65);
             flowBan.Name = "flowBan";
             flowBan.Padding = new Padding(4);
-            flowBan.Size = new Size(628, 205);
+            flowBan.Size = new Size(616, 193);
             flowBan.TabIndex = 1;
-            // 
-            // btnBan06
-            // 
-            btnBan06.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan06.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan06.FlatStyle = FlatStyle.Flat;
-            btnBan06.Font = new Font("Segoe UI", 10F);
-            btnBan06.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan06.Location = new Point(212, 95);
-            btnBan06.Margin = new Padding(8);
-            btnBan06.Name = "btnBan06";
-            btnBan06.Size = new Size(95, 80);
-            btnBan06.TabIndex = 5;
-            btnBan06.Text = "Bàn 06\r\nTrống";
-            btnBan06.UseVisualStyleBackColor = false;
-            // 
-            // btnBan05
-            // 
-            btnBan05.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan05.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan05.FlatStyle = FlatStyle.Flat;
-            btnBan05.Font = new Font("Segoe UI", 10F);
-            btnBan05.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan05.Location = new Point(109, 95);
-            btnBan05.Margin = new Padding(8);
-            btnBan05.Name = "btnBan05";
-            btnBan05.Size = new Size(95, 80);
-            btnBan05.TabIndex = 4;
-            btnBan05.Text = "Bàn 05\r\nĐang dùng";
-            btnBan05.UseVisualStyleBackColor = false;
-            // 
-            // btnBan04
-            // 
-            btnBan04.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan04.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan04.FlatStyle = FlatStyle.Flat;
-            btnBan04.Font = new Font("Segoe UI", 10F);
-            btnBan04.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan04.Location = new Point(6, 95);
-            btnBan04.Margin = new Padding(8);
-            btnBan04.Name = "btnBan04";
-            btnBan04.Size = new Size(95, 80);
-            btnBan04.TabIndex = 3;
-            btnBan04.Text = "Bàn 04\r\nTrống";
-            btnBan04.UseVisualStyleBackColor = false;
-            // 
-            // btnBan03
-            // 
-            btnBan03.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan03.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan03.FlatStyle = FlatStyle.Flat;
-            btnBan03.Font = new Font("Segoe UI", 10F);
-            btnBan03.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan03.Location = new Point(212, 7);
-            btnBan03.Margin = new Padding(8);
-            btnBan03.Name = "btnBan03";
-            btnBan03.Size = new Size(95, 80);
-            btnBan03.TabIndex = 2;
-            btnBan03.Text = "Bàn 03\r\nTrống";
-            btnBan03.UseVisualStyleBackColor = false;
-            // 
-            // btnBan02
-            // 
-            btnBan02.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan02.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan02.FlatStyle = FlatStyle.Flat;
-            btnBan02.Font = new Font("Segoe UI", 10F);
-            btnBan02.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan02.Location = new Point(109, 7);
-            btnBan02.Margin = new Padding(8);
-            btnBan02.Name = "btnBan02";
-            btnBan02.Size = new Size(95, 80);
-            btnBan02.TabIndex = 1;
-            btnBan02.Text = "Bàn 02\r\nTrống";
-            btnBan02.UseVisualStyleBackColor = false;
             // 
             // btnBan01
             // 
@@ -981,13 +887,88 @@ namespace QuanLyQuanCaPhe.Forms
             btnBan01.FlatStyle = FlatStyle.Flat;
             btnBan01.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnBan01.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan01.Location = new Point(6, 7);
+            btnBan01.Location = new Point(12, 12);
             btnBan01.Margin = new Padding(8);
             btnBan01.Name = "btnBan01";
             btnBan01.Size = new Size(95, 80);
             btnBan01.TabIndex = 0;
             btnBan01.Text = "Bàn 01\r\nĐang chọn";
             btnBan01.UseVisualStyleBackColor = false;
+            // 
+            // btnBan02
+            // 
+            btnBan02.BackColor = Color.FromArgb(248, 245, 241);
+            btnBan02.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnBan02.FlatStyle = FlatStyle.Flat;
+            btnBan02.Font = new Font("Segoe UI", 10F);
+            btnBan02.ForeColor = Color.FromArgb(79, 56, 43);
+            btnBan02.Location = new Point(123, 12);
+            btnBan02.Margin = new Padding(8);
+            btnBan02.Name = "btnBan02";
+            btnBan02.Size = new Size(95, 80);
+            btnBan02.TabIndex = 1;
+            btnBan02.Text = "Bàn 02\r\nTrống";
+            btnBan02.UseVisualStyleBackColor = false;
+            // 
+            // btnBan03
+            // 
+            btnBan03.BackColor = Color.FromArgb(248, 245, 241);
+            btnBan03.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnBan03.FlatStyle = FlatStyle.Flat;
+            btnBan03.Font = new Font("Segoe UI", 10F);
+            btnBan03.ForeColor = Color.FromArgb(79, 56, 43);
+            btnBan03.Location = new Point(234, 12);
+            btnBan03.Margin = new Padding(8);
+            btnBan03.Name = "btnBan03";
+            btnBan03.Size = new Size(95, 80);
+            btnBan03.TabIndex = 2;
+            btnBan03.Text = "Bàn 03\r\nTrống";
+            btnBan03.UseVisualStyleBackColor = false;
+            // 
+            // btnBan04
+            // 
+            btnBan04.BackColor = Color.FromArgb(248, 245, 241);
+            btnBan04.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnBan04.FlatStyle = FlatStyle.Flat;
+            btnBan04.Font = new Font("Segoe UI", 10F);
+            btnBan04.ForeColor = Color.FromArgb(79, 56, 43);
+            btnBan04.Location = new Point(345, 12);
+            btnBan04.Margin = new Padding(8);
+            btnBan04.Name = "btnBan04";
+            btnBan04.Size = new Size(95, 80);
+            btnBan04.TabIndex = 3;
+            btnBan04.Text = "Bàn 04\r\nTrống";
+            btnBan04.UseVisualStyleBackColor = false;
+            // 
+            // btnBan05
+            // 
+            btnBan05.BackColor = Color.FromArgb(248, 245, 241);
+            btnBan05.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnBan05.FlatStyle = FlatStyle.Flat;
+            btnBan05.Font = new Font("Segoe UI", 10F);
+            btnBan05.ForeColor = Color.FromArgb(79, 56, 43);
+            btnBan05.Location = new Point(456, 12);
+            btnBan05.Margin = new Padding(8);
+            btnBan05.Name = "btnBan05";
+            btnBan05.Size = new Size(95, 80);
+            btnBan05.TabIndex = 4;
+            btnBan05.Text = "Bàn 05\r\nĐang dùng";
+            btnBan05.UseVisualStyleBackColor = false;
+            // 
+            // btnBan06
+            // 
+            btnBan06.BackColor = Color.FromArgb(248, 245, 241);
+            btnBan06.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnBan06.FlatStyle = FlatStyle.Flat;
+            btnBan06.Font = new Font("Segoe UI", 10F);
+            btnBan06.ForeColor = Color.FromArgb(79, 56, 43);
+            btnBan06.Location = new Point(12, 108);
+            btnBan06.Margin = new Padding(8);
+            btnBan06.Name = "btnBan06";
+            btnBan06.Size = new Size(95, 80);
+            btnBan06.TabIndex = 5;
+            btnBan06.Text = "Bàn 06\r\nTrống";
+            btnBan06.UseVisualStyleBackColor = false;
             // 
             // panelTablesHeader
             // 
@@ -996,7 +977,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelTablesHeader.Dock = DockStyle.Top;
             panelTablesHeader.Location = new Point(12, 12);
             panelTablesHeader.Name = "panelTablesHeader";
-            panelTablesHeader.Size = new Size(628, 53);
+            panelTablesHeader.Size = new Size(616, 53);
             panelTablesHeader.TabIndex = 0;
             // 
             // lblThongTinBan
@@ -1006,7 +987,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblThongTinBan.ForeColor = Color.FromArgb(130, 112, 96);
             lblThongTinBan.Location = new Point(4, 30);
             lblThongTinBan.Name = "lblThongTinBan";
-            lblThongTinBan.Size = new Size(238, 20);
+            lblThongTinBan.Size = new Size(252, 20);
             lblThongTinBan.TabIndex = 1;
             lblThongTinBan.Text = "Chọn bàn để xem món đang phục vụ";
             // 
@@ -1017,7 +998,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblTablesTitle.ForeColor = Color.FromArgb(63, 45, 35);
             lblTablesTitle.Location = new Point(4, 4);
             lblTablesTitle.Name = "lblTablesTitle";
-            lblTablesTitle.Size = new Size(93, 25);
+            lblTablesTitle.Size = new Size(99, 25);
             lblTablesTitle.TabIndex = 0;
             lblTablesTitle.Text = "Sơ đồ bàn";
             // 
@@ -1058,7 +1039,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblUserName.ForeColor = Color.FromArgb(63, 45, 35);
             lblUserName.Location = new Point(936, 27);
             lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(146, 23);
+            lblUserName.Size = new Size(167, 23);
             lblUserName.TabIndex = 3;
             lblUserName.Text = "Nhân viên bán hàng";
             // 
@@ -1092,22 +1073,22 @@ namespace QuanLyQuanCaPhe.Forms
             lblPageTitle.ForeColor = Color.FromArgb(63, 45, 35);
             lblPageTitle.Location = new Point(22, 20);
             lblPageTitle.Name = "lblPageTitle";
-            lblPageTitle.Size = new Size(202, 32);
+            lblPageTitle.Size = new Size(181, 32);
             lblPageTitle.TabIndex = 0;
             lblPageTitle.Text = "Quầy bán hàng";
             // 
-            // frmDashboard
+            // frmBanHang
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
+            AutoScroll = true;
             BackColor = Color.FromArgb(246, 242, 236);
             ClientSize = new Size(1364, 760);
-            AutoScroll = true;
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
             Font = new Font("Segoe UI", 9F);
             MinimumSize = new Size(1220, 720);
-            Name = "frmDashboard";
+            Name = "frmBanHang";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Bán hàng";
             panelSidebar.ResumeLayout(false);
@@ -1126,10 +1107,10 @@ namespace QuanLyQuanCaPhe.Forms
             tableWorkArea.ResumeLayout(false);
             panelMenu.ResumeLayout(false);
             flowMon.ResumeLayout(false);
-            panelMon2.ResumeLayout(false);
-            panelMon2.PerformLayout();
             panelMon1.ResumeLayout(false);
             panelMon1.PerformLayout();
+            panelMon2.ResumeLayout(false);
+            panelMon2.PerformLayout();
             panelMenuFilter.ResumeLayout(false);
             panelMenuFilter.PerformLayout();
             panelTables.ResumeLayout(false);
@@ -1147,10 +1128,9 @@ namespace QuanLyQuanCaPhe.Forms
         private System.Windows.Forms.Panel panelSidebar;
         private System.Windows.Forms.Button btnDangXuat;
         private System.Windows.Forms.FlowLayoutPanel flowSidebarMenu;
-        private System.Windows.Forms.Button btnDashboard;
+        private System.Windows.Forms.Button btnBanHang;
         private System.Windows.Forms.Button btnQuanLyBan;
         private System.Windows.Forms.Button btnQuanLyMon;
-        private System.Windows.Forms.Button btnLoaiMon;
         private System.Windows.Forms.Button btnHoaDon;
         private System.Windows.Forms.Button btnKhachHang;
         private System.Windows.Forms.Button btnNhanVien;

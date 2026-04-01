@@ -17,7 +17,7 @@ namespace QuanLyQuanCaPhe.Services.Mon
         {
             var lines = new List<string>
             {
-                "ID,TenMon,LoaiMonID,TenLoaiMon,DonGia,MoTa,HinhAnh"
+                "ID,TenMon,LoaiMonID,TenLoaiMon,DonGia,TrangThai,MoTa,HinhAnh"
             };
 
             lines.AddRange(dsMon.Select(x => string.Join(",",
@@ -26,6 +26,7 @@ namespace QuanLyQuanCaPhe.Services.Mon
                 x.LoaiMonID,
                 EscapeCsv(x.TenLoaiMon),
                 x.DonGia,
+                EscapeCsv(x.TrangThai),
                 EscapeCsv(x.MoTa),
                 EscapeCsv(x.HinhAnh ?? string.Empty))));
 

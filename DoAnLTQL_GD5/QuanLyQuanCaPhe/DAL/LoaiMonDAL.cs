@@ -21,12 +21,16 @@ public class LoaiMonDAL
             {
                 ID = x.ID,
                 TenLoai = x.TenLoai,
-                SoMon = x.Mon.Count
+                SoMon = x.Mon.Count,
+                MoTa = x.MoTa ?? string.Empty
             });
 
         if (!string.IsNullOrWhiteSpace(tuKhoa))
         {
-            query = query.Where(x => x.ID.ToString().Contains(tuKhoa) || x.TenLoai.Contains(tuKhoa));
+            query = query.Where(x =>
+                x.ID.ToString().Contains(tuKhoa)
+                || x.TenLoai.Contains(tuKhoa)
+                || x.MoTa.Contains(tuKhoa));
         }
 
         return query.OrderBy(x => x.ID).ToList();
@@ -44,10 +48,14 @@ public class LoaiMonDAL
         return context.LoaiMon.Any(x => x.TenLoai == tenLoai && (!boQuaId.HasValue || x.ID != boQuaId.Value));
     }
 
-    public LoaiMonDTO ThemLoai(string tenLoai)
+    public LoaiMonDTO ThemLoai(string tenLoai, string? moTa)
     {
         using var context = new CaPheDbContext();
-        var loai = new dtaLoaiMon { TenLoai = tenLoai };
+        var loai = new dtaLoaiMon
+        {
+            TenLoai = tenLoai,
+            MoTa = string.IsNullOrWhiteSpace(moTa) ? null : moTa.Trim()
+        };
         context.LoaiMon.Add(loai);
         context.SaveChanges();
 
@@ -55,11 +63,12 @@ public class LoaiMonDAL
         {
             ID = loai.ID,
             TenLoai = loai.TenLoai,
-            SoMon = 0
+            SoMon = 0,
+            MoTa = loai.MoTa ?? string.Empty
         };
     }
 
-    public bool CapNhatLoai(int id, string tenLoai)
+    public bool CapNhatLoai(int id, string tenLoai, string? moTa)
     {
         using var context = new CaPheDbContext();
         var loai = context.LoaiMon.FirstOrDefault(x => x.ID == id);
@@ -69,6 +78,7 @@ public class LoaiMonDAL
         }
 
         loai.TenLoai = tenLoai;
+        loai.MoTa = string.IsNullOrWhiteSpace(moTa) ? null : moTa.Trim();
         context.SaveChanges();
         return true;
     }
@@ -111,14 +121,15 @@ public class LoaiMonDAL
         return true;
     }
 
-    public LoaiMonImportResultDTO NhapLoaiMon(IEnumerable<string> dsTenLoai)
+    public LoaiMonImportResultDTO NhapLoaiMon(IEnumerable<LoaiMonDTO> dsLoaiNhap)
     {
         using var context = new CaPheDbContext();
         var result = new LoaiMonImportResultDTO();
 
-        foreach (var tenLoaiRaw in dsTenLoai)
+        foreach (var loaiNhap in dsLoaiNhap)
         {
-            var tenLoai = tenLoaiRaw.Trim();
+            var tenLoai = loaiNhap.TenLoai.Trim();
+            var moTa = string.IsNullOrWhiteSpace(loaiNhap.MoTa) ? null : loaiNhap.MoTa.Trim();
             if (string.IsNullOrWhiteSpace(tenLoai))
             {
                 result.SoBoQua++;
@@ -128,11 +139,16 @@ public class LoaiMonDAL
             var loaiDaCo = context.LoaiMon.FirstOrDefault(x => x.TenLoai == tenLoai);
             if (loaiDaCo != null)
             {
+                loaiDaCo.MoTa = moTa;
                 result.SoCapNhat++;
                 continue;
             }
 
-            context.LoaiMon.Add(new dtaLoaiMon { TenLoai = tenLoai });
+            context.LoaiMon.Add(new dtaLoaiMon
+            {
+                TenLoai = tenLoai,
+                MoTa = moTa
+            });
             result.SoThemMoi++;
         }
 
