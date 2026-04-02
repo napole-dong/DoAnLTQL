@@ -1,6 +1,4 @@
-﻿using System.Globalization;
-using System.Text;
-using QuanLyQuanCaPhe.BUS;
+﻿using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -10,7 +8,6 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly BanBUS _banBUS = new();
         private readonly MonBUS _monBUS = new();
         private readonly BanHangBUS _banHangBUS = new();
-        private readonly Dictionary<int, List<BanHangOrderItemDTO>> _gioTamTheoBan = new();
         private int? _banDangChonId;
         private string? _boLocLoaiMon;
 
@@ -32,7 +29,6 @@ namespace QuanLyQuanCaPhe.Forms
             btnDaXay.Click += (_, _) => ChonBoLocLoaiMon("da xay", btnDaXay);
             btnTra.Click += (_, _) => ChonBoLocLoaiMon("tra", btnTra);
 
-            btnGoiMon.Click += btnGoiMon_Click;
             btnTamTinh.Click += btnTamTinh_Click;
             btnThanhToan.Click += btnThanhToan_Click;
             btnChuyenBan.Click += (_, _) => ThucHienChuyenHoacGopBan(true);
@@ -89,7 +85,7 @@ namespace QuanLyQuanCaPhe.Forms
         private Button TaoNutBan(BanDTO ban)
         {
             var dangChon = _banDangChonId == ban.ID;
-            var trangThai = ChuyenTrangThaiBan(ban.TrangThai);
+            var trangThai = BanHangBUS.ChuyenTrangThaiBan(ban.TrangThai);
 
             var btn = new Button
             {
@@ -129,21 +125,11 @@ namespace QuanLyQuanCaPhe.Forms
         private void TaiDanhSachMon()
         {
             var tuKhoa = txtSearch.Text.Trim();
-            var dsMon = _monBUS.LayDanhSachMon(tuKhoa, null)
-                .Where(x => x.TrangThai.Equals("Đang kinh doanh", StringComparison.OrdinalIgnoreCase))
-                .Where(PhuHopBoLocLoaiMon)
-                .OrderBy(x => x.TenLoaiMon)
-                .ThenBy(x => x.TenMon)
-                .ToList();
+            var dsMon = _banHangBUS.LocMonPhuHopBanHang(_monBUS.LayDanhSachMon(tuKhoa, null), _boLocLoaiMon);
 
             if (!string.IsNullOrWhiteSpace(tuKhoa) && dsMon.Count == 0)
             {
-                dsMon = _monBUS.LayDanhSachMon(null, null)
-                    .Where(x => x.TrangThai.Equals("Đang kinh doanh", StringComparison.OrdinalIgnoreCase))
-                    .Where(PhuHopBoLocLoaiMon)
-                    .OrderBy(x => x.TenLoaiMon)
-                    .ThenBy(x => x.TenMon)
-                    .ToList();
+                dsMon = _banHangBUS.LocMonPhuHopBanHang(_monBUS.LayDanhSachMon(null, null), _boLocLoaiMon);
             }
 
             flowMon.SuspendLayout();
@@ -237,37 +223,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            var gioTam = LayGioTamTheoBan(_banDangChonId.Value);
-            var dongMon = gioTam.FirstOrDefault(x => x.MonID == mon.ID && x.DonGia == mon.DonGia);
-
-            if (dongMon == null)
+            var result = _banHangBUS.ThemMonVaoGioTam(_banDangChonId.Value, mon);
+            if (!result.ThanhCong)
             {
-                gioTam.Add(new BanHangOrderItemDTO
-                {
-                    MonID = mon.ID,
-                    TenMon = mon.TenMon,
-                    SoLuong = 1,
-                    DonGia = mon.DonGia
-                });
-            }
-            else
-            {
-                dongMon.SoLuong = (short)Math.Clamp(dongMon.SoLuong + 1, 1, short.MaxValue);
+                MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
             CapNhatPhieuDangChon();
-        }
-
-        private List<BanHangOrderItemDTO> LayGioTamTheoBan(int banId)
-        {
-            if (_gioTamTheoBan.TryGetValue(banId, out var gioTam))
-            {
-                return gioTam;
-            }
-
-            gioTam = new List<BanHangOrderItemDTO>();
-            _gioTamTheoBan[banId] = gioTam;
-            return gioTam;
         }
 
         private void CapNhatPhieuDangChon()
@@ -284,100 +247,65 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             var banId = _banDangChonId.Value;
-            var phieuDb = _banHangBUS.LayPhieuTheoBan(banId);
-            var dsTam = _gioTamTheoBan.TryGetValue(banId, out var gioTam)
-                ? gioTam
-                : new List<BanHangOrderItemDTO>();
-
-            var dsHienThi = TongHopChiTiet(phieuDb.ChiTiet.Concat(dsTam));
+            var trangThaiPhieu = _banHangBUS.LayTrangThaiPhieuTheoBan(banId);
 
             dgvOrder.DataSource = null;
-            dgvOrder.DataSource = dsHienThi;
+            dgvOrder.DataSource = trangThaiPhieu.ChiTietHienThi;
 
-            var tenBan = string.IsNullOrWhiteSpace(phieuDb.TenBan) ? $"Bàn {banId:D2}" : phieuDb.TenBan;
-            var trangThaiBan = ChuyenTrangThaiBan(phieuDb.TrangThaiBan);
-            var soMonTam = dsTam.Sum(x => x.SoLuong);
-            var tongTien = dsHienThi.Sum(x => x.ThanhTien);
-            var tongMon = dsHienThi.Sum(x => x.SoLuong);
+            var tenBan = trangThaiPhieu.TenBan;
+            var trangThaiBan = BanHangBUS.ChuyenTrangThaiBan(trangThaiPhieu.TrangThaiBan);
 
-            lblOrderMeta.Text = soMonTam > 0
-                ? $"{tenBan} • {trangThaiBan} • {soMonTam} món chờ gọi"
+            lblOrderMeta.Text = trangThaiPhieu.SoMonChoGoi > 0
+                ? $"{tenBan} • {trangThaiBan} • {trangThaiPhieu.SoMonChoGoi} món chờ gọi"
                 : $"{tenBan} • {trangThaiBan}";
 
-            lblThongTinBan.Text = tongMon > 0
-                ? $"{tenBan} đang có {tongMon} món phục vụ"
+            lblThongTinBan.Text = trangThaiPhieu.TongMon > 0
+                ? $"{tenBan} đang có {trangThaiPhieu.TongMon} món phục vụ"
                 : "Chọn bàn để xem món đang phục vụ";
 
-            lblTamTinhValue.Text = DinhDangTien(tongTien);
+            lblTamTinhValue.Text = DinhDangTien(trangThaiPhieu.TongTien);
             lblGiamGiaValue.Text = DinhDangTien(0);
-            lblTongThanhToanValue.Text = DinhDangTien(tongTien);
+            lblTongThanhToanValue.Text = DinhDangTien(trangThaiPhieu.TongTien);
         }
 
-        private static List<BanHangOrderItemDTO> TongHopChiTiet(IEnumerable<BanHangOrderItemDTO> dsChiTiet)
+        private bool LuuMonChoGoiVaLamMoi(int banId, bool hienThongBaoThanhCong = false, string? thongBaoThanhCong = null)
         {
-            return dsChiTiet
-                .GroupBy(x => new { x.MonID, x.TenMon, x.DonGia })
-                .Select(g => new BanHangOrderItemDTO
-                {
-                    MonID = g.Key.MonID,
-                    TenMon = g.Key.TenMon,
-                    DonGia = g.Key.DonGia,
-                    SoLuong = (short)Math.Clamp(g.Sum(x => (int)x.SoLuong), 1, short.MaxValue)
-                })
-                .OrderBy(x => x.TenMon)
-                .ToList();
-        }
-
-        private void btnGoiMon_Click(object? sender, EventArgs e)
-        {
-            if (!_banDangChonId.HasValue)
-            {
-                MessageBox.Show("Vui lòng chọn bàn trước khi gọi món.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var banId = _banDangChonId.Value;
-            var gioTam = LayGioTamTheoBan(banId);
-
-            if (gioTam.Count == 0)
-            {
-                MessageBox.Show("Không có món chờ gọi cho bàn này.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            var result = _banHangBUS.GoiMon(
-                banId,
-                gioTam.Select(x => new BanHangThemMonDTO { MonID = x.MonID, SoLuong = x.SoLuong }));
+            var result = _banHangBUS.LuuMonChoGoi(banId);
 
             if (!result.ThanhCong)
             {
                 MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                return false;
             }
 
-            _gioTamTheoBan.Remove(banId);
             TaiSoDoBan();
             CapNhatPhieuDangChon();
 
-            MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (hienThongBaoThanhCong)
+            {
+                MessageBox.Show(
+                    thongBaoThanhCong ?? result.ThongBao,
+                    "Thông báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+
+            return true;
         }
 
         private void btnTamTinh_Click(object? sender, EventArgs e)
         {
-            if (dgvOrder.DataSource is not List<BanHangOrderItemDTO> dsHienThi || dsHienThi.Count == 0)
+            if (!_banDangChonId.HasValue)
             {
-                MessageBox.Show("Chưa có món để tạm tính.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Vui lòng chọn bàn trước khi lưu bàn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var tongMon = dsHienThi.Sum(x => x.SoLuong);
-            var tongTien = dsHienThi.Sum(x => x.ThanhTien);
-
-            MessageBox.Show(
-                $"Tổng số món: {tongMon}\nTạm tính: {DinhDangTien(tongTien)}",
-                "Tạm tính",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            var banId = _banDangChonId.Value;
+            _ = LuuMonChoGoiVaLamMoi(
+                banId,
+                hienThongBaoThanhCong: true,
+                thongBaoThanhCong: "Đã lưu bàn thành công. Bạn có thể mở lại để thêm món sau.");
         }
 
         private void btnThanhToan_Click(object? sender, EventArgs e)
@@ -389,36 +317,6 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             var banId = _banDangChonId.Value;
-            var gioTam = LayGioTamTheoBan(banId);
-            if (gioTam.Count > 0)
-            {
-                var xacNhanGoiMon = MessageBox.Show(
-                    "Bàn đang có món chờ gọi. Bạn có muốn gọi món trước khi thanh toán không?",
-                    "Xác nhận",
-                    MessageBoxButtons.YesNoCancel,
-                    MessageBoxIcon.Question);
-
-                if (xacNhanGoiMon == DialogResult.Cancel)
-                {
-                    return;
-                }
-
-                if (xacNhanGoiMon == DialogResult.Yes)
-                {
-                    var resultGoiMon = _banHangBUS.GoiMon(
-                        banId,
-                        gioTam.Select(x => new BanHangThemMonDTO { MonID = x.MonID, SoLuong = x.SoLuong }));
-
-                    if (!resultGoiMon.ThanhCong)
-                    {
-                        MessageBox.Show(resultGoiMon.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    _gioTamTheoBan.Remove(banId);
-                }
-            }
-
             var xacNhanThanhToan = MessageBox.Show(
                 "Xác nhận thanh toán bàn đang chọn?",
                 "Xác nhận",
@@ -430,14 +328,13 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            var result = _banHangBUS.ThanhToan(banId);
+            var result = _banHangBUS.ThanhToanHoaDon(banId);
             if (!result.ThanhCong)
             {
                 MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            _gioTamTheoBan.Remove(banId);
             TaiSoDoBan();
             CapNhatPhieuDangChon();
 
@@ -453,8 +350,7 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             var banNguonId = _banDangChonId.Value;
-            var gioTamNguon = LayGioTamTheoBan(banNguonId);
-            if (gioTamNguon.Count > 0)
+            if (_banHangBUS.CoMonChoGoiTrongGioTam(banNguonId))
             {
                 MessageBox.Show("Bàn nguồn còn món chờ gọi. Vui lòng gọi món trước khi chuyển/gộp.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -565,59 +461,9 @@ namespace QuanLyQuanCaPhe.Forms
             }
         }
 
-        private bool PhuHopBoLocLoaiMon(MonDTO mon)
-        {
-            if (string.IsNullOrWhiteSpace(_boLocLoaiMon))
-            {
-                return true;
-            }
-
-            var tenLoai = ChuanHoaKhongDau(mon.TenLoaiMon);
-            return _boLocLoaiMon switch
-            {
-                "cafe" => tenLoai.Contains("ca phe") || tenLoai.Contains("cafe"),
-                "da xay" => tenLoai.Contains("da xay"),
-                "tra" => tenLoai.Contains("tra"),
-                _ => true
-            };
-        }
-
-        private static string ChuyenTrangThaiBan(int trangThai)
-        {
-            return trangThai switch
-            {
-                1 => "Đang phục vụ",
-                2 => "Đặt trước",
-                _ => "Trống"
-            };
-        }
-
         private static string DinhDangTien(int soTien)
         {
             return $"{soTien:N0}đ";
-        }
-
-        private static string ChuanHoaKhongDau(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return string.Empty;
-            }
-
-            var normalized = text.Normalize(NormalizationForm.FormD);
-            var sb = new StringBuilder();
-            foreach (var c in normalized)
-            {
-                if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                {
-                    sb.Append(c);
-                }
-            }
-
-            return sb
-                .ToString()
-                .Normalize(NormalizationForm.FormC)
-                .ToLowerInvariant();
         }
     }
 }

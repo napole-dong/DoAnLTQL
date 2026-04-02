@@ -1,0 +1,9 @@
+namespace QuanLyQuanCaPhe.DTO;
+
+public class HoaDonSaveRequestDTO
+{
+    public int ID { get; set; }
+    public int BanID { get; set; }
+    public DateTime NgayLap { get; set; }
+    public int TrangThai { get; set; }
+}
