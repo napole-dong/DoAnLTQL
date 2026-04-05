@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Auth;
 
 namespace QuanLyQuanCaPhe.DAL;
 
@@ -78,7 +79,7 @@ public class NhanVienDAL
         {
             NhanVienID = nhanVien.ID,
             TenDangNhap = nhanVienDTO.TenDangNhap,
-            MatKhau = nhanVienDTO.MatKhau ?? "123456",
+            MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienDTO.MatKhau ?? "123456"),
             VaiTroID = vaiTroId,
             HoatDong = true
         });
@@ -114,7 +115,8 @@ public class NhanVienDAL
             {
                 NhanVienID = nhanVien.ID,
                 TenDangNhap = nhanVienDTO.TenDangNhap,
-                MatKhau = string.IsNullOrWhiteSpace(nhanVienDTO.MatKhau) ? "123456" : nhanVienDTO.MatKhau,
+                MatKhau = MatKhauService.BamMatKhauNeuCan(
+                    string.IsNullOrWhiteSpace(nhanVienDTO.MatKhau) ? "123456" : nhanVienDTO.MatKhau),
                 VaiTroID = vaiTroId,
                 HoatDong = true
             });
@@ -127,7 +129,7 @@ public class NhanVienDAL
 
             if (!string.IsNullOrWhiteSpace(nhanVienDTO.MatKhau))
             {
-                nhanVien.User.MatKhau = nhanVienDTO.MatKhau;
+                nhanVien.User.MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienDTO.MatKhau);
             }
         }
 
@@ -196,7 +198,8 @@ public class NhanVienDAL
                 {
                     NhanVienID = nhanVienMoi.ID,
                     TenDangNhap = nhanVienNhap.TenDangNhap,
-                    MatKhau = string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau) ? "123456" : nhanVienNhap.MatKhau,
+                    MatKhau = MatKhauService.BamMatKhauNeuCan(
+                        string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau) ? "123456" : nhanVienNhap.MatKhau),
                     VaiTroID = vaiTroId,
                     HoatDong = true
                 });
@@ -212,7 +215,7 @@ public class NhanVienDAL
 
                 if (!string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau))
                 {
-                    user.MatKhau = nhanVienNhap.MatKhau;
+                    user.MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienNhap.MatKhau);
                 }
 
                 soCapNhat++;
