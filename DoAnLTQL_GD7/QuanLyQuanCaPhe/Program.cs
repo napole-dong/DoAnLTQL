@@ -1,0 +1,33 @@
+namespace QuanLyQuanCaPhe
+{
+    internal static class Program
+    {
+        /// <summary>
+        ///  The main entry point for the application.
+        /// </summary>
+        [STAThread]
+        static void Main()
+        {
+            // To customize application configuration such as set high DPI settings or default font,
+            // see https://aka.ms/applicationconfiguration.
+            ApplicationConfiguration.Initialize();
+
+            using var frmDangNhap = new Forms.frmDangNhap();
+            if (frmDangNhap.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (frmDangNhap.ThongTinDangNhap == null)
+            {
+                return;
+            }
+
+            Services.Auth.NguoiDungHienTaiService.DatNguoiDungDangNhap(frmDangNhap.ThongTinDangNhap);
+
+            Application.Run(new Forms.frmBanHang());
+
+            Services.Auth.NguoiDungHienTaiService.XoaNguoiDungDangNhap();
+        }
+    }
+}
