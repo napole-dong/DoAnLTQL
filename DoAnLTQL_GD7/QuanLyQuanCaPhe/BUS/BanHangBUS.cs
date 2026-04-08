@@ -39,7 +39,7 @@ public class BanHangBUS
             return new BanHangTrangThaiPhieuDTO();
         }
 
-        var phieuDb = LayPhieuTheoBan(banId);
+        var phieuDb = _banHangDAL.GetPhieuTheoBan(banId);
         var dsTam = _gioTamTheoBan.TryGetValue(banId, out var gioTam)
             ? gioTam
             : new List<BanHangOrderItemDTO>();
@@ -62,17 +62,17 @@ public class BanHangBUS
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Create))
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bạn không có quyền thêm món." };
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền thêm món.");
         }
 
         if (banId <= 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Vui lòng chọn bàn trước khi thêm món." };
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi thêm món.");
         }
 
         if (mon.ID <= 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Món không hợp lệ." };
+            return BusMessageCatalog.CreateActionResult(false, "Món không hợp lệ.");
         }
 
         var gioTam = LayGioTamTheoBan(banId);
@@ -88,11 +88,11 @@ public class BanHangBUS
                 DonGia = mon.DonGia
             });
 
-            return new BanActionResultDTO { ThanhCong = true, ThongBao = "Đã thêm món vào giỏ tạm." };
+            return BusMessageCatalog.CreateActionResult(true, "Đã thêm món vào giỏ tạm.");
         }
 
         dongMon.SoLuong = (short)Math.Clamp(dongMon.SoLuong + 1, 1, short.MaxValue);
-        return new BanActionResultDTO { ThanhCong = true, ThongBao = "Đã cập nhật số lượng món trong giỏ tạm." };
+        return BusMessageCatalog.CreateActionResult(true, "Đã cập nhật số lượng món trong giỏ tạm.");
     }
 
     public bool CoMonChoGoiTrongGioTam(int banId)
@@ -102,14 +102,14 @@ public class BanHangBUS
             return false;
         }
 
-        return _gioTamTheoBan.TryGetValue(banId, out var gioTam) && gioTam.Count > 0;
+        return _gioTamTheoBan.TryGetValue(banId, out var gioTam) && gioTam.Any();
     }
 
     public BanActionResultDTO LuuMonChoGoi(int banId)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bạn không có quyền lưu bàn." };
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền lưu bàn.");
         }
 
         return DongBoMonTamTheoBan(banId, yeuCauCoMonChoGoi: true);
@@ -119,12 +119,12 @@ public class BanHangBUS
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bạn không có quyền thanh toán." };
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền thanh toán.");
         }
 
         if (banId <= 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Vui lòng chọn bàn trước khi thanh toán." };
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi thanh toán.");
         }
 
         var resultDongBo = DongBoMonTamTheoBan(banId, yeuCauCoMonChoGoi: false);
@@ -165,12 +165,12 @@ public class BanHangBUS
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Create))
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bạn không có quyền gọi món." };
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền gọi món.");
         }
 
         if (banId <= 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Vui lòng chọn bàn trước khi gọi món." };
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi gọi món.");
         }
 
         var dsMonTongHop = dsMonThem
@@ -185,40 +185,40 @@ public class BanHangBUS
 
         if (dsMonTongHop.Count == 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Chưa có món hợp lệ để gọi." };
+            return BusMessageCatalog.CreateActionResult(false, "Chưa có món hợp lệ để gọi.");
         }
 
-        return _banHangDAL.GoiMon(banId, dsMonTongHop);
+        return BusMessageCatalog.NormalizeActionResult(_banHangDAL.GoiMon(banId, dsMonTongHop));
     }
 
     public BanActionResultDTO ThanhToan(int banId)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bạn không có quyền thanh toán." };
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền thanh toán.");
         }
 
         if (banId <= 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Vui lòng chọn bàn trước khi thanh toán." };
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi thanh toán.");
         }
 
-        return _banHangDAL.ThanhToan(banId);
+        return BusMessageCatalog.NormalizeActionResult(_banHangDAL.ThanhToan(banId));
     }
 
     private BanActionResultDTO DongBoMonTamTheoBan(int banId, bool yeuCauCoMonChoGoi)
     {
         if (banId <= 0)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Vui lòng chọn bàn hợp lệ." };
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn hợp lệ.");
         }
 
         var gioTam = LayGioTamTheoBan(banId);
         if (gioTam.Count == 0)
         {
             return yeuCauCoMonChoGoi
-                ? new BanActionResultDTO { ThanhCong = false, ThongBao = "Không có món mới để lưu bàn." }
-                : new BanActionResultDTO { ThanhCong = true, ThongBao = string.Empty };
+                ? BusMessageCatalog.CreateActionResult(false, "Không có món mới để lưu bàn.")
+                : BusMessageCatalog.CreateActionResult(true, string.Empty);
         }
 
         var result = GoiMon(

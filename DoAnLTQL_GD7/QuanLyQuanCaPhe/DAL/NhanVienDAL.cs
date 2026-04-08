@@ -11,34 +11,8 @@ public class NhanVienDAL
     {
         using var context = new CaPheDbContext();
 
-        var query = context.NhanVien
-            .AsNoTracking()
-            .Select(x => new NhanVienDTO
-            {
-                ID = x.ID,
-                HoVaTen = x.HoVaTen,
-                DienThoai = x.DienThoai,
-                DiaChi = x.DiaChi,
-                TenDangNhap = x.User != null ? x.User.TenDangNhap : string.Empty,
-                QuyenHan = x.User != null && x.User.VaiTro != null
-                    ? x.User.VaiTro.TenVaiTro
-                    : "Nhân viên"
-            });
-
-        if (!string.IsNullOrWhiteSpace(tuKhoa))
-        {
-            query = query.Where(x =>
-                x.ID.ToString().Contains(tuKhoa)
-                || x.HoVaTen.Contains(tuKhoa)
-                || (x.DienThoai ?? string.Empty).Contains(tuKhoa)
-                || (x.DiaChi ?? string.Empty).Contains(tuKhoa)
-                || x.TenDangNhap.Contains(tuKhoa)
-                || x.QuyenHan.Contains(tuKhoa));
-        }
-
-        return query
-            .OrderBy(x => x.ID)
-            .ToList();
+        var nhanVienRows = QueryDanhSachNhanVienRows(context, tuKhoa);
+        return MapNhanVienDtos(nhanVienRows);
     }
 
     public int GetNextNhanVienId()
@@ -255,5 +229,72 @@ public class NhanVienDAL
         context.VaiTro.Add(vaiTro);
         context.SaveChanges();
         return vaiTro.ID;
+    }
+
+    private static List<NhanVienReadModel> QueryDanhSachNhanVienRows(CaPheDbContext context, string? tuKhoa)
+    {
+        var query = context.NhanVien
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            var keyword = tuKhoa.Trim();
+            var keywordPattern = $"%{keyword}%";
+            var hasKeywordId = int.TryParse(keyword, out var keywordId);
+
+            query = query.Where(x =>
+                (hasKeywordId && x.ID == keywordId)
+                || EF.Functions.Like(x.HoVaTen, keywordPattern)
+                || EF.Functions.Like(x.DienThoai ?? string.Empty, keywordPattern)
+                || EF.Functions.Like(x.DiaChi ?? string.Empty, keywordPattern)
+                || (x.User != null && EF.Functions.Like(x.User.TenDangNhap, keywordPattern))
+                || (x.User != null && x.User.VaiTro != null && EF.Functions.Like(x.User.VaiTro.TenVaiTro, keywordPattern)));
+        }
+
+        return query
+            .OrderBy(x => x.ID)
+            .Select(x => new NhanVienReadModel
+            {
+                ID = x.ID,
+                HoVaTen = x.HoVaTen,
+                DienThoai = x.DienThoai,
+                DiaChi = x.DiaChi,
+                TenDangNhap = x.User != null ? x.User.TenDangNhap : string.Empty,
+                QuyenHan = x.User != null && x.User.VaiTro != null
+                    ? x.User.VaiTro.TenVaiTro
+                    : "Nhân viên"
+            })
+            .ToList();
+    }
+
+    private static List<NhanVienDTO> MapNhanVienDtos(IEnumerable<NhanVienReadModel> nhanVienRows)
+    {
+        return nhanVienRows
+            .Select(MapNhanVienDto)
+            .ToList();
+    }
+
+    private static NhanVienDTO MapNhanVienDto(NhanVienReadModel nhanVienRow)
+    {
+        return new NhanVienDTO
+        {
+            ID = nhanVienRow.ID,
+            HoVaTen = nhanVienRow.HoVaTen,
+            DienThoai = nhanVienRow.DienThoai,
+            DiaChi = nhanVienRow.DiaChi,
+            TenDangNhap = nhanVienRow.TenDangNhap,
+            QuyenHan = nhanVienRow.QuyenHan
+        };
+    }
+
+    private sealed class NhanVienReadModel
+    {
+        public int ID { get; init; }
+        public string HoVaTen { get; init; } = string.Empty;
+        public string? DienThoai { get; init; }
+        public string? DiaChi { get; init; }
+        public string TenDangNhap { get; init; } = string.Empty;
+        public string QuyenHan { get; init; } = string.Empty;
     }
 }

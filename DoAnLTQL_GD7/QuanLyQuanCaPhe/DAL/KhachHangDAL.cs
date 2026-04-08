@@ -10,29 +10,8 @@ public class KhachHangDAL
     {
         using var context = new CaPheDbContext();
 
-        var query = context.KhachHang
-            .AsNoTracking()
-            .AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(tuKhoa))
-        {
-            query = query.Where(x =>
-                x.ID.ToString().Contains(tuKhoa)
-                || x.HoVaTen.Contains(tuKhoa)
-                || (x.DienThoai ?? string.Empty).Contains(tuKhoa)
-                || (x.DiaChi ?? string.Empty).Contains(tuKhoa));
-        }
-
-        return query
-            .OrderBy(x => x.ID)
-            .Select(x => new KhachHangDTO
-            {
-                ID = x.ID,
-                HoVaTen = x.HoVaTen,
-                DienThoai = x.DienThoai,
-                DiaChi = x.DiaChi
-            })
-            .ToList();
+        var khachRows = QueryDanhSachKhachRows(context, tuKhoa);
+        return MapKhachHangDtos(khachRows);
     }
 
     public int GetNextKhachHangId()
@@ -149,5 +128,62 @@ public class KhachHangDAL
 
         context.SaveChanges();
         return (soThemMoi, soCapNhat, soBoQua);
+    }
+
+    private static List<KhachHangReadModel> QueryDanhSachKhachRows(CaPheDbContext context, string? tuKhoa)
+    {
+        var query = context.KhachHang
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            var keyword = tuKhoa.Trim();
+            var keywordPattern = $"%{keyword}%";
+            var hasKeywordId = int.TryParse(keyword, out var keywordId);
+
+            query = query.Where(x =>
+                (hasKeywordId && x.ID == keywordId)
+                || EF.Functions.Like(x.HoVaTen, keywordPattern)
+                || EF.Functions.Like(x.DienThoai ?? string.Empty, keywordPattern)
+                || EF.Functions.Like(x.DiaChi ?? string.Empty, keywordPattern));
+        }
+
+        return query
+            .OrderBy(x => x.ID)
+            .Select(x => new KhachHangReadModel
+            {
+                ID = x.ID,
+                HoVaTen = x.HoVaTen,
+                DienThoai = x.DienThoai,
+                DiaChi = x.DiaChi
+            })
+            .ToList();
+    }
+
+    private static List<KhachHangDTO> MapKhachHangDtos(IEnumerable<KhachHangReadModel> khachRows)
+    {
+        return khachRows
+            .Select(MapKhachHangDto)
+            .ToList();
+    }
+
+    private static KhachHangDTO MapKhachHangDto(KhachHangReadModel khachRow)
+    {
+        return new KhachHangDTO
+        {
+            ID = khachRow.ID,
+            HoVaTen = khachRow.HoVaTen,
+            DienThoai = khachRow.DienThoai,
+            DiaChi = khachRow.DiaChi
+        };
+    }
+
+    private sealed class KhachHangReadModel
+    {
+        public int ID { get; init; }
+        public string HoVaTen { get; init; } = string.Empty;
+        public string? DienThoai { get; init; }
+        public string? DiaChi { get; init; }
     }
 }

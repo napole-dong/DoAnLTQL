@@ -108,7 +108,8 @@ public class CaPheDbContext : DbContext
             entity.Property(x => x.TrangThaiTextLegacy)
                 .HasColumnName("TrangThaiText_Legacy")
                 .HasMaxLength(50)
-                .IsRequired();
+                .IsRequired()
+                .HasDefaultValue("Đang kinh doanh");
 
             entity.HasIndex(x => x.LoaiMonID);
 

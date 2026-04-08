@@ -26,7 +26,7 @@ public class MonBUS
             return new List<MonDTO>();
         }
 
-        var tuKhoa = ($"{textSearch} {textTimMon}").Trim();
+        var tuKhoa = BusInputHelper.MergeKeywords(textSearch, textTimMon);
         return _monDAL.GetDanhSachMon(tuKhoa);
     }
 
@@ -129,7 +129,7 @@ public class MonBUS
                 continue;
             }
 
-            var cot = SplitCsvLine(lines[i]);
+            var cot = BusInputHelper.SplitCsvLine(lines[i]);
             if (cot.Count < 3)
             {
                 soBoQua++;
@@ -145,30 +145,30 @@ public class MonBUS
 
             if (cot.Count >= 8)
             {
-                tenMon = cot[1].Trim();
-                loaiMonText = cot[2].Trim();
-                donGiaText = cot[4].Trim();
-                trangThai = cot[5].Trim();
-                moTa = cot[6].Trim();
-                hinhAnh = cot[7].Trim();
+                tenMon = BusInputHelper.NormalizeText(cot[1]);
+                loaiMonText = BusInputHelper.NormalizeText(cot[2]);
+                donGiaText = BusInputHelper.NormalizeText(cot[4]);
+                trangThai = BusInputHelper.NormalizeText(cot[5]);
+                moTa = BusInputHelper.NormalizeText(cot[6]);
+                hinhAnh = BusInputHelper.NormalizeText(cot[7]);
             }
             else if (cot.Count >= 7)
             {
-                tenMon = cot[1].Trim();
-                loaiMonText = cot[2].Trim();
-                donGiaText = cot[4].Trim();
+                tenMon = BusInputHelper.NormalizeText(cot[1]);
+                loaiMonText = BusInputHelper.NormalizeText(cot[2]);
+                donGiaText = BusInputHelper.NormalizeText(cot[4]);
                 trangThai = string.Empty;
-                moTa = cot[5].Trim();
-                hinhAnh = cot[6].Trim();
+                moTa = BusInputHelper.NormalizeText(cot[5]);
+                hinhAnh = BusInputHelper.NormalizeText(cot[6]);
             }
             else
             {
-                tenMon = cot[0].Trim();
-                loaiMonText = cot[1].Trim();
-                donGiaText = cot[2].Trim();
+                tenMon = BusInputHelper.NormalizeText(cot[0]);
+                loaiMonText = BusInputHelper.NormalizeText(cot[1]);
+                donGiaText = BusInputHelper.NormalizeText(cot[2]);
                 trangThai = string.Empty;
-                moTa = cot.Count > 3 ? cot[3].Trim() : string.Empty;
-                hinhAnh = cot.Count > 4 ? cot[4].Trim() : string.Empty;
+                moTa = cot.Count > 3 ? BusInputHelper.NormalizeText(cot[3]) : string.Empty;
+                hinhAnh = cot.Count > 4 ? BusInputHelper.NormalizeText(cot[4]) : string.Empty;
             }
 
             if (string.IsNullOrWhiteSpace(tenMon) || !decimal.TryParse(donGiaText, out var donGia) || donGia < 0)
@@ -242,6 +242,10 @@ public class MonBUS
             monDTO.DonGia = 0;
         }
 
+        monDTO.TenMon = BusInputHelper.NormalizeText(monDTO.TenMon);
+        monDTO.MoTa = BusInputHelper.NormalizeText(monDTO.MoTa);
+        monDTO.HinhAnh = BusInputHelper.NormalizeNullableText(monDTO.HinhAnh);
+
         return (true, string.Empty);
     }
 
@@ -274,33 +278,5 @@ public class MonBUS
         }
 
         return donGia <= 0 ? 0 : 1;
-    }
-
-    private static List<string> SplitCsvLine(string line)
-    {
-        var result = new List<string>();
-        var current = new System.Text.StringBuilder();
-        var inQuotes = false;
-
-        foreach (var c in line)
-        {
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (c == ',' && !inQuotes)
-            {
-                result.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(c);
-        }
-
-        result.Add(current.ToString());
-        return result;
     }
 }

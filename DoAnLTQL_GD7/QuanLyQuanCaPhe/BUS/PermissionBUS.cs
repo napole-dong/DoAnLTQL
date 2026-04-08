@@ -9,34 +9,39 @@ public class PermissionBUS
 
     public bool CheckPermission(string feature, string action)
     {
-        var nguoiDungDangNhap = NguoiDungHienTaiService.LayNguoiDungDangNhap();
-        if (nguoiDungDangNhap == null)
+        var roleId = LayRoleIdDangNhap();
+        if (roleId <= 0)
         {
             return false;
         }
 
-        return _permissionDAL.CheckPermission(nguoiDungDangNhap.RoleId, feature, action);
+        return _permissionDAL.CheckPermission(roleId, feature, action);
     }
 
     public List<string> LayDanhSachVaiTroCoTheGan()
     {
-        var nguoiDungDangNhap = NguoiDungHienTaiService.LayNguoiDungDangNhap();
-        if (nguoiDungDangNhap == null)
+        var roleId = LayRoleIdDangNhap();
+        if (roleId <= 0)
         {
             return new List<string>();
         }
 
-        return _permissionDAL.LayDanhSachVaiTroCoTheGan(nguoiDungDangNhap.RoleId);
+        return _permissionDAL.LayDanhSachVaiTroCoTheGan(roleId);
     }
 
     public bool CoTheGanVaiTro(string tenVaiTro)
     {
-        var nguoiDungDangNhap = NguoiDungHienTaiService.LayNguoiDungDangNhap();
-        if (nguoiDungDangNhap == null)
+        var roleId = LayRoleIdDangNhap();
+        if (roleId <= 0)
         {
             return false;
         }
 
-        return _permissionDAL.CoTheGanVaiTro(nguoiDungDangNhap.RoleId, tenVaiTro);
+        return _permissionDAL.CoTheGanVaiTro(roleId, tenVaiTro);
+    }
+
+    private static int LayRoleIdDangNhap()
+    {
+        return NguoiDungHienTaiService.LayNguoiDungDangNhap()?.RoleId ?? 0;
     }
 }

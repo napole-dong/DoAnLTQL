@@ -24,45 +24,9 @@ public class MonDAL
     public List<MonDTO> GetDanhSachMon(string? tuKhoa, int? loaiMonId = null)
     {
         using var context = new CaPheDbContext();
-        var query = context.Mon
-            .AsNoTracking()
-            .Include(x => x.LoaiMon)
-            .AsQueryable();
 
-        if (loaiMonId.HasValue)
-        {
-            query = query.Where(x => x.LoaiMonID == loaiMonId.Value);
-        }
-
-        var dsMon = query
-            .OrderBy(x => x.ID)
-            .Select(x => new MonDTO
-            {
-                ID = x.ID,
-                TenMon = x.TenMon,
-                LoaiMonID = x.LoaiMonID,
-                TenLoaiMon = x.LoaiMon.TenLoai,
-                DonGia = x.DonGia,
-                TrangThai = x.TrangThai,
-                MoTa = x.MoTa ?? string.Empty,
-                HinhAnh = x.HinhAnh
-            })
-            .ToList();
-
-        if (string.IsNullOrWhiteSpace(tuKhoa))
-        {
-            return dsMon;
-        }
-
-        tuKhoa = tuKhoa.Trim();
-        return dsMon
-            .Where(x =>
-                x.ID.ToString().Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.TenMon.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.TenLoaiMon.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.TrangThaiHienThi.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.MoTa.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var monRows = QueryDanhSachMonRows(context, tuKhoa, loaiMonId);
+        return MapMonDtos(monRows);
     }
 
     public int GetNextMonId()
@@ -74,22 +38,9 @@ public class MonDAL
     public MonDTO? GetMonById(int id)
     {
         using var context = new CaPheDbContext();
-        return context.Mon
-            .AsNoTracking()
-            .Include(x => x.LoaiMon)
-            .Where(x => x.ID == id)
-            .Select(x => new MonDTO
-            {
-                ID = x.ID,
-                TenMon = x.TenMon,
-                LoaiMonID = x.LoaiMonID,
-                TenLoaiMon = x.LoaiMon.TenLoai,
-                DonGia = x.DonGia,
-                TrangThai = x.TrangThai,
-                MoTa = x.MoTa ?? string.Empty,
-                HinhAnh = x.HinhAnh
-            })
-            .FirstOrDefault();
+
+        var monRow = QueryMonByIdRow(context, id);
+        return monRow == null ? null : MapMonDto(monRow);
     }
 
     public MonDTO ThemMon(MonDTO monDTO)
@@ -196,5 +147,107 @@ public class MonDAL
 
         context.SaveChanges();
         return result;
+    }
+
+    private static List<MonReadModel> QueryDanhSachMonRows(CaPheDbContext context, string? tuKhoa, int? loaiMonId)
+    {
+        var query = context.Mon
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (loaiMonId.HasValue)
+        {
+            query = query.Where(x => x.LoaiMonID == loaiMonId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            var keyword = tuKhoa.Trim();
+            var keywordPattern = $"%{keyword}%";
+            var hasKeywordId = int.TryParse(keyword, out var keywordId);
+
+            var matchDangKinhDoanh = "Đang kinh doanh".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var matchNgungBan = "Ngừng bán".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var matchTamNgung = "Tạm ngừng".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var matchKhongXacDinh = "Không xác định".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+            query = query.Where(x =>
+                (hasKeywordId && x.ID == keywordId)
+                || EF.Functions.Like(x.TenMon, keywordPattern)
+                || EF.Functions.Like(x.LoaiMon.TenLoai, keywordPattern)
+                || EF.Functions.Like(x.MoTa ?? string.Empty, keywordPattern)
+                || (matchDangKinhDoanh && x.TrangThai == 1)
+                || (matchNgungBan && x.TrangThai == 0)
+                || (matchTamNgung && x.TrangThai == 2)
+                || (matchKhongXacDinh && x.TrangThai != 0 && x.TrangThai != 1 && x.TrangThai != 2));
+        }
+
+        return query
+            .OrderBy(x => x.ID)
+            .Select(x => new MonReadModel
+            {
+                ID = x.ID,
+                TenMon = x.TenMon,
+                LoaiMonID = x.LoaiMonID,
+                TenLoaiMon = x.LoaiMon.TenLoai,
+                DonGia = x.DonGia,
+                TrangThai = x.TrangThai,
+                MoTa = x.MoTa ?? string.Empty,
+                HinhAnh = x.HinhAnh
+            })
+            .ToList();
+    }
+
+    private static MonReadModel? QueryMonByIdRow(CaPheDbContext context, int id)
+    {
+        return context.Mon
+            .AsNoTracking()
+            .Where(x => x.ID == id)
+            .Select(x => new MonReadModel
+            {
+                ID = x.ID,
+                TenMon = x.TenMon,
+                LoaiMonID = x.LoaiMonID,
+                TenLoaiMon = x.LoaiMon.TenLoai,
+                DonGia = x.DonGia,
+                TrangThai = x.TrangThai,
+                MoTa = x.MoTa ?? string.Empty,
+                HinhAnh = x.HinhAnh
+            })
+            .FirstOrDefault();
+    }
+
+    private static List<MonDTO> MapMonDtos(IEnumerable<MonReadModel> monRows)
+    {
+        return monRows
+            .Select(MapMonDto)
+            .ToList();
+    }
+
+    private static MonDTO MapMonDto(MonReadModel monRow)
+    {
+        return new MonDTO
+        {
+            ID = monRow.ID,
+            TenMon = monRow.TenMon,
+            LoaiMonID = monRow.LoaiMonID,
+            TenLoaiMon = monRow.TenLoaiMon,
+            DonGia = monRow.DonGia,
+            TrangThai = monRow.TrangThai,
+            MoTa = monRow.MoTa,
+            HinhAnh = monRow.HinhAnh
+        };
+    }
+
+    private sealed class MonReadModel
+    {
+        public int ID { get; init; }
+        public string TenMon { get; init; } = string.Empty;
+        public int LoaiMonID { get; init; }
+        public string TenLoaiMon { get; init; } = string.Empty;
+        public decimal DonGia { get; init; }
+        public int TrangThai { get; init; }
+        public string MoTa { get; init; } = string.Empty;
+        public string? HinhAnh { get; init; }
     }
 }

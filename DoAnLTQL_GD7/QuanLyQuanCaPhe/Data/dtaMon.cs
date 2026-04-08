@@ -8,7 +8,7 @@ public class dtaMon
     public decimal DonGia { get; set; }
     public string? HinhAnh { get; set; }
     public string? MoTa { get; set; }
-    public string TrangThaiTextLegacy { get; set; } = string.Empty;
+    public string TrangThaiTextLegacy { get; set; } = "Đang kinh doanh";
     public int TrangThai { get; set; }
 
     public dtaLoaiMon LoaiMon { get; set; } = null!;

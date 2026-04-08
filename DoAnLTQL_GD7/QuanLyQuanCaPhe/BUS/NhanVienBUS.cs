@@ -16,7 +16,7 @@ public class NhanVienBUS
             return new List<NhanVienDTO>();
         }
 
-        return _nhanVienDAL.GetDanhSachNhanVien(tuKhoa?.Trim());
+        return _nhanVienDAL.GetDanhSachNhanVien(BusInputHelper.NormalizeNullableText(tuKhoa));
     }
 
     public int LayMaNhanVienTiepTheo()
@@ -40,6 +40,8 @@ public class NhanVienBUS
         {
             return (false, "Bạn không có quyền thêm nhân viên.", null);
         }
+
+        ChuanHoaNhanVien(nhanVienDTO);
 
         var validation = KiemTraThongTin(nhanVienDTO, false);
         if (!validation.HopLe)
@@ -72,6 +74,8 @@ public class NhanVienBUS
         {
             return (false, "Vui lòng chọn nhân viên cần cập nhật.");
         }
+
+        ChuanHoaNhanVien(nhanVienDTO);
 
         var validation = KiemTraThongTin(nhanVienDTO, true);
         if (!validation.HopLe)
@@ -145,7 +149,7 @@ public class NhanVienBUS
                 continue;
             }
 
-            var cot = SplitCsvLine(lines[i]);
+            var cot = BusInputHelper.SplitCsvLine(lines[i]);
 
             var hoVaTen = string.Empty;
             var dienThoai = string.Empty;
@@ -156,29 +160,29 @@ public class NhanVienBUS
 
             if (cot.Count >= 7)
             {
-                hoVaTen = cot[1].Trim();
-                dienThoai = cot[2].Trim();
-                diaChi = cot[3].Trim();
-                tenDangNhap = cot[4].Trim();
-                matKhau = cot[5].Trim();
-                quyenHan = cot[6].Trim();
+                hoVaTen = BusInputHelper.NormalizeText(cot[1]);
+                dienThoai = BusInputHelper.NormalizeText(cot[2]);
+                diaChi = BusInputHelper.NormalizeText(cot[3]);
+                tenDangNhap = BusInputHelper.NormalizeText(cot[4]);
+                matKhau = BusInputHelper.NormalizeText(cot[5]);
+                quyenHan = BusInputHelper.NormalizeText(cot[6]);
             }
             else if (cot.Count == 6)
             {
-                hoVaTen = cot[0].Trim();
-                dienThoai = cot[1].Trim();
-                diaChi = cot[2].Trim();
-                tenDangNhap = cot[3].Trim();
-                matKhau = cot[4].Trim();
-                quyenHan = cot[5].Trim();
+                hoVaTen = BusInputHelper.NormalizeText(cot[0]);
+                dienThoai = BusInputHelper.NormalizeText(cot[1]);
+                diaChi = BusInputHelper.NormalizeText(cot[2]);
+                tenDangNhap = BusInputHelper.NormalizeText(cot[3]);
+                matKhau = BusInputHelper.NormalizeText(cot[4]);
+                quyenHan = BusInputHelper.NormalizeText(cot[5]);
             }
             else if (cot.Count == 5)
             {
-                hoVaTen = cot[0].Trim();
-                dienThoai = cot[1].Trim();
-                diaChi = cot[2].Trim();
-                tenDangNhap = cot[3].Trim();
-                quyenHan = cot[4].Trim();
+                hoVaTen = BusInputHelper.NormalizeText(cot[0]);
+                dienThoai = BusInputHelper.NormalizeText(cot[1]);
+                diaChi = BusInputHelper.NormalizeText(cot[2]);
+                tenDangNhap = BusInputHelper.NormalizeText(cot[3]);
+                quyenHan = BusInputHelper.NormalizeText(cot[4]);
             }
             else
             {
@@ -233,7 +237,7 @@ public class NhanVienBUS
         }
 
         if (!string.IsNullOrWhiteSpace(nhanVienDTO.DienThoai)
-            && (!nhanVienDTO.DienThoai.All(char.IsDigit) || nhanVienDTO.DienThoai.Length is < 9 or > 11))
+            && !BusInputHelper.IsValidPhoneNumber(nhanVienDTO.DienThoai))
         {
             return (false, "Số điện thoại không hợp lệ.");
         }
@@ -241,31 +245,13 @@ public class NhanVienBUS
         return (true, string.Empty);
     }
 
-    private static List<string> SplitCsvLine(string line)
+    private static void ChuanHoaNhanVien(NhanVienDTO nhanVienDTO)
     {
-        var result = new List<string>();
-        var current = new System.Text.StringBuilder();
-        var inQuotes = false;
-
-        foreach (var c in line)
-        {
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (c == ',' && !inQuotes)
-            {
-                result.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(c);
-        }
-
-        result.Add(current.ToString());
-        return result;
+        nhanVienDTO.HoVaTen = BusInputHelper.NormalizeText(nhanVienDTO.HoVaTen);
+        nhanVienDTO.TenDangNhap = BusInputHelper.NormalizeText(nhanVienDTO.TenDangNhap);
+        nhanVienDTO.QuyenHan = BusInputHelper.NormalizeText(nhanVienDTO.QuyenHan);
+        nhanVienDTO.DienThoai = BusInputHelper.NormalizeNullableText(nhanVienDTO.DienThoai);
+        nhanVienDTO.DiaChi = BusInputHelper.NormalizeNullableText(nhanVienDTO.DiaChi);
+        nhanVienDTO.MatKhau = BusInputHelper.NormalizeNullableText(nhanVienDTO.MatKhau);
     }
 }

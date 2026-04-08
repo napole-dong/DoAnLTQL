@@ -16,7 +16,7 @@ public class NguyenLieuBUS
             return new List<NguyenLieuDTO>();
         }
 
-        return _nguyenLieuDAL.GetDanhSachNguyenLieu(tuKhoa?.Trim());
+        return _nguyenLieuDAL.GetDanhSachNguyenLieu(BusInputHelper.NormalizeNullableText(tuKhoa));
     }
 
     public int LayMaNguyenLieuTiepTheo()
@@ -35,6 +35,8 @@ public class NguyenLieuBUS
         {
             return (false, "Bạn không có quyền thêm nguyên liệu.", null);
         }
+
+        ChuanHoaNguyenLieu(nguyenLieuDTO);
 
         var validation = KiemTraThongTin(nguyenLieuDTO);
         if (!validation.HopLe)
@@ -58,6 +60,8 @@ public class NguyenLieuBUS
         {
             return (false, "Vui lòng chọn nguyên liệu cần cập nhật.");
         }
+
+        ChuanHoaNguyenLieu(nguyenLieuDTO);
 
         var validation = KiemTraThongTin(nguyenLieuDTO);
         if (!validation.HopLe)
@@ -144,5 +148,11 @@ public class NguyenLieuBUS
         }
 
         return 1;
+    }
+
+    private static void ChuanHoaNguyenLieu(NguyenLieuDTO nguyenLieuDTO)
+    {
+        nguyenLieuDTO.TenNguyenLieu = BusInputHelper.NormalizeText(nguyenLieuDTO.TenNguyenLieu);
+        nguyenLieuDTO.DonViTinh = BusInputHelper.NormalizeText(nguyenLieuDTO.DonViTinh);
     }
 }

@@ -13,23 +13,14 @@ public class PermissionDAL
         }
 
         using var context = new CaPheDbContext();
-        var permission = context.Permission
-            .AsNoTracking()
-            .FirstOrDefault(x => x.VaiTroID == roleId && x.Feature == feature.Trim());
+        var permission = QueryPermissionByRoleAndFeature(context, roleId, feature.Trim());
 
         if (permission == null)
         {
             return false;
         }
 
-        return action.Trim() switch
-        {
-            "View" => permission.CanView,
-            "Create" => permission.CanCreate,
-            "Update" => permission.CanUpdate,
-            "Delete" => permission.CanDelete,
-            _ => false
-        };
+        return CoActionDuocPhep(permission, action.Trim());
     }
 
     public List<string> LayDanhSachVaiTroCoTheGan(int currentRoleId)
@@ -41,14 +32,13 @@ public class PermissionDAL
 
         using var context = new CaPheDbContext();
 
-        var dsVaiTro = context.VaiTro
-            .AsNoTracking()
-            .OrderBy(x => x.TenVaiTro)
+        var dsVaiTro = QueryDanhSachVaiTroRows(context);
+        var roleIds = dsVaiTro
+            .Select(x => x.ID)
+            .Append(currentRoleId)
+            .Distinct()
             .ToList();
-
-        var dsQuyen = context.Permission
-            .AsNoTracking()
-            .ToList();
+        var dsQuyen = QueryDanhSachQuyenTheoRoleIds(context, roleIds);
 
         return dsVaiTro
             .Where(vaiTro => CoTheGanVaiTroNoiBo(currentRoleId, vaiTro.ID, dsQuyen))
@@ -65,23 +55,97 @@ public class PermissionDAL
 
         using var context = new CaPheDbContext();
 
-        var targetRole = context.VaiTro
-            .AsNoTracking()
-            .FirstOrDefault(x => x.TenVaiTro == targetRoleName.Trim());
+        var targetRole = QueryVaiTroTheoTen(context, targetRoleName.Trim());
 
         if (targetRole == null)
         {
             return false;
         }
 
-        var dsQuyen = context.Permission
-            .AsNoTracking()
-            .ToList();
+        var dsQuyen = QueryDanhSachQuyenTheoRoleIds(context, new[] { currentRoleId, targetRole.ID });
 
         return CoTheGanVaiTroNoiBo(currentRoleId, targetRole.ID, dsQuyen);
     }
 
-    private static bool CoTheGanVaiTroNoiBo(int currentRoleId, int targetRoleId, IEnumerable<dtaPermission> dsQuyen)
+    private static PermissionReadModel? QueryPermissionByRoleAndFeature(CaPheDbContext context, int roleId, string feature)
+    {
+        return context.Permission
+            .AsNoTracking()
+            .Where(x => x.VaiTroID == roleId && x.Feature == feature)
+            .Select(x => new PermissionReadModel
+            {
+                VaiTroID = x.VaiTroID,
+                Feature = x.Feature,
+                CanView = x.CanView,
+                CanCreate = x.CanCreate,
+                CanUpdate = x.CanUpdate,
+                CanDelete = x.CanDelete
+            })
+            .FirstOrDefault();
+    }
+
+    private static List<VaiTroReadModel> QueryDanhSachVaiTroRows(CaPheDbContext context)
+    {
+        return context.VaiTro
+            .AsNoTracking()
+            .OrderBy(x => x.TenVaiTro)
+            .Select(x => new VaiTroReadModel
+            {
+                ID = x.ID,
+                TenVaiTro = x.TenVaiTro
+            })
+            .ToList();
+    }
+
+    private static VaiTroReadModel? QueryVaiTroTheoTen(CaPheDbContext context, string tenVaiTro)
+    {
+        return context.VaiTro
+            .AsNoTracking()
+            .Where(x => x.TenVaiTro == tenVaiTro)
+            .Select(x => new VaiTroReadModel
+            {
+                ID = x.ID,
+                TenVaiTro = x.TenVaiTro
+            })
+            .FirstOrDefault();
+    }
+
+    private static List<PermissionReadModel> QueryDanhSachQuyenTheoRoleIds(CaPheDbContext context, IEnumerable<int> roleIds)
+    {
+        var roleIdSet = roleIds.Distinct().ToList();
+        if (roleIdSet.Count == 0)
+        {
+            return new List<PermissionReadModel>();
+        }
+
+        return context.Permission
+            .AsNoTracking()
+            .Where(x => roleIdSet.Contains(x.VaiTroID))
+            .Select(x => new PermissionReadModel
+            {
+                VaiTroID = x.VaiTroID,
+                Feature = x.Feature,
+                CanView = x.CanView,
+                CanCreate = x.CanCreate,
+                CanUpdate = x.CanUpdate,
+                CanDelete = x.CanDelete
+            })
+            .ToList();
+    }
+
+    private static bool CoActionDuocPhep(PermissionReadModel permission, string action)
+    {
+        return action switch
+        {
+            "View" => permission.CanView,
+            "Create" => permission.CanCreate,
+            "Update" => permission.CanUpdate,
+            "Delete" => permission.CanDelete,
+            _ => false
+        };
+    }
+
+    private static bool CoTheGanVaiTroNoiBo(int currentRoleId, int targetRoleId, IEnumerable<PermissionReadModel> dsQuyen)
     {
         var quyenNguoiGan = dsQuyen
             .Where(x => x.VaiTroID == currentRoleId)
@@ -112,11 +176,27 @@ public class PermissionDAL
         return true;
     }
 
-    private static bool CoQuyenMoRongHon(dtaPermission quyenNguoiDangDangNhap, dtaPermission quyenDich)
+    private static bool CoQuyenMoRongHon(PermissionReadModel quyenNguoiDangDangNhap, PermissionReadModel quyenDich)
     {
         return (quyenDich.CanView && !quyenNguoiDangDangNhap.CanView)
                || (quyenDich.CanCreate && !quyenNguoiDangDangNhap.CanCreate)
                || (quyenDich.CanUpdate && !quyenNguoiDangDangNhap.CanUpdate)
                || (quyenDich.CanDelete && !quyenNguoiDangDangNhap.CanDelete);
+    }
+
+    private sealed class PermissionReadModel
+    {
+        public int VaiTroID { get; init; }
+        public string Feature { get; init; } = string.Empty;
+        public bool CanView { get; init; }
+        public bool CanCreate { get; init; }
+        public bool CanUpdate { get; init; }
+        public bool CanDelete { get; init; }
+    }
+
+    private sealed class VaiTroReadModel
+    {
+        public int ID { get; init; }
+        public string TenVaiTro { get; init; } = string.Empty;
     }
 }

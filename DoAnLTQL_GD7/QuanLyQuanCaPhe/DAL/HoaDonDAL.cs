@@ -10,96 +10,30 @@ public class HoaDonDAL
     {
         using var context = new CaPheDbContext();
 
-        var tuNgay = boLoc.TuNgay.Date;
-        var denNgay = boLoc.DenNgay.Date.AddDays(1).AddTicks(-1);
-
-        var query = context.HoaDon
-            .AsNoTracking()
-            .Where(x => x.NgayLap >= tuNgay && x.NgayLap <= denNgay);
-
-        if (boLoc.TrangThai.HasValue)
-        {
-            query = query.Where(x => x.TrangThai == boLoc.TrangThai.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(boLoc.TuKhoa))
-        {
-            var tuKhoa = boLoc.TuKhoa.Trim();
-            query = query.Where(x =>
-                x.ID.ToString().Contains(tuKhoa)
-                || x.Ban.TenBan.Contains(tuKhoa)
-                || (x.KhachHang != null && x.KhachHang.HoVaTen.Contains(tuKhoa))
-                || x.NhanVien.HoVaTen.Contains(tuKhoa));
-        }
-
-        return query
-            .OrderByDescending(x => x.NgayLap)
-            .ThenByDescending(x => x.ID)
-            .Select(x => new HoaDonDTO
-            {
-                ID = x.ID,
-                NgayLap = x.NgayLap,
-                BanID = x.BanID,
-                TenBan = x.Ban.TenBan,
-                KhachHangID = x.KhachHangID ?? 0,
-                TenKhachHang = x.KhachHang != null ? x.KhachHang.HoVaTen : "Khách lẻ",
-                NhanVienID = x.NhanVienID,
-                TenNhanVien = x.NhanVien.HoVaTen,
-                TrangThai = x.TrangThai,
-                TongTien = x.HoaDon_ChiTiet.Sum(ct => ct.SoLuongBan * ct.DonGiaBan)
-            })
-            .ToList();
+        var hoaDonRows = QueryDanhSachHoaDonRows(context, boLoc);
+        return MapDanhSachHoaDonDtos(hoaDonRows);
     }
 
     public HoaDonDTO? GetHoaDonTheoId(int hoaDonId)
     {
         using var context = new CaPheDbContext();
 
-        var hoaDon = context.HoaDon
-            .AsNoTracking()
-            .Include(x => x.Ban)
-            .Include(x => x.KhachHang)
-            .Include(x => x.NhanVien)
-            .Include(x => x.HoaDon_ChiTiet)
-            .ThenInclude(x => x.Mon)
-            .FirstOrDefault(x => x.ID == hoaDonId);
-
-        if (hoaDon == null)
+        var hoaDonHeader = QueryHoaDonHeaderRow(context, hoaDonId);
+        if (hoaDonHeader == null)
         {
             return null;
         }
 
-        var chiTiet = hoaDon.HoaDon_ChiTiet
-            .OrderBy(x => x.Mon.TenMon)
-            .Select(x => new HoaDonChiTietDTO
-            {
-                MonID = x.MonID,
-                TenMon = x.Mon.TenMon,
-                SoLuong = x.SoLuongBan,
-                DonGia = x.DonGiaBan
-            })
-            .ToList();
-
-        return new HoaDonDTO
-        {
-            ID = hoaDon.ID,
-            NgayLap = hoaDon.NgayLap,
-            BanID = hoaDon.BanID,
-            TenBan = hoaDon.Ban.TenBan,
-            KhachHangID = hoaDon.KhachHangID ?? 0,
-            TenKhachHang = hoaDon.KhachHang?.HoVaTen ?? "Khách lẻ",
-            NhanVienID = hoaDon.NhanVienID,
-            TenNhanVien = hoaDon.NhanVien.HoVaTen,
-            TrangThai = hoaDon.TrangThai,
-            TongTien = chiTiet.Sum(x => x.ThanhTien),
-            ChiTiet = chiTiet
-        };
+        var hoaDonChiTietRows = QueryHoaDonChiTietRows(context, hoaDonId);
+        return MapHoaDonTheoIdDto(hoaDonHeader, hoaDonChiTietRows);
     }
 
     public int GetNextHoaDonId()
     {
         using var context = new CaPheDbContext();
-        return (context.HoaDon.Max(x => (int?)x.ID) ?? 0) + 1;
+        return (context.HoaDon
+            .AsNoTracking()
+            .Max(x => (int?)x.ID) ?? 0) + 1;
     }
 
     public List<HoaDonBanKhachItemDTO> GetDanhSachBanKhach()
@@ -325,7 +259,7 @@ public class HoaDonDAL
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Hóa đơn không ở trạng thái chờ thanh toán." };
         }
 
-        if (hoaDon.HoaDon_ChiTiet.Count == 0)
+        if (!hoaDon.HoaDon_ChiTiet.Any())
         {
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Hóa đơn chưa có món, không thể thu tiền." };
         }
@@ -344,6 +278,177 @@ public class HoaDonDAL
         };
     }
 
+    private static List<HoaDonListReadModel> QueryDanhSachHoaDonRows(CaPheDbContext context, HoaDonFilterDTO boLoc)
+    {
+        var query = BuildHoaDonFilterQuery(context, boLoc);
+
+        return query
+            .OrderByDescending(x => x.NgayLap)
+            .ThenByDescending(x => x.ID)
+            .Select(x => new HoaDonListReadModel
+            {
+                ID = x.ID,
+                NgayLap = x.NgayLap,
+                BanID = x.BanID,
+                TenBan = x.Ban.TenBan,
+                KhachHangID = x.KhachHangID ?? 0,
+                TenKhachHang = x.KhachHang != null ? x.KhachHang.HoVaTen : "Khách lẻ",
+                NhanVienID = x.NhanVienID,
+                TenNhanVien = x.NhanVien.HoVaTen,
+                TrangThai = x.TrangThai,
+                TongTien = x.HoaDon_ChiTiet.Sum(ct => ct.SoLuongBan * ct.DonGiaBan)
+            })
+            .ToList();
+    }
+
+    private static IQueryable<dtaHoadon> BuildHoaDonFilterQuery(CaPheDbContext context, HoaDonFilterDTO boLoc)
+    {
+        var tuNgay = boLoc.TuNgay.Date;
+        var denNgay = boLoc.DenNgay.Date.AddDays(1).AddTicks(-1);
+
+        var query = context.HoaDon
+            .AsNoTracking()
+            .Where(x => x.NgayLap >= tuNgay && x.NgayLap <= denNgay);
+
+        if (boLoc.TrangThai.HasValue)
+        {
+            query = query.Where(x => x.TrangThai == boLoc.TrangThai.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(boLoc.TuKhoa))
+        {
+            var tuKhoa = boLoc.TuKhoa.Trim();
+            var keywordPattern = $"%{tuKhoa}%";
+            var hasKeywordId = int.TryParse(tuKhoa, out var keywordId);
+
+            query = query.Where(x =>
+                (hasKeywordId && x.ID == keywordId)
+                || EF.Functions.Like(x.Ban.TenBan, keywordPattern)
+                || (x.KhachHang != null && EF.Functions.Like(x.KhachHang.HoVaTen, keywordPattern))
+                || EF.Functions.Like(x.NhanVien.HoVaTen, keywordPattern));
+        }
+
+        return query;
+    }
+
+    private static List<HoaDonDTO> MapDanhSachHoaDonDtos(IEnumerable<HoaDonListReadModel> hoaDonRows)
+    {
+        return hoaDonRows
+            .Select(x => new HoaDonDTO
+            {
+                ID = x.ID,
+                NgayLap = x.NgayLap,
+                BanID = x.BanID,
+                TenBan = x.TenBan,
+                KhachHangID = x.KhachHangID,
+                TenKhachHang = x.TenKhachHang,
+                NhanVienID = x.NhanVienID,
+                TenNhanVien = x.TenNhanVien,
+                TrangThai = x.TrangThai,
+                TongTien = x.TongTien
+            })
+            .ToList();
+    }
+
+    private static HoaDonHeaderReadModel? QueryHoaDonHeaderRow(CaPheDbContext context, int hoaDonId)
+    {
+        return context.HoaDon
+            .AsNoTracking()
+            .Where(x => x.ID == hoaDonId)
+            .Select(x => new HoaDonHeaderReadModel
+            {
+                ID = x.ID,
+                NgayLap = x.NgayLap,
+                BanID = x.BanID,
+                TenBan = x.Ban.TenBan,
+                KhachHangID = x.KhachHangID ?? 0,
+                TenKhachHang = x.KhachHang != null ? x.KhachHang.HoVaTen : "Khách lẻ",
+                NhanVienID = x.NhanVienID,
+                TenNhanVien = x.NhanVien.HoVaTen,
+                TrangThai = x.TrangThai
+            })
+            .FirstOrDefault();
+    }
+
+    private static List<HoaDonChiTietReadModel> QueryHoaDonChiTietRows(CaPheDbContext context, int hoaDonId)
+    {
+        return context.HoaDon_ChiTiet
+            .AsNoTracking()
+            .Where(x => x.HoaDonID == hoaDonId)
+            .OrderBy(x => x.Mon.TenMon)
+            .Select(x => new HoaDonChiTietReadModel
+            {
+                MonID = x.MonID,
+                TenMon = x.Mon.TenMon,
+                SoLuong = x.SoLuongBan,
+                DonGia = x.DonGiaBan
+            })
+            .ToList();
+    }
+
+    private static HoaDonDTO MapHoaDonTheoIdDto(HoaDonHeaderReadModel hoaDonHeader, IEnumerable<HoaDonChiTietReadModel> chiTietRows)
+    {
+        var chiTietDtos = chiTietRows
+            .Select(x => new HoaDonChiTietDTO
+            {
+                MonID = x.MonID,
+                TenMon = x.TenMon,
+                SoLuong = x.SoLuong,
+                DonGia = x.DonGia
+            })
+            .ToList();
+
+        return new HoaDonDTO
+        {
+            ID = hoaDonHeader.ID,
+            NgayLap = hoaDonHeader.NgayLap,
+            BanID = hoaDonHeader.BanID,
+            TenBan = hoaDonHeader.TenBan,
+            KhachHangID = hoaDonHeader.KhachHangID,
+            TenKhachHang = hoaDonHeader.TenKhachHang,
+            NhanVienID = hoaDonHeader.NhanVienID,
+            TenNhanVien = hoaDonHeader.TenNhanVien,
+            TrangThai = hoaDonHeader.TrangThai,
+            TongTien = chiTietDtos.Sum(x => x.ThanhTien),
+            ChiTiet = chiTietDtos
+        };
+    }
+
+    private sealed class HoaDonListReadModel
+    {
+        public int ID { get; init; }
+        public DateTime NgayLap { get; init; }
+        public int BanID { get; init; }
+        public string TenBan { get; init; } = string.Empty;
+        public int KhachHangID { get; init; }
+        public string TenKhachHang { get; init; } = string.Empty;
+        public int NhanVienID { get; init; }
+        public string TenNhanVien { get; init; } = string.Empty;
+        public int TrangThai { get; init; }
+        public decimal TongTien { get; init; }
+    }
+
+    private sealed class HoaDonHeaderReadModel
+    {
+        public int ID { get; init; }
+        public DateTime NgayLap { get; init; }
+        public int BanID { get; init; }
+        public string TenBan { get; init; } = string.Empty;
+        public int KhachHangID { get; init; }
+        public string TenKhachHang { get; init; } = string.Empty;
+        public int NhanVienID { get; init; }
+        public string TenNhanVien { get; init; } = string.Empty;
+        public int TrangThai { get; init; }
+    }
+
+    private sealed class HoaDonChiTietReadModel
+    {
+        public int MonID { get; init; }
+        public string TenMon { get; init; } = string.Empty;
+        public short SoLuong { get; init; }
+        public decimal DonGia { get; init; }
+    }
+
     private static void DongBoTrangThaiBanTheoHoaDonMo(CaPheDbContext context, int banId)
     {
         var ban = context.Ban.FirstOrDefault(x => x.ID == banId);
@@ -357,7 +462,10 @@ public class HoaDonDAL
 
     private static int GetOrCreateNhanVienMacDinh(CaPheDbContext context)
     {
-        var nhanVien = context.NhanVien.OrderBy(x => x.ID).FirstOrDefault();
+        var nhanVien = context.NhanVien
+            .AsNoTracking()
+            .OrderBy(x => x.ID)
+            .FirstOrDefault();
         if (nhanVien != null)
         {
             return nhanVien.ID;
@@ -378,8 +486,13 @@ public class HoaDonDAL
 
     private static int GetOrCreateKhachLe(CaPheDbContext context)
     {
-        var khach = context.KhachHang.FirstOrDefault(x => x.HoVaTen == "Khách lẻ")
-                    ?? context.KhachHang.OrderBy(x => x.ID).FirstOrDefault();
+        var khach = context.KhachHang
+                        .AsNoTracking()
+                        .FirstOrDefault(x => x.HoVaTen == "Khách lẻ")
+                    ?? context.KhachHang
+                        .AsNoTracking()
+                        .OrderBy(x => x.ID)
+                        .FirstOrDefault();
 
         if (khach != null)
         {

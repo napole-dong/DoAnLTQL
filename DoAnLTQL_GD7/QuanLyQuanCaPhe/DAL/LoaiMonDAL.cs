@@ -15,25 +15,9 @@ public class LoaiMonDAL
     public List<LoaiMonDTO> GetDanhSachLoai(string? tuKhoa)
     {
         using var context = new CaPheDbContext();
-        var query = context.LoaiMon
-            .AsNoTracking()
-            .Select(x => new LoaiMonDTO
-            {
-                ID = x.ID,
-                TenLoai = x.TenLoai,
-                SoMon = x.Mon.Count,
-                MoTa = x.MoTa ?? string.Empty
-            });
 
-        if (!string.IsNullOrWhiteSpace(tuKhoa))
-        {
-            query = query.Where(x =>
-                x.ID.ToString().Contains(tuKhoa)
-                || x.TenLoai.Contains(tuKhoa)
-                || x.MoTa.Contains(tuKhoa));
-        }
-
-        return query.OrderBy(x => x.ID).ToList();
+        var loaiRows = QueryDanhSachLoaiRows(context, tuKhoa);
+        return MapLoaiMonDtos(loaiRows);
     }
 
     public int GetNextLoaiMonId()
@@ -86,18 +70,11 @@ public class LoaiMonDAL
     public bool ChuyenMonSangLoaiKhac(int loaiNguonId, int loaiDichId)
     {
         using var context = new CaPheDbContext();
-        var dsMon = context.Mon.Where(x => x.LoaiMonID == loaiNguonId).ToList();
-        if (dsMon.Count == 0)
-        {
-            return true;
-        }
+        context.Mon
+            .Where(x => x.LoaiMonID == loaiNguonId)
+            .ExecuteUpdate(setters => setters
+                .SetProperty(x => x.LoaiMonID, loaiDichId));
 
-        foreach (var mon in dsMon)
-        {
-            mon.LoaiMonID = loaiDichId;
-        }
-
-        context.SaveChanges();
         return true;
     }
 
@@ -154,5 +131,61 @@ public class LoaiMonDAL
 
         context.SaveChanges();
         return result;
+    }
+
+    private static List<LoaiMonReadModel> QueryDanhSachLoaiRows(CaPheDbContext context, string? tuKhoa)
+    {
+        var query = context.LoaiMon
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            var keyword = tuKhoa.Trim();
+            var keywordPattern = $"%{keyword}%";
+            var hasKeywordId = int.TryParse(keyword, out var keywordId);
+
+            query = query.Where(x =>
+                (hasKeywordId && x.ID == keywordId)
+                || EF.Functions.Like(x.TenLoai, keywordPattern)
+                || EF.Functions.Like(x.MoTa ?? string.Empty, keywordPattern));
+        }
+
+        return query
+            .OrderBy(x => x.ID)
+            .Select(x => new LoaiMonReadModel
+            {
+                ID = x.ID,
+                TenLoai = x.TenLoai,
+                SoMon = x.Mon.Count,
+                MoTa = x.MoTa ?? string.Empty
+            })
+            .ToList();
+    }
+
+    private static List<LoaiMonDTO> MapLoaiMonDtos(IEnumerable<LoaiMonReadModel> loaiRows)
+    {
+        return loaiRows
+            .Select(MapLoaiMonDto)
+            .ToList();
+    }
+
+    private static LoaiMonDTO MapLoaiMonDto(LoaiMonReadModel loaiRow)
+    {
+        return new LoaiMonDTO
+        {
+            ID = loaiRow.ID,
+            TenLoai = loaiRow.TenLoai,
+            SoMon = loaiRow.SoMon,
+            MoTa = loaiRow.MoTa
+        };
+    }
+
+    private sealed class LoaiMonReadModel
+    {
+        public int ID { get; init; }
+        public string TenLoai { get; init; } = string.Empty;
+        public int SoMon { get; init; }
+        public string MoTa { get; init; } = string.Empty;
     }
 }

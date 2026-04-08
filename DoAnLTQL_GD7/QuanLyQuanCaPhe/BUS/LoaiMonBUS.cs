@@ -16,7 +16,7 @@ public class LoaiMonBUS
             return new List<LoaiMonDTO>();
         }
 
-        var tuKhoa = ($"{textSearch} {textTimLoai}").Trim();
+        var tuKhoa = BusInputHelper.MergeKeywords(textSearch, textTimLoai);
         return _loaiMonDAL.GetDanhSachLoai(tuKhoa);
     }
 
@@ -37,18 +37,20 @@ public class LoaiMonBUS
             return (false, "Bạn không có quyền thêm loại món.", null);
         }
 
-        tenLoai = tenLoai.Trim();
-        if (string.IsNullOrWhiteSpace(tenLoai))
+        var tenLoaiChuan = BusInputHelper.NormalizeText(tenLoai);
+        var moTaChuan = BusInputHelper.NormalizeNullableText(moTa);
+
+        if (tenLoaiChuan.Length == 0)
         {
             return (false, "Tên loại món không được để trống.", null);
         }
 
-        if (_loaiMonDAL.TenLoaiDaTonTai(tenLoai))
+        if (_loaiMonDAL.TenLoaiDaTonTai(tenLoaiChuan))
         {
             return (false, "Tên loại món đã tồn tại.", null);
         }
 
-        var loai = _loaiMonDAL.ThemLoai(tenLoai, moTa);
+        var loai = _loaiMonDAL.ThemLoai(tenLoaiChuan, moTaChuan);
         return (true, "Thêm loại món thành công.", loai);
     }
 
@@ -59,23 +61,25 @@ public class LoaiMonBUS
             return (false, "Bạn không có quyền cập nhật loại món.");
         }
 
-        tenLoai = tenLoai.Trim();
+        var tenLoaiChuan = BusInputHelper.NormalizeText(tenLoai);
+        var moTaChuan = BusInputHelper.NormalizeNullableText(moTa);
+
         if (id <= 0)
         {
             return (false, "Vui lòng chọn loại món cần cập nhật.");
         }
 
-        if (string.IsNullOrWhiteSpace(tenLoai))
+        if (tenLoaiChuan.Length == 0)
         {
             return (false, "Tên loại món không được để trống.");
         }
 
-        if (_loaiMonDAL.TenLoaiDaTonTai(tenLoai, id))
+        if (_loaiMonDAL.TenLoaiDaTonTai(tenLoaiChuan, id))
         {
             return (false, "Tên loại món đã tồn tại.");
         }
 
-        var daCapNhat = _loaiMonDAL.CapNhatLoai(id, tenLoai, moTa);
+        var daCapNhat = _loaiMonDAL.CapNhatLoai(id, tenLoaiChuan, moTaChuan);
         return daCapNhat
             ? (true, "Cập nhật loại món thành công.")
             : (false, "Không tìm thấy loại món để cập nhật.");
@@ -156,17 +160,19 @@ public class LoaiMonBUS
                 continue;
             }
 
-            var cot = SplitCsvLine(lines[i]);
-            var tenLoai = cot.Count >= 2 ? cot[1].Trim() : cot[0].Trim();
+            var cot = BusInputHelper.SplitCsvLine(lines[i]);
+            var tenLoai = cot.Count >= 2
+                ? BusInputHelper.NormalizeText(cot[1])
+                : BusInputHelper.NormalizeText(cot[0]);
             var moTa = string.Empty;
 
             if (cot.Count >= 4)
             {
-                moTa = cot[3].Trim();
+                moTa = BusInputHelper.NormalizeText(cot[3]);
             }
             else if (cot.Count == 3 && !int.TryParse(cot[2], out _))
             {
-                moTa = cot[2].Trim();
+                moTa = BusInputHelper.NormalizeText(cot[2]);
             }
 
             if (string.IsNullOrWhiteSpace(tenLoai))
@@ -184,34 +190,6 @@ public class LoaiMonBUS
 
         var result = _loaiMonDAL.NhapLoaiMon(dsLoaiNhap);
         result.SoBoQua += soBoQua;
-        return result;
-    }
-
-    private static List<string> SplitCsvLine(string line)
-    {
-        var result = new List<string>();
-        var current = new System.Text.StringBuilder();
-        var inQuotes = false;
-
-        foreach (var c in line)
-        {
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (c == ',' && !inQuotes)
-            {
-                result.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(c);
-        }
-
-        result.Add(current.ToString());
         return result;
     }
 }

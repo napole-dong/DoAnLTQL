@@ -9,67 +9,75 @@ public class BanDAL
     public BanThongKeDTO GetThongKe()
     {
         using var context = new CaPheDbContext();
+
+        var tongBan = context.Ban
+            .AsNoTracking()
+            .Count();
+
+        var banDangPhucVu = context.Ban
+            .AsNoTracking()
+            .Count(b => b.TrangThai == 1);
+
+        var banTrong = context.Ban
+            .AsNoTracking()
+            .Count(b => b.TrangThai == 0);
+
+        var banDatTruoc = context.HoaDon
+            .AsNoTracking()
+            .Count(hd => hd.TrangThai == 0
+                && hd.GhiChuHoaDon != null
+                && EF.Functions.Like(hd.GhiChuHoaDon, "%đặt trước%"));
+
         return new BanThongKeDTO
         {
-            TongBan = context.Ban.AsNoTracking().Count(),
-            BanDangPhucVu = context.Ban.AsNoTracking().Count(b => b.TrangThai == 1),
-            BanTrong = context.Ban.AsNoTracking().Count(b => b.TrangThai == 0),
-            BanDatTruoc = context.HoaDon
-                .AsNoTracking()
-                .Count(hd => hd.TrangThai == 0 && hd.GhiChuHoaDon != null && EF.Functions.Like(hd.GhiChuHoaDon, "%đặt trước%"))
+            TongBan = tongBan,
+            BanDangPhucVu = banDangPhucVu,
+            BanTrong = banTrong,
+            BanDatTruoc = banDatTruoc
         };
     }
 
     public List<BanDTO> GetDanhSachBan(string? khuVuc, string? trangThai, string? tuKhoa)
     {
         using var context = new CaPheDbContext();
-        var dsBan = context.Ban
+
+        var query = context.Ban
             .AsNoTracking()
+            .AsQueryable();
+
+        query = ApplyKhuVucFilter(query, khuVuc);
+        query = ApplyTrangThaiFilter(query, trangThai);
+        query = ApplyTuKhoaFilter(query, tuKhoa);
+
+        var banRows = query
             .OrderBy(b => b.ID)
-            .ToList()
-            .Select(b => new BanDTO
+            .Select(b => new BanReadModel
             {
                 ID = b.ID,
                 TenBan = b.TenBan,
-                TrangThai = b.TrangThai,
-                KhuVuc = XacDinhKhuVuc(b.TenBan),
-                TinhTrang = ChuyenTrangThaiBan(b.TrangThai)
+                TrangThai = b.TrangThai
             })
             .ToList();
 
-        return dsBan
-            .Where(b => string.IsNullOrWhiteSpace(khuVuc)
-                || khuVuc == "Tất cả khu vực"
-                || b.KhuVuc == khuVuc)
-            .Where(b => string.IsNullOrWhiteSpace(trangThai)
-                || trangThai == "Tất cả trạng thái"
-                || (trangThai == "Trống" && b.TrangThai == 0)
-                || (trangThai == "Đang phục vụ" && b.TrangThai == 1)
-                || (trangThai == "Đặt trước" && b.TrangThai == 2))
-            .Where(b => string.IsNullOrWhiteSpace(tuKhoa)
-                || b.ID.ToString().Contains(tuKhoa)
-                || b.TenBan.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || b.KhuVuc.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || b.TinhTrang.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || (tuKhoa.Equals("trống", StringComparison.OrdinalIgnoreCase) && b.TrangThai == 0))
-            .ToList();
+        return MapBanDtos(banRows);
     }
 
     public List<BanDTO> GetSoDoBan()
     {
         using var context = new CaPheDbContext();
-        return context.Ban
+
+        var banRows = context.Ban
             .AsNoTracking()
             .OrderBy(b => b.ID)
-            .Select(b => new BanDTO
+            .Select(b => new BanReadModel
             {
                 ID = b.ID,
                 TenBan = b.TenBan,
-                TrangThai = b.TrangThai,
-                TinhTrang = ChuyenTrangThaiBan(b.TrangThai),
-                KhuVuc = XacDinhKhuVuc(b.TenBan)
+                TrangThai = b.TrangThai
             })
             .ToList();
+
+        return MapBanDtos(banRows);
     }
 
     public bool TenBanDaTonTai(string tenBan)
@@ -92,18 +100,19 @@ public class BanDAL
     public BanDTO? GetBanById(int banId)
     {
         using var context = new CaPheDbContext();
-        return context.Ban
+
+        var banRow = context.Ban
             .AsNoTracking()
             .Where(x => x.ID == banId)
-            .Select(x => new BanDTO
+            .Select(x => new BanReadModel
             {
                 ID = x.ID,
                 TenBan = x.TenBan,
-                TrangThai = x.TrangThai,
-                KhuVuc = XacDinhKhuVuc(x.TenBan),
-                TinhTrang = ChuyenTrangThaiBan(x.TrangThai)
+                TrangThai = x.TrangThai
             })
             .FirstOrDefault();
+
+        return banRow == null ? null : MapBanDto(banRow);
     }
 
     public bool BanDaPhatSinhHoaDon(int banId)
@@ -129,19 +138,20 @@ public class BanDAL
     public List<BanDTO> GetDanhSachBanDich(int banNguonId)
     {
         using var context = new CaPheDbContext();
-        return context.Ban
+
+        var banRows = context.Ban
             .AsNoTracking()
             .Where(b => b.ID != banNguonId)
             .OrderBy(b => b.TenBan)
-            .Select(b => new BanDTO
+            .Select(b => new BanReadModel
             {
                 ID = b.ID,
                 TenBan = b.TenBan,
-                TrangThai = b.TrangThai,
-                KhuVuc = XacDinhKhuVuc(b.TenBan),
-                TinhTrang = ChuyenTrangThaiBan(b.TrangThai)
+                TrangThai = b.TrangThai
             })
             .ToList();
+
+        return MapBanDtos(banRows);
     }
 
     public BanActionResultDTO ChuyenHoacGopBan(BanChuyenGopRequestDTO request)
@@ -222,6 +232,111 @@ public class BanDAL
 
         context.SaveChanges();
         return new BanActionResultDTO { ThanhCong = true, ThongBao = "Gộp bàn thành công." };
+    }
+
+    private static IQueryable<dtaBan> ApplyKhuVucFilter(IQueryable<dtaBan> query, string? khuVuc)
+    {
+        if (string.IsNullOrWhiteSpace(khuVuc) || khuVuc == "Tất cả khu vực")
+        {
+            return query;
+        }
+
+        return khuVuc switch
+        {
+            "Khu trong nhà" => query.Where(b =>
+                b.TenBan.StartsWith("A") || b.TenBan.StartsWith("a")
+                || b.TenBan.StartsWith("B") || b.TenBan.StartsWith("b")),
+            "Khu sân vườn" => query.Where(b => b.TenBan.StartsWith("C") || b.TenBan.StartsWith("c")),
+            "Khu phòng riêng" => query.Where(b => b.TenBan.StartsWith("D") || b.TenBan.StartsWith("d")),
+            "Khu khác" => query.Where(b =>
+                !(b.TenBan.StartsWith("A") || b.TenBan.StartsWith("a")
+                  || b.TenBan.StartsWith("B") || b.TenBan.StartsWith("b")
+                  || b.TenBan.StartsWith("C") || b.TenBan.StartsWith("c")
+                  || b.TenBan.StartsWith("D") || b.TenBan.StartsWith("d"))),
+            _ => query
+        };
+    }
+
+    private static IQueryable<dtaBan> ApplyTrangThaiFilter(IQueryable<dtaBan> query, string? trangThai)
+    {
+        if (string.IsNullOrWhiteSpace(trangThai) || trangThai == "Tất cả trạng thái")
+        {
+            return query;
+        }
+
+        return trangThai switch
+        {
+            "Trống" => query.Where(b => b.TrangThai == 0),
+            "Đang phục vụ" => query.Where(b => b.TrangThai == 1),
+            "Đặt trước" => query.Where(b => b.TrangThai == 2),
+            _ => query
+        };
+    }
+
+    private static IQueryable<dtaBan> ApplyTuKhoaFilter(IQueryable<dtaBan> query, string? tuKhoa)
+    {
+        if (string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            return query;
+        }
+
+        var keyword = tuKhoa.Trim();
+        var keywordPattern = $"%{keyword}%";
+        var hasKeywordId = int.TryParse(keyword, out var keywordId);
+
+        var matchSanSang = "Sẵn sàng".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var matchDangPhucVu = "Đang phục vụ".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var matchDatTruoc = "Đặt trước".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var matchTrong = keyword.Equals("trống", StringComparison.OrdinalIgnoreCase);
+
+        var matchKhuTrongNha = "Khu trong nhà".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var matchKhuSanVuon = "Khu sân vườn".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var matchKhuPhongRieng = "Khu phòng riêng".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+        var matchKhuKhac = "Khu khác".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+        return query.Where(b =>
+            (hasKeywordId && b.ID == keywordId)
+            || EF.Functions.Like(b.TenBan, keywordPattern)
+            || (matchSanSang && b.TrangThai == 0)
+            || (matchDangPhucVu && b.TrangThai == 1)
+            || (matchDatTruoc && b.TrangThai == 2)
+            || (matchTrong && b.TrangThai == 0)
+            || (matchKhuTrongNha
+                && (b.TenBan.StartsWith("A") || b.TenBan.StartsWith("a")
+                    || b.TenBan.StartsWith("B") || b.TenBan.StartsWith("b")))
+            || (matchKhuSanVuon && (b.TenBan.StartsWith("C") || b.TenBan.StartsWith("c")))
+            || (matchKhuPhongRieng && (b.TenBan.StartsWith("D") || b.TenBan.StartsWith("d")))
+            || (matchKhuKhac
+                && !(b.TenBan.StartsWith("A") || b.TenBan.StartsWith("a")
+                     || b.TenBan.StartsWith("B") || b.TenBan.StartsWith("b")
+                     || b.TenBan.StartsWith("C") || b.TenBan.StartsWith("c")
+                     || b.TenBan.StartsWith("D") || b.TenBan.StartsWith("d"))));
+    }
+
+    private static List<BanDTO> MapBanDtos(IEnumerable<BanReadModel> banRows)
+    {
+        return banRows
+            .Select(MapBanDto)
+            .ToList();
+    }
+
+    private static BanDTO MapBanDto(BanReadModel banRow)
+    {
+        return new BanDTO
+        {
+            ID = banRow.ID,
+            TenBan = banRow.TenBan,
+            TrangThai = banRow.TrangThai,
+            KhuVuc = XacDinhKhuVuc(banRow.TenBan),
+            TinhTrang = ChuyenTrangThaiBan(banRow.TrangThai)
+        };
+    }
+
+    private sealed class BanReadModel
+    {
+        public int ID { get; init; }
+        public string TenBan { get; init; } = string.Empty;
+        public int TrangThai { get; init; }
     }
 
     private static string ChuyenTrangThaiBan(int trangThai)

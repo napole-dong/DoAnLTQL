@@ -16,7 +16,7 @@ public class KhachHangBUS
             return new List<KhachHangDTO>();
         }
 
-        return _khachHangDAL.GetDanhSachKhach(textTimKhach?.Trim());
+        return _khachHangDAL.GetDanhSachKhach(BusInputHelper.NormalizeNullableText(textTimKhach));
     }
 
     public int LayMaKhachTiepTheo()
@@ -35,6 +35,8 @@ public class KhachHangBUS
         {
             return (false, "Bạn không có quyền thêm khách hàng.", null);
         }
+
+        ChuanHoaKhachHang(khachDTO);
 
         var validation = KiemTraThongTin(khachDTO);
         if (!validation.HopLe)
@@ -63,6 +65,8 @@ public class KhachHangBUS
         {
             return (false, "Vui lòng chọn khách hàng cần cập nhật.");
         }
+
+        ChuanHoaKhachHang(khachDTO);
 
         var validation = KiemTraThongTin(khachDTO);
         if (!validation.HopLe)
@@ -129,7 +133,7 @@ public class KhachHangBUS
                 continue;
             }
 
-            var cot = SplitCsvLine(lines[i]);
+            var cot = BusInputHelper.SplitCsvLine(lines[i]);
 
             string hoVaTen;
             string dienThoai;
@@ -137,15 +141,15 @@ public class KhachHangBUS
 
             if (cot.Count >= 4)
             {
-                hoVaTen = cot[1].Trim();
-                dienThoai = cot[2].Trim();
-                diaChi = cot[3].Trim();
+                hoVaTen = BusInputHelper.NormalizeText(cot[1]);
+                dienThoai = BusInputHelper.NormalizeText(cot[2]);
+                diaChi = BusInputHelper.NormalizeText(cot[3]);
             }
             else
             {
-                hoVaTen = cot.ElementAtOrDefault(0)?.Trim() ?? string.Empty;
-                dienThoai = cot.ElementAtOrDefault(1)?.Trim() ?? string.Empty;
-                diaChi = cot.ElementAtOrDefault(2)?.Trim() ?? string.Empty;
+                hoVaTen = BusInputHelper.NormalizeText(cot.ElementAtOrDefault(0));
+                dienThoai = BusInputHelper.NormalizeText(cot.ElementAtOrDefault(1));
+                diaChi = BusInputHelper.NormalizeText(cot.ElementAtOrDefault(2));
             }
 
             if (string.IsNullOrWhiteSpace(hoVaTen))
@@ -154,7 +158,7 @@ public class KhachHangBUS
                 continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(dienThoai) && !LaSoDienThoaiHopLe(dienThoai))
+            if (!string.IsNullOrWhiteSpace(dienThoai) && !BusInputHelper.IsValidPhoneNumber(dienThoai))
             {
                 soBoQua++;
                 continue;
@@ -179,7 +183,7 @@ public class KhachHangBUS
             return (false, "Họ và tên không được để trống.");
         }
 
-        if (!string.IsNullOrWhiteSpace(khachDTO.DienThoai) && !LaSoDienThoaiHopLe(khachDTO.DienThoai))
+        if (!string.IsNullOrWhiteSpace(khachDTO.DienThoai) && !BusInputHelper.IsValidPhoneNumber(khachDTO.DienThoai))
         {
             return (false, "Số điện thoại không hợp lệ.");
         }
@@ -187,37 +191,10 @@ public class KhachHangBUS
         return (true, string.Empty);
     }
 
-    private static bool LaSoDienThoaiHopLe(string dienThoai)
+    private static void ChuanHoaKhachHang(KhachHangDTO khachDTO)
     {
-        return dienThoai.All(char.IsDigit) && dienThoai.Length is >= 9 and <= 11;
-    }
-
-    private static List<string> SplitCsvLine(string line)
-    {
-        var result = new List<string>();
-        var current = new System.Text.StringBuilder();
-        var inQuotes = false;
-
-        foreach (var c in line)
-        {
-            if (c == '"')
-            {
-                inQuotes = !inQuotes;
-                continue;
-            }
-
-            if (c == ',' && !inQuotes)
-            {
-                result.Add(current.ToString());
-                current.Clear();
-                continue;
-            }
-
-            current.Append(c);
-        }
-
-        result.Add(current.ToString());
-        return result;
+        khachDTO.HoVaTen = BusInputHelper.NormalizeText(khachDTO.HoVaTen);
+        khachDTO.DienThoai = BusInputHelper.NormalizeNullableText(khachDTO.DienThoai);
+        khachDTO.DiaChi = BusInputHelper.NormalizeNullableText(khachDTO.DiaChi);
     }
 }
-//hello word

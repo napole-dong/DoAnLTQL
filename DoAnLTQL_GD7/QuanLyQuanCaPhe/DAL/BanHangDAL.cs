@@ -10,40 +10,18 @@ public class BanHangDAL
     {
         using var context = new CaPheDbContext();
 
-        var ban = context.Ban
-            .AsNoTracking()
-            .FirstOrDefault(x => x.ID == banId);
-        if (ban == null)
+        var banRow = QueryBanRow(context, banId);
+        if (banRow == null)
         {
             return new BanHangPhieuDTO();
         }
 
-        var hoaDonMo = context.HoaDon
-            .AsNoTracking()
-            .Include(x => x.HoaDon_ChiTiet)
-            .ThenInclude(x => x.Mon)
-            .FirstOrDefault(x => x.BanID == banId && x.TrangThai == 0);
+        var hoaDonMoId = QueryHoaDonMoId(context, banId);
+        var chiTietRows = hoaDonMoId.HasValue
+            ? QueryHoaDonChiTietRows(context, hoaDonMoId.Value)
+            : new List<BanHangOrderItemReadModel>();
 
-        var chiTiet = hoaDonMo?.HoaDon_ChiTiet
-            .GroupBy(x => new { x.MonID, x.Mon.TenMon, x.DonGiaBan })
-            .Select(g => new BanHangOrderItemDTO
-            {
-                MonID = g.Key.MonID,
-                TenMon = g.Key.TenMon,
-                DonGia = g.Key.DonGiaBan,
-                SoLuong = (short)Math.Clamp(g.Sum(x => (int)x.SoLuongBan), 1, short.MaxValue)
-            })
-            .OrderBy(x => x.TenMon)
-            .ToList() ?? new List<BanHangOrderItemDTO>();
-
-        return new BanHangPhieuDTO
-        {
-            BanID = ban.ID,
-            TenBan = ban.TenBan,
-            TrangThaiBan = ban.TrangThai,
-            HoaDonID = hoaDonMo?.ID,
-            ChiTiet = chiTiet
-        };
+        return MapBanHangPhieuDto(banRow, hoaDonMoId, chiTietRows);
     }
 
     public BanActionResultDTO GoiMon(int banId, IEnumerable<BanHangThemMonDTO> dsMonThem)
@@ -59,16 +37,21 @@ public class BanHangDAL
         var dsMonHopLe = dsMonThem
             .Where(x => x.MonID > 0 && x.SoLuong > 0)
             .ToList();
-        if (dsMonHopLe.Count == 0)
+        if (!dsMonHopLe.Any())
         {
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Danh sách món gọi không hợp lệ." };
         }
 
+        var dsMonId = dsMonHopLe
+            .Select(x => x.MonID)
+            .Distinct()
+            .ToList();
+
         var dsMonDb = context.Mon
-            .Where(x => dsMonHopLe.Select(m => m.MonID).Contains(x.ID))
+            .Where(x => dsMonId.Contains(x.ID))
             .ToDictionary(x => x.ID);
 
-        if (dsMonDb.Count != dsMonHopLe.Select(x => x.MonID).Distinct().Count())
+        if (dsMonDb.Count != dsMonId.Count)
         {
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Có món không tồn tại trong hệ thống." };
         }
@@ -79,7 +62,7 @@ public class BanHangDAL
         }
 
         var hoaDonMo = context.HoaDon
-            .Include(x => x.HoaDon_ChiTiet)
+            .AsNoTracking()
             .FirstOrDefault(x => x.BanID == banId && x.TrangThai == 0);
 
         if (hoaDonMo == null)
@@ -101,11 +84,15 @@ public class BanHangDAL
             context.SaveChanges();
         }
 
+        var chiTietHoaDon = context.HoaDon_ChiTiet
+            .Where(x => x.HoaDonID == hoaDonMo.ID)
+            .ToList();
+
         foreach (var monThem in dsMonHopLe)
         {
             var mon = dsMonDb[monThem.MonID];
 
-            var chiTiet = hoaDonMo.HoaDon_ChiTiet
+            var chiTiet = chiTietHoaDon
                 .FirstOrDefault(x => x.MonID == monThem.MonID && x.DonGiaBan == mon.DonGia && x.GhiChu == null);
 
             if (chiTiet == null)
@@ -150,7 +137,7 @@ public class BanHangDAL
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bàn này chưa có hóa đơn mở." };
         }
 
-        if (hoaDonMo.HoaDon_ChiTiet.Count == 0)
+        if (!hoaDonMo.HoaDon_ChiTiet.Any())
         {
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Hóa đơn chưa có món, không thể thanh toán." };
         }
@@ -160,6 +147,87 @@ public class BanHangDAL
         context.SaveChanges();
 
         return new BanActionResultDTO { ThanhCong = true, ThongBao = $"Thanh toán hóa đơn HD{hoaDonMo.ID:D5} thành công." };
+    }
+
+    private static BanReadModel? QueryBanRow(CaPheDbContext context, int banId)
+    {
+        return context.Ban
+            .AsNoTracking()
+            .Where(x => x.ID == banId)
+            .Select(x => new BanReadModel
+            {
+                ID = x.ID,
+                TenBan = x.TenBan,
+                TrangThaiBan = x.TrangThai
+            })
+            .FirstOrDefault();
+    }
+
+    private static int? QueryHoaDonMoId(CaPheDbContext context, int banId)
+    {
+        return context.HoaDon
+            .AsNoTracking()
+            .Where(x => x.BanID == banId && x.TrangThai == 0)
+            .Select(x => (int?)x.ID)
+            .FirstOrDefault();
+    }
+
+    private static List<BanHangOrderItemReadModel> QueryHoaDonChiTietRows(CaPheDbContext context, int hoaDonId)
+    {
+        return context.HoaDon_ChiTiet
+            .AsNoTracking()
+            .Where(x => x.HoaDonID == hoaDonId)
+            .GroupBy(x => new { x.MonID, x.Mon.TenMon, x.DonGiaBan })
+            .Select(g => new BanHangOrderItemReadModel
+            {
+                MonID = g.Key.MonID,
+                TenMon = g.Key.TenMon,
+                DonGia = g.Key.DonGiaBan,
+                TongSoLuong = g.Sum(x => (int)x.SoLuongBan)
+            })
+            .OrderBy(x => x.TenMon)
+            .ToList();
+    }
+
+    private static BanHangPhieuDTO MapBanHangPhieuDto(
+        BanReadModel banRow,
+        int? hoaDonMoId,
+        IEnumerable<BanHangOrderItemReadModel> chiTietRows)
+    {
+        return new BanHangPhieuDTO
+        {
+            BanID = banRow.ID,
+            TenBan = banRow.TenBan,
+            TrangThaiBan = banRow.TrangThaiBan,
+            HoaDonID = hoaDonMoId,
+            ChiTiet = chiTietRows.Select(MapBanHangOrderItemDto).ToList()
+        };
+    }
+
+    private static BanHangOrderItemDTO MapBanHangOrderItemDto(BanHangOrderItemReadModel chiTietRow)
+    {
+        return new BanHangOrderItemDTO
+        {
+            MonID = chiTietRow.MonID,
+            TenMon = chiTietRow.TenMon,
+            DonGia = chiTietRow.DonGia,
+            SoLuong = (short)Math.Clamp(chiTietRow.TongSoLuong, 1, short.MaxValue)
+        };
+    }
+
+    private sealed class BanReadModel
+    {
+        public int ID { get; init; }
+        public string TenBan { get; init; } = string.Empty;
+        public int TrangThaiBan { get; init; }
+    }
+
+    private sealed class BanHangOrderItemReadModel
+    {
+        public int MonID { get; init; }
+        public string TenMon { get; init; } = string.Empty;
+        public decimal DonGia { get; init; }
+        public int TongSoLuong { get; init; }
     }
 
     private static int GetOrCreateNhanVienMacDinh(CaPheDbContext context)

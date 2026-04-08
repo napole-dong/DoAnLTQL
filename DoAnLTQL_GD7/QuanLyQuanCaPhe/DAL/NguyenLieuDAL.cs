@@ -10,35 +10,8 @@ public class NguyenLieuDAL
     {
         using var context = new CaPheDbContext();
 
-        var dsNguyenLieu = context.Set<dtaNguyenLieu>()
-            .AsNoTracking()
-            .OrderBy(x => x.ID)
-            .Select(x => new NguyenLieuDTO
-            {
-                MaNguyenLieu = x.ID,
-                TenNguyenLieu = x.TenNguyenLieu,
-                DonViTinh = x.DonViTinh,
-                SoLuongTon = x.SoLuongTon,
-                MucCanhBao = x.MucCanhBao,
-                GiaNhapGanNhat = x.GiaNhapGanNhat,
-                TrangThai = x.TrangThai
-            })
-            .ToList();
-
-        if (string.IsNullOrWhiteSpace(tuKhoa))
-        {
-            return dsNguyenLieu;
-        }
-
-        tuKhoa = tuKhoa.Trim();
-        return dsNguyenLieu
-            .Where(x =>
-                x.MaNguyenLieu.ToString().Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.TenNguyenLieu.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.DonViTinh.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.TrangThaiHienThi.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-                || x.TrangThai.ToString().Contains(tuKhoa, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var nguyenLieuRows = QueryDanhSachNguyenLieuRows(context, tuKhoa);
+        return MapNguyenLieuDtos(nguyenLieuRows);
     }
 
     public int GetNextNguyenLieuId()
@@ -104,5 +77,81 @@ public class NguyenLieuDAL
         context.Set<dtaNguyenLieu>().Remove(nguyenLieu);
         context.SaveChanges();
         return true;
+    }
+
+    private static List<NguyenLieuReadModel> QueryDanhSachNguyenLieuRows(CaPheDbContext context, string? tuKhoa)
+    {
+        var query = context.Set<dtaNguyenLieu>()
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(tuKhoa))
+        {
+            var keyword = tuKhoa.Trim();
+            var keywordPattern = $"%{keyword}%";
+            var hasKeywordId = int.TryParse(keyword, out var keywordId);
+            var hasKeywordTrangThai = int.TryParse(keyword, out var keywordTrangThai);
+
+            var matchNgungDung = "Ngừng dùng".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var matchSapHet = "Sắp hết".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var matchHetHang = "Hết hàng".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var matchDangSuDung = "Đang sử dụng".Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+            query = query.Where(x =>
+                (hasKeywordId && x.ID == keywordId)
+                || EF.Functions.Like(x.TenNguyenLieu, keywordPattern)
+                || EF.Functions.Like(x.DonViTinh, keywordPattern)
+                || (hasKeywordTrangThai && x.TrangThai == keywordTrangThai)
+                || (matchNgungDung && x.TrangThai == 0)
+                || (matchSapHet && x.TrangThai == 2 && x.SoLuongTon > 0)
+                || (matchHetHang && x.TrangThai != 0 && x.SoLuongTon <= 0)
+                || (matchDangSuDung && x.TrangThai != 0 && x.TrangThai != 2 && x.SoLuongTon > 0));
+        }
+
+        return query
+            .OrderBy(x => x.ID)
+            .Select(x => new NguyenLieuReadModel
+            {
+                MaNguyenLieu = x.ID,
+                TenNguyenLieu = x.TenNguyenLieu,
+                DonViTinh = x.DonViTinh,
+                SoLuongTon = x.SoLuongTon,
+                MucCanhBao = x.MucCanhBao,
+                GiaNhapGanNhat = x.GiaNhapGanNhat,
+                TrangThai = x.TrangThai
+            })
+            .ToList();
+    }
+
+    private static List<NguyenLieuDTO> MapNguyenLieuDtos(IEnumerable<NguyenLieuReadModel> nguyenLieuRows)
+    {
+        return nguyenLieuRows
+            .Select(MapNguyenLieuDto)
+            .ToList();
+    }
+
+    private static NguyenLieuDTO MapNguyenLieuDto(NguyenLieuReadModel nguyenLieuRow)
+    {
+        return new NguyenLieuDTO
+        {
+            MaNguyenLieu = nguyenLieuRow.MaNguyenLieu,
+            TenNguyenLieu = nguyenLieuRow.TenNguyenLieu,
+            DonViTinh = nguyenLieuRow.DonViTinh,
+            SoLuongTon = nguyenLieuRow.SoLuongTon,
+            MucCanhBao = nguyenLieuRow.MucCanhBao,
+            GiaNhapGanNhat = nguyenLieuRow.GiaNhapGanNhat,
+            TrangThai = nguyenLieuRow.TrangThai
+        };
+    }
+
+    private sealed class NguyenLieuReadModel
+    {
+        public int MaNguyenLieu { get; init; }
+        public string TenNguyenLieu { get; init; } = string.Empty;
+        public string DonViTinh { get; init; } = string.Empty;
+        public decimal SoLuongTon { get; init; }
+        public decimal MucCanhBao { get; init; }
+        public decimal GiaNhapGanNhat { get; init; }
+        public int TrangThai { get; init; }
     }
 }

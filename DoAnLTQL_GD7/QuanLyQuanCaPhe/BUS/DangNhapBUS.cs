@@ -9,15 +9,15 @@ public class DangNhapBUS
 
     public (bool ThanhCong, string ThongBao, string TruongLoi, ThongTinDangNhapDTO? ThongTinDangNhap) DangNhap(string tenDangNhap, string matKhau)
     {
-        var tenDangNhapChuan = tenDangNhap.Trim();
-        var matKhauChuan = matKhau.Trim();
+        var tenDangNhapChuan = BusInputHelper.NormalizeText(tenDangNhap);
+        var matKhauChuan = BusInputHelper.NormalizeText(matKhau);
 
-        if (string.IsNullOrWhiteSpace(tenDangNhapChuan))
+        if (tenDangNhapChuan.Length == 0)
         {
             return (false, "Tên đăng nhập không được để trống.", "TenDangNhap", null);
         }
 
-        if (string.IsNullOrWhiteSpace(matKhauChuan))
+        if (matKhauChuan.Length == 0)
         {
             return (false, "Mật khẩu không được để trống.", "MatKhau", null);
         }
