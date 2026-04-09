@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Diagnostics;
 
 namespace QuanLyQuanCaPhe.DAL;
 
@@ -11,6 +12,15 @@ public class NguyenLieuDAL
         using var context = new CaPheDbContext();
 
         var nguyenLieuRows = QueryDanhSachNguyenLieuRows(context, tuKhoa);
+        return MapNguyenLieuDtos(nguyenLieuRows);
+    }
+
+    public List<NguyenLieuDTO> GetDanhSachNguyenLieuSapHet()
+    {
+        using var context = new CaPheDbContext();
+
+        var nguyenLieuRows = QueryDanhSachNguyenLieuSapHetRows(context);
+
         return MapNguyenLieuDtos(nguyenLieuRows);
     }
 
@@ -79,6 +89,122 @@ public class NguyenLieuDAL
         return true;
     }
 
+    public (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu)
+    {
+        using var correlationScope = CorrelationContext.BeginScope();
+        using var context = new CaPheDbContext();
+        using var transaction = context.Database.BeginTransaction();
+
+        AppLogger.Info($"Start NhapKho. NguyenLieuID={maNguyenLieu}, SoLuongNhap={soLuongNhap}.", nameof(NguyenLieuDAL));
+        AppLogger.Audit(
+            "Inventory.Import.Start",
+            "Bat dau nhap kho.",
+            new
+            {
+                NguyenLieuId = maNguyenLieu,
+                SoLuongNhap = soLuongNhap,
+                GiaNhap = giaNhap
+            },
+            nameof(NguyenLieuDAL));
+
+        try
+        {
+            var nguyenLieu = context.NguyenLieu.FirstOrDefault(x => x.ID == maNguyenLieu);
+            if (nguyenLieu == null)
+            {
+                transaction.Rollback();
+                AppLogger.Audit(
+                    "Inventory.Import.Rejected",
+                    "Khong tim thay nguyen lieu de nhap kho.",
+                    new { NguyenLieuId = maNguyenLieu },
+                    nameof(NguyenLieuDAL));
+                return (false, "Không tìm thấy nguyên liệu để nhập kho.");
+            }
+
+            var soLuongTonTruoc = nguyenLieu.SoLuongTon;
+
+            var phieuNhap = new dtaPhieuNhapKho
+            {
+                NguyenLieuID = maNguyenLieu,
+                SoLuongNhap = soLuongNhap,
+                GiaNhap = giaNhap,
+                NgayNhap = DateTime.Now,
+                GhiChu = string.IsNullOrWhiteSpace(ghiChu) ? null : ghiChu.Trim()
+            };
+
+            context.PhieuNhapKho.Add(phieuNhap);
+
+            nguyenLieu.SoLuongTon += soLuongNhap;
+            nguyenLieu.GiaNhapGanNhat = giaNhap;
+            nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
+            nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
+
+            context.SaveChanges();
+            transaction.Commit();
+
+            AppLogger.Audit(
+                "Inventory.Import.Success",
+                "Nhap kho thanh cong.",
+                new
+                {
+                    NguyenLieuId = maNguyenLieu,
+                    SoLuongNhap = soLuongNhap,
+                    SoLuongTonTruoc = soLuongTonTruoc,
+                    SoLuongTonSau = nguyenLieu.SoLuongTon,
+                    GiaNhap = giaNhap
+                },
+                nameof(NguyenLieuDAL));
+
+            return (true, "Nhập kho thành công.");
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+
+            var mappedError = AppExceptionMapper.Map(ex);
+            AppLogger.Error(
+                ex,
+                $"Unexpected failure in NhapKho. NguyenLieuID={maNguyenLieu}.",
+                nameof(NguyenLieuDAL),
+                mappedError.Code);
+            AppLogger.Audit(
+                "Inventory.Import.Failed",
+                "Nhap kho that bai do loi he thong.",
+                new
+                {
+                    NguyenLieuId = maNguyenLieu,
+                    SoLuongNhap = soLuongNhap,
+                    GiaNhap = giaNhap
+                },
+                nameof(NguyenLieuDAL));
+
+            var thongBao = AppExceptionHandler.CreateUserMessage(
+                "Không thể nhập kho do xảy ra lỗi trong quá trình lưu dữ liệu kho.",
+                ex);
+            return (false, thongBao);
+        }
+    }
+
+    private static List<NguyenLieuReadModel> QueryDanhSachNguyenLieuSapHetRows(CaPheDbContext context)
+    {
+        return context.Set<dtaNguyenLieu>()
+            .AsNoTracking()
+            .Where(x => x.SoLuongTon < x.MucCanhBao)
+            .OrderBy(x => x.SoLuongTon)
+            .ThenBy(x => x.TenNguyenLieu)
+            .Select(x => new NguyenLieuReadModel
+            {
+                MaNguyenLieu = x.ID,
+                TenNguyenLieu = x.TenNguyenLieu,
+                DonViTinh = x.DonViTinh,
+                SoLuongTon = x.SoLuongTon,
+                MucCanhBao = x.MucCanhBao,
+                GiaNhapGanNhat = x.GiaNhapGanNhat,
+                TrangThai = x.TrangThai
+            })
+            .ToList();
+    }
+
     private static List<NguyenLieuReadModel> QueryDanhSachNguyenLieuRows(CaPheDbContext context, string? tuKhoa)
     {
         var query = context.Set<dtaNguyenLieu>()
@@ -141,6 +267,36 @@ public class NguyenLieuDAL
             MucCanhBao = nguyenLieuRow.MucCanhBao,
             GiaNhapGanNhat = nguyenLieuRow.GiaNhapGanNhat,
             TrangThai = nguyenLieuRow.TrangThai
+        };
+    }
+
+    private static int TinhTrangThaiNguyenLieu(decimal soLuongTon, decimal mucCanhBao, int trangThaiHienTai)
+    {
+        if (trangThaiHienTai == 0)
+        {
+            return 0;
+        }
+
+        if (soLuongTon <= 0)
+        {
+            return 2;
+        }
+
+        if (soLuongTon <= mucCanhBao)
+        {
+            return 2;
+        }
+
+        return 1;
+    }
+
+    private static string ChuyenTrangThaiNguyenLieuTextLegacy(int trangThai, decimal soLuongTon)
+    {
+        return trangThai switch
+        {
+            0 => "Ngừng dùng",
+            2 => soLuongTon <= 0 ? "Hết hàng" : "Sắp hết",
+            _ => soLuongTon <= 0 ? "Hết hàng" : "Đang sử dụng"
         };
     }
 

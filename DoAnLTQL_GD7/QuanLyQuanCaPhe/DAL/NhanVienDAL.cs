@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Diagnostics;
 
 namespace QuanLyQuanCaPhe.DAL;
 
@@ -46,32 +47,56 @@ public class NhanVienDAL
 
     public NhanVienDTO ThemNhanVien(NhanVienDTO nhanVienDTO)
     {
+        using var correlationScope = CorrelationContext.BeginScope();
         using var context = new CaPheDbContext();
 
-        var nhanVien = new dtaNhanVien
+        AppLogger.Info($"Start ThemNhanVien. TenDangNhap={nhanVienDTO.TenDangNhap}.", nameof(NhanVienDAL));
+
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        try
         {
-            HoVaTen = nhanVienDTO.HoVaTen,
-            DienThoai = string.IsNullOrWhiteSpace(nhanVienDTO.DienThoai) ? null : nhanVienDTO.DienThoai,
-            DiaChi = string.IsNullOrWhiteSpace(nhanVienDTO.DiaChi) ? null : nhanVienDTO.DiaChi
-        };
+            return strategy.Execute(() =>
+            {
+                using var transaction = context.Database.BeginTransaction();
 
-        context.NhanVien.Add(nhanVien);
-        context.SaveChanges();
+                var nhanVien = new dtaNhanVien
+                {
+                    HoVaTen = nhanVienDTO.HoVaTen,
+                    DienThoai = string.IsNullOrWhiteSpace(nhanVienDTO.DienThoai) ? null : nhanVienDTO.DienThoai,
+                    DiaChi = string.IsNullOrWhiteSpace(nhanVienDTO.DiaChi) ? null : nhanVienDTO.DiaChi
+                };
 
-        var vaiTroId = GetOrCreateVaiTroId(context, nhanVienDTO.QuyenHan);
-        context.User.Add(new dtaUser
+                context.NhanVien.Add(nhanVien);
+                context.SaveChanges();
+
+                var vaiTroId = LayVaiTroId(context, nhanVienDTO.QuyenHan);
+                if (vaiTroId <= 0)
+                {
+                    throw new InvalidOperationException("Vai trò không hợp lệ.");
+                }
+
+                context.User.Add(new dtaUser
+                {
+                    NhanVienID = nhanVien.ID,
+                    TenDangNhap = nhanVienDTO.TenDangNhap,
+                    MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienDTO.MatKhau ?? "123456"),
+                    VaiTroID = vaiTroId,
+                    HoatDong = true
+                });
+
+                context.SaveChanges();
+                transaction.Commit();
+
+                nhanVienDTO.ID = nhanVien.ID;
+                return nhanVienDTO;
+            });
+        }
+        catch (Exception ex)
         {
-            NhanVienID = nhanVien.ID,
-            TenDangNhap = nhanVienDTO.TenDangNhap,
-            MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienDTO.MatKhau ?? "123456"),
-            VaiTroID = vaiTroId,
-            HoatDong = true
-        });
-
-        context.SaveChanges();
-
-        nhanVienDTO.ID = nhanVien.ID;
-        return nhanVienDTO;
+            AppLogger.Error(ex, $"Unexpected failure in ThemNhanVien. TenDangNhap={nhanVienDTO.TenDangNhap}.", nameof(NhanVienDAL));
+            throw;
+        }
     }
 
     public bool CapNhatNhanVien(NhanVienDTO nhanVienDTO)
@@ -91,7 +116,11 @@ public class NhanVienDAL
         nhanVien.DienThoai = string.IsNullOrWhiteSpace(nhanVienDTO.DienThoai) ? null : nhanVienDTO.DienThoai;
         nhanVien.DiaChi = string.IsNullOrWhiteSpace(nhanVienDTO.DiaChi) ? null : nhanVienDTO.DiaChi;
 
-        var vaiTroId = GetOrCreateVaiTroId(context, nhanVienDTO.QuyenHan);
+        var vaiTroId = LayVaiTroId(context, nhanVienDTO.QuyenHan);
+        if (vaiTroId <= 0)
+        {
+            return false;
+        }
 
         if (nhanVien.User == null)
         {
@@ -142,93 +171,127 @@ public class NhanVienDAL
         return true;
     }
 
-    public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapDanhSachNhanVien(IEnumerable<NhanVienDTO> dsNhap)
+    public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapDanhSachNhanVien(
+        IEnumerable<NhanVienDTO> dsNhap,
+        bool choPhepThemMoi,
+        bool choPhepCapNhat)
     {
+        using var correlationScope = CorrelationContext.BeginScope();
         using var context = new CaPheDbContext();
 
-        var soThemMoi = 0;
-        var soCapNhat = 0;
-        var soBoQua = 0;
+        AppLogger.Info("Start NhapDanhSachNhanVien.", nameof(NhanVienDAL));
 
-        foreach (var nhanVienNhap in dsNhap)
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        try
         {
-            if (string.IsNullOrWhiteSpace(nhanVienNhap.HoVaTen)
-                || string.IsNullOrWhiteSpace(nhanVienNhap.TenDangNhap)
-                || string.IsNullOrWhiteSpace(nhanVienNhap.QuyenHan))
+            return strategy.Execute(() =>
             {
-                soBoQua++;
-                continue;
-            }
+                using var transaction = context.Database.BeginTransaction();
 
-            var user = context.User
-                .Include(x => x.NhanVien)
-                .FirstOrDefault(x => x.TenDangNhap == nhanVienNhap.TenDangNhap);
+                var soThemMoi = 0;
+                var soCapNhat = 0;
+                var soBoQua = 0;
 
-            var vaiTroId = GetOrCreateVaiTroId(context, nhanVienNhap.QuyenHan);
-
-            if (user == null)
-            {
-                var nhanVienMoi = new dtaNhanVien
+                foreach (var nhanVienNhap in dsNhap)
                 {
-                    HoVaTen = nhanVienNhap.HoVaTen,
-                    DienThoai = string.IsNullOrWhiteSpace(nhanVienNhap.DienThoai) ? null : nhanVienNhap.DienThoai,
-                    DiaChi = string.IsNullOrWhiteSpace(nhanVienNhap.DiaChi) ? null : nhanVienNhap.DiaChi
-                };
+                    if (string.IsNullOrWhiteSpace(nhanVienNhap.HoVaTen)
+                        || string.IsNullOrWhiteSpace(nhanVienNhap.TenDangNhap)
+                        || string.IsNullOrWhiteSpace(nhanVienNhap.QuyenHan))
+                    {
+                        soBoQua++;
+                        continue;
+                    }
 
-                context.NhanVien.Add(nhanVienMoi);
-                context.SaveChanges();
+                    var user = context.User
+                        .Include(x => x.NhanVien)
+                        .FirstOrDefault(x => x.TenDangNhap == nhanVienNhap.TenDangNhap);
 
-                context.User.Add(new dtaUser
-                {
-                    NhanVienID = nhanVienMoi.ID,
-                    TenDangNhap = nhanVienNhap.TenDangNhap,
-                    MatKhau = MatKhauService.BamMatKhauNeuCan(
-                        string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau) ? "123456" : nhanVienNhap.MatKhau),
-                    VaiTroID = vaiTroId,
-                    HoatDong = true
-                });
+                    if (user == null && !choPhepThemMoi)
+                    {
+                        soBoQua++;
+                        continue;
+                    }
 
-                soThemMoi++;
-            }
-            else
-            {
-                user.NhanVien.HoVaTen = nhanVienNhap.HoVaTen;
-                user.NhanVien.DienThoai = string.IsNullOrWhiteSpace(nhanVienNhap.DienThoai) ? null : nhanVienNhap.DienThoai;
-                user.NhanVien.DiaChi = string.IsNullOrWhiteSpace(nhanVienNhap.DiaChi) ? null : nhanVienNhap.DiaChi;
-                user.VaiTroID = vaiTroId;
+                    if (user != null && !choPhepCapNhat)
+                    {
+                        soBoQua++;
+                        continue;
+                    }
 
-                if (!string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau))
-                {
-                    user.MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienNhap.MatKhau);
+                    var vaiTroId = LayVaiTroId(context, nhanVienNhap.QuyenHan);
+                    if (vaiTroId <= 0)
+                    {
+                        soBoQua++;
+                        continue;
+                    }
+
+                    if (user == null)
+                    {
+                        var nhanVienMoi = new dtaNhanVien
+                        {
+                            HoVaTen = nhanVienNhap.HoVaTen,
+                            DienThoai = string.IsNullOrWhiteSpace(nhanVienNhap.DienThoai) ? null : nhanVienNhap.DienThoai,
+                            DiaChi = string.IsNullOrWhiteSpace(nhanVienNhap.DiaChi) ? null : nhanVienNhap.DiaChi
+                        };
+
+                        context.NhanVien.Add(nhanVienMoi);
+                        context.SaveChanges();
+
+                        context.User.Add(new dtaUser
+                        {
+                            NhanVienID = nhanVienMoi.ID,
+                            TenDangNhap = nhanVienNhap.TenDangNhap,
+                            MatKhau = MatKhauService.BamMatKhauNeuCan(
+                                string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau) ? "123456" : nhanVienNhap.MatKhau),
+                            VaiTroID = vaiTroId,
+                            HoatDong = true
+                        });
+
+                        soThemMoi++;
+                    }
+                    else
+                    {
+                        user.NhanVien.HoVaTen = nhanVienNhap.HoVaTen;
+                        user.NhanVien.DienThoai = string.IsNullOrWhiteSpace(nhanVienNhap.DienThoai) ? null : nhanVienNhap.DienThoai;
+                        user.NhanVien.DiaChi = string.IsNullOrWhiteSpace(nhanVienNhap.DiaChi) ? null : nhanVienNhap.DiaChi;
+                        user.VaiTroID = vaiTroId;
+
+                        if (!string.IsNullOrWhiteSpace(nhanVienNhap.MatKhau))
+                        {
+                            user.MatKhau = MatKhauService.BamMatKhauNeuCan(nhanVienNhap.MatKhau);
+                        }
+
+                        soCapNhat++;
+                    }
                 }
 
-                soCapNhat++;
-            }
-        }
+                context.SaveChanges();
+                transaction.Commit();
 
-        context.SaveChanges();
-        return (soThemMoi, soCapNhat, soBoQua);
+                return (soThemMoi, soCapNhat, soBoQua);
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error(ex, "Unexpected failure in NhapDanhSachNhanVien.", nameof(NhanVienDAL));
+            throw;
+        }
     }
 
-    private static int GetOrCreateVaiTroId(CaPheDbContext context, string tenVaiTro)
+    private static int LayVaiTroId(CaPheDbContext context, string tenVaiTro)
     {
-        var tenVaiTroChuan = string.IsNullOrWhiteSpace(tenVaiTro) ? "Staff" : tenVaiTro.Trim();
-
-        var vaiTro = context.VaiTro.FirstOrDefault(x => x.TenVaiTro == tenVaiTroChuan);
-        if (vaiTro != null)
+        var tenVaiTroChuan = string.IsNullOrWhiteSpace(tenVaiTro) ? string.Empty : tenVaiTro.Trim();
+        if (tenVaiTroChuan.Length == 0)
         {
-            return vaiTro.ID;
+            return 0;
         }
 
-        vaiTro = new dtaVaiTro
-        {
-            TenVaiTro = tenVaiTroChuan,
-            MoTa = null
-        };
-
-        context.VaiTro.Add(vaiTro);
-        context.SaveChanges();
-        return vaiTro.ID;
+        return context.VaiTro
+            .AsNoTracking()
+            .Where(x => x.TenVaiTro == tenVaiTroChuan)
+            .Select(x => x.ID)
+            .FirstOrDefault();
     }
 
     private static List<NhanVienReadModel> QueryDanhSachNhanVienRows(CaPheDbContext context, string? tuKhoa)

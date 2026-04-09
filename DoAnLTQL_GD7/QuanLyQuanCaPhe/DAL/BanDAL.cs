@@ -224,7 +224,7 @@ public class BanDAL
         }
 
         context.HoaDon_ChiTiet.RemoveRange(hoaDonNguon.HoaDon_ChiTiet);
-        hoaDonNguon.TrangThai = 1;
+        hoaDonNguon.TrangThai = 2;
         hoaDonNguon.GhiChuHoaDon = $"{hoaDonNguon.GhiChuHoaDon} [Đã gộp vào HD{hoaDonDich.ID:D5}]".Trim();
 
         banNguon.TrangThai = 0;

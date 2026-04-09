@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuanLyQuanCaPhe.Data;
 
@@ -11,9 +12,11 @@ using QuanLyQuanCaPhe.Data;
 namespace QuanLyQuanCaPhe.Migrations
 {
     [DbContext(typeof(CaPheDbContext))]
-    partial class CaPheDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260409032209_EnforceSingleOpenInvoicePerTable")]
+    partial class EnforceSingleOpenInvoicePerTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,9 +55,6 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.HasIndex("MonID");
 
-                    b.HasIndex("HoaDonID", "MonID")
-                        .HasDatabaseName("IX_HoaDonChiTiet_HoaDonID_MonID");
-
                     b.ToTable("HoaDon_ChiTiet", (string)null);
                 });
 
@@ -76,13 +76,7 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.HasKey("ID");
 
-                    b.HasIndex("TrangThai")
-                        .HasDatabaseName("IX_Ban_TrangThai");
-
-                    b.ToTable("Ban", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Ban_TrangThai", "[TrangThai] IN (0, 1, 2)");
-                        });
+                    b.ToTable("Ban", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaCongThucMon", b =>
@@ -131,9 +125,7 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("TrangThai")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
+                        .HasColumnType("int");
 
                     b.HasKey("ID");
 
@@ -146,16 +138,7 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.HasIndex("NhanVienID");
 
-                    b.HasIndex("NgayLap", "TrangThai")
-                        .HasDatabaseName("IX_HoaDon_NgayLap_TrangThai");
-
-                    b.HasIndex("TrangThai", "NhanVienID", "NgayLap")
-                        .HasDatabaseName("IX_HoaDon_TrangThai_NhanVien_NgayLap");
-
-                    b.ToTable("HoaDon", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2)");
-                        });
+                    b.ToTable("HoaDon", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaKhachHang", b =>

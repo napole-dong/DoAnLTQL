@@ -1,5 +1,5 @@
-﻿using System.Configuration;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using QuanLyQuanCaPhe.Services.Configuration;
 
 namespace QuanLyQuanCaPhe.Data;
 
@@ -32,7 +32,10 @@ public class CaPheDbContext : DbContext
     {
         modelBuilder.Entity<dtaBan>(entity =>
         {
-            entity.ToTable("Ban");
+            entity.ToTable("Ban", table =>
+            {
+                table.HasCheckConstraint("CK_Ban_TrangThai", "[TrangThai] IN (0, 1, 2)");
+            });
             entity.HasKey(x => x.ID);
 
             entity.Property(x => x.TenBan)
@@ -41,6 +44,9 @@ public class CaPheDbContext : DbContext
 
             entity.Property(x => x.TrangThai)
                 .IsRequired();
+
+            entity.HasIndex(x => x.TrangThai)
+                .HasDatabaseName("IX_Ban_TrangThai");
         });
 
         modelBuilder.Entity<dtaKhachHang>(entity =>
@@ -139,7 +145,10 @@ public class CaPheDbContext : DbContext
 
         modelBuilder.Entity<dtaHoadon>(entity =>
         {
-            entity.ToTable("HoaDon");
+            entity.ToTable("HoaDon", table =>
+            {
+                table.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2)");
+            });
             entity.HasKey(x => x.ID);
 
             entity.Property(x => x.GhiChuHoaDon)
@@ -148,9 +157,21 @@ public class CaPheDbContext : DbContext
 
             entity.Property(x => x.KhachHangID).IsRequired(false);
 
+            entity.Property(x => x.TrangThai)
+                .IsRequired()
+                .HasDefaultValue(0);
+
             entity.HasIndex(x => x.BanID);
+            entity.HasIndex(x => x.BanID)
+                .HasDatabaseName("UX_HoaDon_Ban_Mo")
+                .HasFilter("[TrangThai] = 0")
+                .IsUnique();
             entity.HasIndex(x => x.KhachHangID);
             entity.HasIndex(x => x.NhanVienID);
+            entity.HasIndex(x => new { x.NgayLap, x.TrangThai })
+                .HasDatabaseName("IX_HoaDon_NgayLap_TrangThai");
+            entity.HasIndex(x => new { x.TrangThai, x.NhanVienID, x.NgayLap })
+                .HasDatabaseName("IX_HoaDon_TrangThai_NhanVien_NgayLap");
 
             entity.HasOne(x => x.Ban)
                 .WithMany(x => x.HoaDon)
@@ -183,6 +204,8 @@ public class CaPheDbContext : DbContext
 
             entity.HasIndex(x => x.HoaDonID);
             entity.HasIndex(x => x.MonID);
+            entity.HasIndex(x => new { x.HoaDonID, x.MonID })
+                .HasDatabaseName("IX_HoaDonChiTiet_HoaDonID_MonID");
 
             entity.HasOne(x => x.HoaDon)
                 .WithMany(x => x.HoaDon_ChiTiet)
@@ -395,12 +418,12 @@ public class CaPheDbContext : DbContext
             return;
         }
 
-        var connectionString = ConfigurationManager.ConnectionStrings["CaPheConnection"]?.ConnectionString;
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("Không tìm thấy connection string 'CaPheConnection' trong App.config.");
-        }
-
-        optionsBuilder.UseSqlServer(connectionString);
+        var connectionString = ConnectionStringResolver.Resolve();
+        optionsBuilder.UseSqlServer(
+            connectionString,
+            sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null));
     }
 }

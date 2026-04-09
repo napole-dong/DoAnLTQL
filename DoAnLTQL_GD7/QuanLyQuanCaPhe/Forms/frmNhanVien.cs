@@ -15,8 +15,6 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly NhanVienBUS _nhanVienBUS = new();
         private readonly PermissionBUS _permissionBUS = new();
-        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
-        private bool _isAutoRefreshing;
 
         public frmNhanVien(bool isEmbedded = false)
         {
@@ -41,15 +39,15 @@ namespace QuanLyQuanCaPhe.Forms
             btnTimNhanVien.Click += btnTimNhanVien_Click;
             btnNhapNhanVien.Click += btnNhapNhanVien_Click;
             btnXuatNhanVien.Click += btnXuatNhanVien_Click;
-            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+            KhoiTaoNutLamMoi();
 
             btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
             btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
             btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
             btnKhachHang.Click += (_, _) => OpenStandaloneForm(new frmKhachHang(), PermissionFeatures.Menu);
             btnThongKe.Click += (_, _) => MoTinhNangThongKe();
-            btnHoaDon.Click += (_, _) => MoTinhNangHoaDon();
-            btnDangXuat.Click += (_, _) => Close();
+            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
         private void frmNhanVien_Load(object? sender, EventArgs e)
@@ -74,19 +72,34 @@ namespace QuanLyQuanCaPhe.Forms
 
             LoadDanhSachNhanVien();
             ResetForm();
-            _autoRefreshTimer.Start();
+        }
+
+        private void KhoiTaoNutLamMoi()
+        {
+            var btnLamMoi = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(248, 245, 241),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = Color.FromArgb(65, 48, 39),
+                Location = new Point(Math.Max(0, btnNhapNhanVien.Left - 96), btnNhapNhanVien.Top),
+                Name = "btnLamMoiNhanVien",
+                Size = new Size(88, 30),
+                TabStop = false,
+                Text = "Làm mới",
+                UseVisualStyleBackColor = false
+            };
+
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.Click += btnLamMoi_Click;
+
+            panelDanhSachHeader.Controls.Add(btnLamMoi);
+            btnLamMoi.BringToFront();
         }
 
         private void HienThiNguoiDungDangNhap()
         {
-            var nguoiDungDangNhap = NguoiDungHienTaiService.LayNguoiDungDangNhap();
-            if (nguoiDungDangNhap == null)
-            {
-                lblUserName.Text = "Khách";
-                return;
-            }
-
-            lblUserName.Text = $"{nguoiDungDangNhap.HoVaTen} ({nguoiDungDangNhap.QuyenHan})";
         }
 
         private void TaiDanhSachVaiTroTheoQuyen()
@@ -125,9 +138,10 @@ namespace QuanLyQuanCaPhe.Forms
             btnBanHang.Visible = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
 
             var coQuyenMenu = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
+            var coQuyenHoaDon = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
             btnQuanLyBan.Visible = coQuyenMenu;
             btnQuanLyMon.Visible = coQuyenMenu;
-            btnHoaDon.Visible = coQuyenMenu;
+            btnHoaDon.Visible = coQuyenHoaDon;
             btnKhachHang.Visible = coQuyenMenu;
 
             btnNhanVien.Visible = coQuyenXemNhanVien;
@@ -220,22 +234,9 @@ namespace QuanLyQuanCaPhe.Forms
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
+        private void btnLamMoi_Click(object? sender, EventArgs e)
         {
-            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
-            {
-                return;
-            }
-
-            try
-            {
-                _isAutoRefreshing = true;
-                LoadDanhSachNhanVien();
-            }
-            finally
-            {
-                _isAutoRefreshing = false;
-            }
+            LoadDanhSachNhanVien();
         }
 
         private void btnTimNhanVien_Click(object? sender, EventArgs e)
@@ -447,13 +448,23 @@ namespace QuanLyQuanCaPhe.Forms
             if (!_permissionBUS.CheckPermission(feature, PermissionActions.View))
             {
                 targetForm.Dispose();
-                MessageBox.Show("Bạn không có quyền truy cập chức năng này.", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang nay.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             Hide();
-            targetForm.FormClosed += (_, _) => Close();
-            targetForm.Show();
+            targetForm.FormClosed += (_, _) =>
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    Show();
+                    BringToFront();
+                    Activate();
+                    LoadDanhSachNhanVien();
+                }
+            };
+
+            targetForm.Show(this);
         }
 
         private void MoTinhNangThongKe()
@@ -480,8 +491,6 @@ namespace QuanLyQuanCaPhe.Forms
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _autoRefreshTimer.Stop();
-            _autoRefreshTimer.Dispose();
             base.OnFormClosed(e);
         }
     }

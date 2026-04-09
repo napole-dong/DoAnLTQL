@@ -71,6 +71,7 @@ namespace QuanLyQuanCaPhe.Forms
             txtTimKiemHoaDon = new TextBox();
             lblTimKiemHoaDon = new Label();
             panelMasterHeader = new Panel();
+            btnLamMoi = new Button();
             lblDanhSachHoaDonTitle = new Label();
             panelDetail = new Panel();
             tableDetail = new TableLayoutPanel();
@@ -118,9 +119,6 @@ namespace QuanLyQuanCaPhe.Forms
             txtMaHoaDon = new TextBox();
             lblMaHoaDon = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             lblPageTitle = new Label();
             lblTongKetTitle = new Label();
             panelBillMini = new Panel();
@@ -157,7 +155,6 @@ namespace QuanLyQuanCaPhe.Forms
             panelThongTinChung.SuspendLayout();
             grpThongTinChung.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             panelBillMini.SuspendLayout();
             SuspendLayout();
             // 
@@ -626,12 +623,28 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // panelMasterHeader
             // 
+            panelMasterHeader.Controls.Add(btnLamMoi);
             panelMasterHeader.Controls.Add(lblDanhSachHoaDonTitle);
             panelMasterHeader.Dock = DockStyle.Top;
             panelMasterHeader.Location = new Point(0, 0);
             panelMasterHeader.Name = "panelMasterHeader";
             panelMasterHeader.Size = new Size(584, 42);
             panelMasterHeader.TabIndex = 0;
+            // 
+            // btnLamMoi
+            // 
+            btnLamMoi.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnLamMoi.BackColor = Color.FromArgb(248, 245, 241);
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.FlatStyle = FlatStyle.Flat;
+            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
+            btnLamMoi.Location = new Point(487, 5);
+            btnLamMoi.Name = "btnLamMoi";
+            btnLamMoi.Size = new Size(94, 32);
+            btnLamMoi.TabIndex = 1;
+            btnLamMoi.Text = "Làm mới";
+            btnLamMoi.UseVisualStyleBackColor = false;
             // 
             // lblDanhSachHoaDonTitle
             // 
@@ -871,7 +884,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             lblTienThoiValue.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
             lblTienThoiValue.ForeColor = Color.FromArgb(56, 90, 68);
-            lblTienThoiValue.Location = new Point(268, 92);
+            lblTienThoiValue.Location = new Point(272, 79);
             lblTienThoiValue.Name = "lblTienThoiValue";
             lblTienThoiValue.Size = new Size(140, 23);
             lblTienThoiValue.TabIndex = 6;
@@ -882,7 +895,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             lblTienThoiTitle.AutoSize = true;
             lblTienThoiTitle.ForeColor = Color.DimGray;
-            lblTienThoiTitle.Location = new Point(12, 93);
+            lblTienThoiTitle.Location = new Point(16, 80);
             lblTienThoiTitle.Name = "lblTienThoiTitle";
             lblTienThoiTitle.Size = new Size(94, 21);
             lblTienThoiTitle.TabIndex = 5;
@@ -894,7 +907,7 @@ namespace QuanLyQuanCaPhe.Forms
             txtTienKhachDua.BorderStyle = BorderStyle.FixedSingle;
             txtTienKhachDua.Font = new Font("Segoe UI", 9.5F);
             txtTienKhachDua.ForeColor = Color.FromArgb(59, 46, 36);
-            txtTienKhachDua.Location = new Point(268, 60);
+            txtTienKhachDua.Location = new Point(272, 47);
             txtTienKhachDua.Name = "txtTienKhachDua";
             txtTienKhachDua.PlaceholderText = "Nhập số tiền khách đưa";
             txtTienKhachDua.Size = new Size(140, 29);
@@ -905,7 +918,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             lblTienKhachDuaTitle.AutoSize = true;
             lblTienKhachDuaTitle.ForeColor = Color.DimGray;
-            lblTienKhachDuaTitle.Location = new Point(12, 64);
+            lblTienKhachDuaTitle.Location = new Point(16, 51);
             lblTienKhachDuaTitle.Name = "lblTienKhachDuaTitle";
             lblTienKhachDuaTitle.Size = new Size(119, 21);
             lblTienKhachDuaTitle.TabIndex = 3;
@@ -915,7 +928,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             lblTongTienValue.Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold);
             lblTongTienValue.ForeColor = Color.FromArgb(119, 63, 27);
-            lblTongTienValue.Location = new Point(256, 31);
+            lblTongTienValue.Location = new Point(260, 18);
             lblTongTienValue.Name = "lblTongTienValue";
             lblTongTienValue.Size = new Size(152, 30);
             lblTongTienValue.TabIndex = 2;
@@ -927,7 +940,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblTongTienTitle.AutoSize = true;
             lblTongTienTitle.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             lblTongTienTitle.ForeColor = Color.FromArgb(79, 56, 43);
-            lblTongTienTitle.Location = new Point(12, 35);
+            lblTongTienTitle.Location = new Point(16, 22);
             lblTongTienTitle.Name = "lblTongTienTitle";
             lblTongTienTitle.Size = new Size(113, 23);
             lblTongTienTitle.TabIndex = 1;
@@ -1224,9 +1237,6 @@ namespace QuanLyQuanCaPhe.Forms
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
             panelTopbar.Location = new Point(0, 0);
@@ -1234,41 +1244,6 @@ namespace QuanLyQuanCaPhe.Forms
             panelTopbar.Padding = new Padding(22, 16, 22, 16);
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.DimGray;
-            btnUserMenu.Location = new Point(1088, 24);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 28);
-            btnUserMenu.TabIndex = 3;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.Location = new Point(936, 27);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(135, 23);
-            lblUserName.TabIndex = 2;
-            lblUserName.Text = "Manager Coffee";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(221, 206, 189);
-            picAvatar.Location = new Point(892, 20);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(36, 36);
-            picAvatar.TabIndex = 1;
-            picAvatar.TabStop = false;
             // 
             // lblPageTitle
             // 
@@ -1404,7 +1379,6 @@ namespace QuanLyQuanCaPhe.Forms
             grpThongTinChung.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             panelBillMini.ResumeLayout(false);
             ResumeLayout(false);
         }
@@ -1447,6 +1421,7 @@ namespace QuanLyQuanCaPhe.Forms
         private TextBox txtTimKiemHoaDon;
         private Label lblTimKiemHoaDon;
         private Panel panelMasterHeader;
+        private Button btnLamMoi;
         private Label lblDanhSachHoaDonTitle;
         private Panel panelDetail;
         private TableLayoutPanel tableDetail;
@@ -1497,9 +1472,6 @@ namespace QuanLyQuanCaPhe.Forms
         private Button btnBoQua;
         private Label lblNhomDuLieu;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
         private Label lblPageTitle;
         private GroupBox grpTongKet;
         private GroupBox grpChiTiet;

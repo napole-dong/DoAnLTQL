@@ -48,11 +48,6 @@ namespace QuanLyQuanCaPhe.Forms
             tableMain = new TableLayoutPanel();
             panelOrder = new Panel();
             dgvOrder = new DataGridView();
-            colTenMon = new DataGridViewTextBoxColumn();
-            colSoLuong = new DataGridViewTextBoxColumn();
-            colDonGia = new DataGridViewTextBoxColumn();
-            colThanhTien = new DataGridViewTextBoxColumn();
-            colXoa = new DataGridViewButtonColumn();
             panelOrderFooter = new Panel();
             btnThanhToan = new Button();
             btnTamTinh = new Button();
@@ -69,26 +64,12 @@ namespace QuanLyQuanCaPhe.Forms
             lblOrderTitle = new Label();
             panelTables = new Panel();
             flowBan = new FlowLayoutPanel();
-            btnBan01 = new Button();
-            btnBan02 = new Button();
-            btnBan03 = new Button();
-            btnBan04 = new Button();
-            btnBan05 = new Button();
-            btnBan06 = new Button();
             panelTablesHeader = new Panel();
             lblThongTinBan = new Label();
             lblTablesTitle = new Label();
             tableWorkArea = new TableLayoutPanel();
             panelMenu = new Panel();
             flowMon = new FlowLayoutPanel();
-            panelMon1 = new Panel();
-            lblMon1Gia = new Label();
-            lblMon1Ten = new Label();
-            btnMon1 = new Button();
-            panelMon2 = new Panel();
-            lblMon2Gia = new Label();
-            lblMon2Ten = new Label();
-            btnMon2 = new Button();
             panelMenuFilter = new Panel();
             btnTatCa = new Button();
             btnTra = new Button();
@@ -97,10 +78,14 @@ namespace QuanLyQuanCaPhe.Forms
             lblMenuTitle = new Label();
             panelTopbar = new Panel();
             btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             txtSearch = new TextBox();
+            btnLamMoi = new Button();
             lblPageTitle = new Label();
+            colTenMon = new DataGridViewTextBoxColumn();
+            colSoLuong = new DataGridViewTextBoxColumn();
+            colDonGia = new DataGridViewTextBoxColumn();
+            colThanhTien = new DataGridViewTextBoxColumn();
+            colXoa = new DataGridViewButtonColumn();
             panelSidebar.SuspendLayout();
             flowSidebarMenu.SuspendLayout();
             panelLogo.SuspendLayout();
@@ -112,16 +97,11 @@ namespace QuanLyQuanCaPhe.Forms
             panelOrderFooter.SuspendLayout();
             panelOrderHeader.SuspendLayout();
             panelTables.SuspendLayout();
-            flowBan.SuspendLayout();
             panelTablesHeader.SuspendLayout();
             tableWorkArea.SuspendLayout();
             panelMenu.SuspendLayout();
-            flowMon.SuspendLayout();
-            panelMon1.SuspendLayout();
-            panelMon2.SuspendLayout();
             panelMenuFilter.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             SuspendLayout();
             // 
             // panelSidebar
@@ -406,50 +386,6 @@ namespace QuanLyQuanCaPhe.Forms
             dgvOrder.Size = new Size(576, 178);
             dgvOrder.TabIndex = 1;
             // 
-            // colTenMon
-            // 
-            colTenMon.FillWeight = 135F;
-            colTenMon.HeaderText = "Tên món";
-            colTenMon.MinimumWidth = 6;
-            colTenMon.Name = "colTenMon";
-            colTenMon.ReadOnly = true;
-            // 
-            // colSoLuong
-            // 
-            colSoLuong.FillWeight = 78F;
-            colSoLuong.HeaderText = "Số lượng (+/-)";
-            colSoLuong.MinimumWidth = 6;
-            colSoLuong.Name = "colSoLuong";
-            colSoLuong.ReadOnly = true;
-            // 
-            // colDonGia
-            // 
-            colDonGia.FillWeight = 86F;
-            colDonGia.HeaderText = "Đơn giá";
-            colDonGia.MinimumWidth = 6;
-            colDonGia.Name = "colDonGia";
-            colDonGia.ReadOnly = true;
-            // 
-            // colThanhTien
-            // 
-            colThanhTien.FillWeight = 94F;
-            colThanhTien.HeaderText = "Thành tiền";
-            colThanhTien.MinimumWidth = 6;
-            colThanhTien.Name = "colThanhTien";
-            colThanhTien.ReadOnly = true;
-            // 
-            // colXoa
-            // 
-            colXoa.FillWeight = 58F;
-            colXoa.HeaderText = "Xóa";
-            colXoa.MinimumWidth = 6;
-            colXoa.Name = "colXoa";
-            colXoa.ReadOnly = true;
-            colXoa.Resizable = DataGridViewTriState.True;
-            colXoa.SortMode = DataGridViewColumnSortMode.Automatic;
-            colXoa.Text = "Xóa";
-            colXoa.UseColumnTextForButtonValue = true;
-            // 
             // panelOrderFooter
             // 
             panelOrderFooter.Controls.Add(btnThanhToan);
@@ -616,9 +552,9 @@ namespace QuanLyQuanCaPhe.Forms
             lblOrderMeta.ForeColor = Color.FromArgb(130, 112, 96);
             lblOrderMeta.Location = new Point(4, 35);
             lblOrderMeta.Name = "lblOrderMeta";
-            lblOrderMeta.Size = new Size(125, 20);
+            lblOrderMeta.Size = new Size(108, 20);
             lblOrderMeta.TabIndex = 1;
-            lblOrderMeta.Text = "Bàn 01 • Tại quán";
+            lblOrderMeta.Text = "Chưa chọn bàn";
             // 
             // lblOrderTitle
             // 
@@ -647,108 +583,12 @@ namespace QuanLyQuanCaPhe.Forms
             // flowBan
             // 
             flowBan.AutoScroll = true;
-            flowBan.Controls.Add(btnBan01);
-            flowBan.Controls.Add(btnBan02);
-            flowBan.Controls.Add(btnBan03);
-            flowBan.Controls.Add(btnBan04);
-            flowBan.Controls.Add(btnBan05);
-            flowBan.Controls.Add(btnBan06);
             flowBan.Dock = DockStyle.Fill;
             flowBan.Location = new Point(12, 65);
             flowBan.Name = "flowBan";
             flowBan.Padding = new Padding(4);
             flowBan.Size = new Size(552, 91);
             flowBan.TabIndex = 1;
-            // 
-            // btnBan01
-            // 
-            btnBan01.BackColor = Color.FromArgb(255, 241, 230);
-            btnBan01.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan01.FlatStyle = FlatStyle.Flat;
-            btnBan01.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            btnBan01.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan01.Location = new Point(12, 12);
-            btnBan01.Margin = new Padding(8);
-            btnBan01.Name = "btnBan01";
-            btnBan01.Size = new Size(95, 80);
-            btnBan01.TabIndex = 0;
-            btnBan01.Text = "Bàn 01\r\nĐang chọn";
-            btnBan01.UseVisualStyleBackColor = false;
-            // 
-            // btnBan02
-            // 
-            btnBan02.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan02.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan02.FlatStyle = FlatStyle.Flat;
-            btnBan02.Font = new Font("Segoe UI", 10F);
-            btnBan02.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan02.Location = new Point(123, 12);
-            btnBan02.Margin = new Padding(8);
-            btnBan02.Name = "btnBan02";
-            btnBan02.Size = new Size(95, 80);
-            btnBan02.TabIndex = 1;
-            btnBan02.Text = "Bàn 02\r\nTrống";
-            btnBan02.UseVisualStyleBackColor = false;
-            // 
-            // btnBan03
-            // 
-            btnBan03.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan03.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan03.FlatStyle = FlatStyle.Flat;
-            btnBan03.Font = new Font("Segoe UI", 10F);
-            btnBan03.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan03.Location = new Point(234, 12);
-            btnBan03.Margin = new Padding(8);
-            btnBan03.Name = "btnBan03";
-            btnBan03.Size = new Size(95, 80);
-            btnBan03.TabIndex = 2;
-            btnBan03.Text = "Bàn 03\r\nTrống";
-            btnBan03.UseVisualStyleBackColor = false;
-            // 
-            // btnBan04
-            // 
-            btnBan04.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan04.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan04.FlatStyle = FlatStyle.Flat;
-            btnBan04.Font = new Font("Segoe UI", 10F);
-            btnBan04.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan04.Location = new Point(345, 12);
-            btnBan04.Margin = new Padding(8);
-            btnBan04.Name = "btnBan04";
-            btnBan04.Size = new Size(95, 80);
-            btnBan04.TabIndex = 3;
-            btnBan04.Text = "Bàn 04\r\nTrống";
-            btnBan04.UseVisualStyleBackColor = false;
-            // 
-            // btnBan05
-            // 
-            btnBan05.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan05.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan05.FlatStyle = FlatStyle.Flat;
-            btnBan05.Font = new Font("Segoe UI", 10F);
-            btnBan05.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan05.Location = new Point(12, 108);
-            btnBan05.Margin = new Padding(8);
-            btnBan05.Name = "btnBan05";
-            btnBan05.Size = new Size(95, 80);
-            btnBan05.TabIndex = 4;
-            btnBan05.Text = "Bàn 05\r\nĐang dùng";
-            btnBan05.UseVisualStyleBackColor = false;
-            // 
-            // btnBan06
-            // 
-            btnBan06.BackColor = Color.FromArgb(248, 245, 241);
-            btnBan06.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnBan06.FlatStyle = FlatStyle.Flat;
-            btnBan06.Font = new Font("Segoe UI", 10F);
-            btnBan06.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBan06.Location = new Point(123, 108);
-            btnBan06.Margin = new Padding(8);
-            btnBan06.Name = "btnBan06";
-            btnBan06.Size = new Size(95, 80);
-            btnBan06.TabIndex = 5;
-            btnBan06.Text = "Bàn 06\r\nTrống";
-            btnBan06.UseVisualStyleBackColor = false;
             // 
             // panelTablesHeader
             // 
@@ -812,108 +652,12 @@ namespace QuanLyQuanCaPhe.Forms
             // flowMon
             // 
             flowMon.AutoScroll = true;
-            flowMon.Controls.Add(panelMon1);
-            flowMon.Controls.Add(panelMon2);
             flowMon.Dock = DockStyle.Fill;
-            flowMon.Location = new Point(12, 78);
+            flowMon.Location = new Point(12, 96);
             flowMon.Name = "flowMon";
             flowMon.Padding = new Padding(4);
-            flowMon.Size = new Size(442, 552);
+            flowMon.Size = new Size(442, 534);
             flowMon.TabIndex = 1;
-            // 
-            // panelMon1
-            // 
-            panelMon1.BackColor = Color.FromArgb(250, 247, 243);
-            panelMon1.Controls.Add(lblMon1Gia);
-            panelMon1.Controls.Add(lblMon1Ten);
-            panelMon1.Controls.Add(btnMon1);
-            panelMon1.Location = new Point(7, 7);
-            panelMon1.Name = "panelMon1";
-            panelMon1.Size = new Size(200, 120);
-            panelMon1.TabIndex = 0;
-            // 
-            // lblMon1Gia
-            // 
-            lblMon1Gia.AutoSize = true;
-            lblMon1Gia.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblMon1Gia.ForeColor = Color.FromArgb(119, 63, 27);
-            lblMon1Gia.Location = new Point(14, 68);
-            lblMon1Gia.Name = "lblMon1Gia";
-            lblMon1Gia.Size = new Size(60, 23);
-            lblMon1Gia.TabIndex = 2;
-            lblMon1Gia.Text = "45.000";
-            // 
-            // lblMon1Ten
-            // 
-            lblMon1Ten.AutoSize = true;
-            lblMon1Ten.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblMon1Ten.ForeColor = Color.FromArgb(63, 45, 35);
-            lblMon1Ten.Location = new Point(14, 18);
-            lblMon1Ten.Name = "lblMon1Ten";
-            lblMon1Ten.Size = new Size(104, 23);
-            lblMon1Ten.TabIndex = 1;
-            lblMon1Ten.Text = "Latte đá xay";
-            // 
-            // btnMon1
-            // 
-            btnMon1.BackColor = Color.White;
-            btnMon1.FlatAppearance.BorderColor = Color.FromArgb(230, 220, 210);
-            btnMon1.FlatStyle = FlatStyle.Flat;
-            btnMon1.Font = new Font("Segoe UI", 9F);
-            btnMon1.ForeColor = Color.FromArgb(79, 56, 43);
-            btnMon1.Location = new Point(100, 76);
-            btnMon1.Name = "btnMon1";
-            btnMon1.Size = new Size(86, 32);
-            btnMon1.TabIndex = 0;
-            btnMon1.Text = "+ Thêm";
-            btnMon1.UseVisualStyleBackColor = false;
-            // 
-            // panelMon2
-            // 
-            panelMon2.BackColor = Color.FromArgb(250, 247, 243);
-            panelMon2.Controls.Add(lblMon2Gia);
-            panelMon2.Controls.Add(lblMon2Ten);
-            panelMon2.Controls.Add(btnMon2);
-            panelMon2.Location = new Point(213, 7);
-            panelMon2.Name = "panelMon2";
-            panelMon2.Size = new Size(200, 120);
-            panelMon2.TabIndex = 1;
-            // 
-            // lblMon2Gia
-            // 
-            lblMon2Gia.AutoSize = true;
-            lblMon2Gia.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblMon2Gia.ForeColor = Color.FromArgb(119, 63, 27);
-            lblMon2Gia.Location = new Point(14, 68);
-            lblMon2Gia.Name = "lblMon2Gia";
-            lblMon2Gia.Size = new Size(59, 23);
-            lblMon2Gia.TabIndex = 2;
-            lblMon2Gia.Text = "39.000";
-            // 
-            // lblMon2Ten
-            // 
-            lblMon2Ten.AutoSize = true;
-            lblMon2Ten.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblMon2Ten.ForeColor = Color.FromArgb(63, 45, 35);
-            lblMon2Ten.Location = new Point(14, 18);
-            lblMon2Ten.Name = "lblMon2Ten";
-            lblMon2Ten.Size = new Size(104, 23);
-            lblMon2Ten.TabIndex = 1;
-            lblMon2Ten.Text = "Trà đào cam";
-            // 
-            // btnMon2
-            // 
-            btnMon2.BackColor = Color.White;
-            btnMon2.FlatAppearance.BorderColor = Color.FromArgb(230, 220, 210);
-            btnMon2.FlatStyle = FlatStyle.Flat;
-            btnMon2.Font = new Font("Segoe UI", 9F);
-            btnMon2.ForeColor = Color.FromArgb(79, 56, 43);
-            btnMon2.Location = new Point(100, 76);
-            btnMon2.Name = "btnMon2";
-            btnMon2.Size = new Size(86, 32);
-            btnMon2.TabIndex = 0;
-            btnMon2.Text = "+ Thêm";
-            btnMon2.UseVisualStyleBackColor = false;
             // 
             // panelMenuFilter
             // 
@@ -925,7 +669,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelMenuFilter.Dock = DockStyle.Top;
             panelMenuFilter.Location = new Point(12, 12);
             panelMenuFilter.Name = "panelMenuFilter";
-            panelMenuFilter.Size = new Size(442, 66);
+            panelMenuFilter.Size = new Size(442, 84);
             panelMenuFilter.TabIndex = 0;
             // 
             // btnTatCa
@@ -1003,8 +747,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             panelTopbar.BackColor = Color.White;
             panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
+            panelTopbar.Controls.Add(btnLamMoi);
             panelTopbar.Controls.Add(txtSearch);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
@@ -1013,6 +756,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelTopbar.Padding = new Padding(22, 16, 22, 16);
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
+            panelTopbar.Paint += panelTopbar_Paint;
             // 
             // btnUserMenu
             // 
@@ -1028,28 +772,6 @@ namespace QuanLyQuanCaPhe.Forms
             btnUserMenu.Text = "▾";
             btnUserMenu.UseVisualStyleBackColor = true;
             // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.ForeColor = Color.FromArgb(63, 45, 35);
-            lblUserName.Location = new Point(936, 27);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(167, 23);
-            lblUserName.TabIndex = 3;
-            lblUserName.Text = "Nhân viên bán hàng";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(221, 206, 189);
-            picAvatar.Location = new Point(894, 20);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(36, 36);
-            picAvatar.TabIndex = 2;
-            picAvatar.TabStop = false;
-            // 
             // txtSearch
             // 
             txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -1063,6 +785,20 @@ namespace QuanLyQuanCaPhe.Forms
             txtSearch.Size = new Size(280, 30);
             txtSearch.TabIndex = 1;
             // 
+            // btnLamMoi
+            // 
+            btnLamMoi.BackColor = Color.FromArgb(248, 245, 241);
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.FlatStyle = FlatStyle.Flat;
+            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
+            btnLamMoi.Location = new Point(531, 23);
+            btnLamMoi.Name = "btnLamMoi";
+            btnLamMoi.Size = new Size(95, 30);
+            btnLamMoi.TabIndex = 2;
+            btnLamMoi.Text = "Làm mới";
+            btnLamMoi.UseVisualStyleBackColor = false;
+            // 
             // lblPageTitle
             // 
             lblPageTitle.AutoSize = true;
@@ -1073,6 +809,50 @@ namespace QuanLyQuanCaPhe.Forms
             lblPageTitle.Size = new Size(181, 32);
             lblPageTitle.TabIndex = 0;
             lblPageTitle.Text = "Quầy bán hàng";
+            // 
+            // colTenMon
+            // 
+            colTenMon.FillWeight = 135F;
+            colTenMon.HeaderText = "Tên món";
+            colTenMon.MinimumWidth = 6;
+            colTenMon.Name = "colTenMon";
+            colTenMon.ReadOnly = true;
+            // 
+            // colSoLuong
+            // 
+            colSoLuong.FillWeight = 78F;
+            colSoLuong.HeaderText = "Số lượng";
+            colSoLuong.MinimumWidth = 6;
+            colSoLuong.Name = "colSoLuong";
+            colSoLuong.ReadOnly = true;
+            // 
+            // colDonGia
+            // 
+            colDonGia.FillWeight = 86F;
+            colDonGia.HeaderText = "Đơn giá";
+            colDonGia.MinimumWidth = 6;
+            colDonGia.Name = "colDonGia";
+            colDonGia.ReadOnly = true;
+            // 
+            // colThanhTien
+            // 
+            colThanhTien.FillWeight = 94F;
+            colThanhTien.HeaderText = "Thành tiền";
+            colThanhTien.MinimumWidth = 6;
+            colThanhTien.Name = "colThanhTien";
+            colThanhTien.ReadOnly = true;
+            // 
+            // colXoa
+            // 
+            colXoa.FillWeight = 58F;
+            colXoa.HeaderText = "Xóa";
+            colXoa.MinimumWidth = 6;
+            colXoa.Name = "colXoa";
+            colXoa.ReadOnly = true;
+            colXoa.Resizable = DataGridViewTriState.True;
+            colXoa.SortMode = DataGridViewColumnSortMode.Automatic;
+            colXoa.Text = "Xóa";
+            colXoa.UseColumnTextForButtonValue = true;
             // 
             // frmBanHang
             // 
@@ -1102,21 +882,14 @@ namespace QuanLyQuanCaPhe.Forms
             panelOrderHeader.ResumeLayout(false);
             panelOrderHeader.PerformLayout();
             panelTables.ResumeLayout(false);
-            flowBan.ResumeLayout(false);
             panelTablesHeader.ResumeLayout(false);
             panelTablesHeader.PerformLayout();
             tableWorkArea.ResumeLayout(false);
             panelMenu.ResumeLayout(false);
-            flowMon.ResumeLayout(false);
-            panelMon1.ResumeLayout(false);
-            panelMon1.PerformLayout();
-            panelMon2.ResumeLayout(false);
-            panelMon2.PerformLayout();
             panelMenuFilter.ResumeLayout(false);
             panelMenuFilter.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             ResumeLayout(false);
         }
 
@@ -1157,14 +930,6 @@ namespace QuanLyQuanCaPhe.Forms
         private System.Windows.Forms.TableLayoutPanel tableWorkArea;
         private System.Windows.Forms.Panel panelMenu;
         private System.Windows.Forms.FlowLayoutPanel flowMon;
-        private System.Windows.Forms.Panel panelMon2;
-        private System.Windows.Forms.Label lblMon2Gia;
-        private System.Windows.Forms.Label lblMon2Ten;
-        private System.Windows.Forms.Button btnMon2;
-        private System.Windows.Forms.Panel panelMon1;
-        private System.Windows.Forms.Label lblMon1Gia;
-        private System.Windows.Forms.Label lblMon1Ten;
-        private System.Windows.Forms.Button btnMon1;
         private System.Windows.Forms.Panel panelMenuFilter;
         private System.Windows.Forms.Button btnTatCa;
         private System.Windows.Forms.Button btnTra;
@@ -1173,20 +938,13 @@ namespace QuanLyQuanCaPhe.Forms
         private System.Windows.Forms.Label lblMenuTitle;
         private System.Windows.Forms.Panel panelTables;
         private System.Windows.Forms.FlowLayoutPanel flowBan;
-        private System.Windows.Forms.Button btnBan06;
-        private System.Windows.Forms.Button btnBan05;
-        private System.Windows.Forms.Button btnBan04;
-        private System.Windows.Forms.Button btnBan03;
-        private System.Windows.Forms.Button btnBan02;
-        private System.Windows.Forms.Button btnBan01;
         private System.Windows.Forms.Panel panelTablesHeader;
         private System.Windows.Forms.Label lblThongTinBan;
         private System.Windows.Forms.Label lblTablesTitle;
         private System.Windows.Forms.Panel panelTopbar;
         private System.Windows.Forms.Button btnUserMenu;
-        private System.Windows.Forms.Label lblUserName;
-        private System.Windows.Forms.PictureBox picAvatar;
         private System.Windows.Forms.TextBox txtSearch;
+        private System.Windows.Forms.Button btnLamMoi;
         private System.Windows.Forms.Label lblPageTitle;
         private System.Windows.Forms.DataGridViewTextBoxColumn colTenMon;
         private System.Windows.Forms.DataGridViewTextBoxColumn colSoLuong;

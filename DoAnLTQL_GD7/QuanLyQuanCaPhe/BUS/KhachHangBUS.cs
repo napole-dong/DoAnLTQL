@@ -111,8 +111,10 @@ public class KhachHangBUS
 
     public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapKhachTuCsv(string[] lines)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create)
-            && !_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        var coQuyenThemMoi = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create);
+        var coQuyenCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update);
+
+        if (!coQuyenThemMoi && !coQuyenCapNhat)
         {
             return (0, 0, lines.Length);
         }
@@ -172,7 +174,7 @@ public class KhachHangBUS
             });
         }
 
-        var result = _khachHangDAL.NhapDanhSachKhach(dsKhach);
+        var result = _khachHangDAL.NhapDanhSachKhach(dsKhach, coQuyenThemMoi, coQuyenCapNhat);
         return (result.SoThemMoi, result.SoCapNhat, result.SoBoQua + soBoQua);
     }
 

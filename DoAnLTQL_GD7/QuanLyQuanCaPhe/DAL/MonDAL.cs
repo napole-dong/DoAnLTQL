@@ -105,7 +105,7 @@ public class MonDAL
         return true;
     }
 
-    public MonImportResultDTO NhapDanhSachMon(IEnumerable<MonDTO> dsMonNhap)
+    public MonImportResultDTO NhapDanhSachMon(IEnumerable<MonDTO> dsMonNhap, bool choPhepThemMoi, bool choPhepCapNhat)
     {
         using var context = new CaPheDbContext();
         var result = new MonImportResultDTO();
@@ -122,6 +122,12 @@ public class MonDAL
             var mon = context.Mon.FirstOrDefault(x => x.TenMon == monNhap.TenMon && x.LoaiMonID == monNhap.LoaiMonID);
             if (mon == null)
             {
+                if (!choPhepThemMoi)
+                {
+                    result.SoBoQua++;
+                    continue;
+                }
+
                 context.Mon.Add(new dtaMon
                 {
                     TenMon = monNhap.TenMon,
@@ -136,6 +142,12 @@ public class MonDAL
             }
             else
             {
+                if (!choPhepCapNhat)
+                {
+                    result.SoBoQua++;
+                    continue;
+                }
+
                 mon.DonGia = monNhap.DonGia;
                 mon.TrangThai = monNhap.TrangThai;
                 mon.TrangThaiTextLegacy = monNhap.TrangThaiHienThi;

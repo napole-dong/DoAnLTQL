@@ -87,7 +87,10 @@ public class KhachHangDAL
         return true;
     }
 
-    public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapDanhSachKhach(IEnumerable<KhachHangDTO> dsKhachNhap)
+    public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapDanhSachKhach(
+        IEnumerable<KhachHangDTO> dsKhachNhap,
+        bool choPhepThemMoi,
+        bool choPhepCapNhat)
     {
         using var context = new CaPheDbContext();
         var soThemMoi = 0;
@@ -110,6 +113,12 @@ public class KhachHangDAL
 
             if (khach == null)
             {
+                if (!choPhepThemMoi)
+                {
+                    soBoQua++;
+                    continue;
+                }
+
                 context.KhachHang.Add(new dtaKhachHang
                 {
                     HoVaTen = khachNhap.HoVaTen,
@@ -120,6 +129,12 @@ public class KhachHangDAL
             }
             else
             {
+                if (!choPhepCapNhat)
+                {
+                    soBoQua++;
+                    continue;
+                }
+
                 khach.HoVaTen = khachNhap.HoVaTen;
                 khach.DiaChi = string.IsNullOrWhiteSpace(khachNhap.DiaChi) ? null : khachNhap.DiaChi;
                 soCapNhat++;

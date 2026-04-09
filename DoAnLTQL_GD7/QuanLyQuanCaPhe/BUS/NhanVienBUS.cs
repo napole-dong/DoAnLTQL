@@ -31,6 +31,11 @@ public class NhanVienBUS
 
     public List<string> LayDanhSachVaiTroCoTheGan()
     {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.TaiKhoan, PermissionActions.View))
+        {
+            return new List<string>();
+        }
+
         return _permissionBUS.LayDanhSachVaiTroCoTheGan();
     }
 
@@ -47,6 +52,11 @@ public class NhanVienBUS
         if (!validation.HopLe)
         {
             return (false, validation.ThongBaoLoi, null);
+        }
+
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.TaiKhoan, PermissionActions.PhanQuyen))
+        {
+            return (false, "Bạn không có quyền gán vai trò tài khoản.", null);
         }
 
         if (!_permissionBUS.CoTheGanVaiTro(nhanVienDTO.QuyenHan))
@@ -81,6 +91,11 @@ public class NhanVienBUS
         if (!validation.HopLe)
         {
             return (false, validation.ThongBaoLoi);
+        }
+
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.TaiKhoan, PermissionActions.PhanQuyen))
+        {
+            return (false, "Bạn không có quyền gán vai trò tài khoản.");
         }
 
         if (!_permissionBUS.CoTheGanVaiTro(nhanVienDTO.QuyenHan))
@@ -124,8 +139,11 @@ public class NhanVienBUS
 
     public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapNhanVienTuCsv(string[] lines)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create)
-            && !_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update))
+        var coQuyenThemMoi = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create);
+        var coQuyenCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update);
+        var coQuyenPhanQuyen = _permissionBUS.CheckPermission(PermissionFeatures.TaiKhoan, PermissionActions.PhanQuyen);
+
+        if ((!coQuyenThemMoi && !coQuyenCapNhat) || !coQuyenPhanQuyen)
         {
             return (0, 0, lines.Length);
         }
@@ -137,6 +155,10 @@ public class NhanVienBUS
 
         var dsNhap = new List<NhanVienDTO>();
         var soBoQua = 0;
+        var dsVaiTroCoTheGan = new HashSet<string>(
+            _permissionBUS.LayDanhSachVaiTroCoTheGan(),
+            StringComparer.OrdinalIgnoreCase);
+
         var startIndex = lines[0].Contains("HoVaTen", StringComparison.OrdinalIgnoreCase)
             || lines[0].Contains("TenDangNhap", StringComparison.OrdinalIgnoreCase)
             ? 1
@@ -207,10 +229,16 @@ public class NhanVienBUS
                 continue;
             }
 
+            if (!dsVaiTroCoTheGan.Contains(nhanVien.QuyenHan))
+            {
+                soBoQua++;
+                continue;
+            }
+
             dsNhap.Add(nhanVien);
         }
 
-        var result = _nhanVienDAL.NhapDanhSachNhanVien(dsNhap);
+        var result = _nhanVienDAL.NhapDanhSachNhanVien(dsNhap, coQuyenThemMoi, coQuyenCapNhat);
         return (result.SoThemMoi, result.SoCapNhat, result.SoBoQua + soBoQua);
     }
 

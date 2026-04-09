@@ -61,6 +61,7 @@
             lblCoDiaChiIcon = new Label();
             tableCenter = new TableLayoutPanel();
             panelThongTinKhach = new Panel();
+            btnLamMoi = new Button();
             btnXoaKhach = new Button();
             btnCapNhatKhach = new Button();
             btnThemKhach = new Button();
@@ -87,9 +88,6 @@
             btnXuatKhach = new Button();
             lblDanhSachKhachTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             lblPageTitle = new Label();
             panelSidebar.SuspendLayout();
             flowSidebarMenu.SuspendLayout();
@@ -107,7 +105,6 @@
             ((System.ComponentModel.ISupportInitialize)dgvDanhSachKhach).BeginInit();
             panelDanhSachHeader.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             SuspendLayout();
             // 
             // panelSidebar
@@ -514,6 +511,7 @@
             // 
             panelThongTinKhach.AutoScroll = true;
             panelThongTinKhach.BackColor = Color.White;
+            panelThongTinKhach.Controls.Add(btnLamMoi);
             panelThongTinKhach.Controls.Add(btnXoaKhach);
             panelThongTinKhach.Controls.Add(btnCapNhatKhach);
             panelThongTinKhach.Controls.Add(btnThemKhach);
@@ -536,6 +534,21 @@
             panelThongTinKhach.Padding = new Padding(16, 14, 16, 14);
             panelThongTinKhach.Size = new Size(338, 512);
             panelThongTinKhach.TabIndex = 0;
+            // 
+            // btnLamMoi
+            // 
+            btnLamMoi.BackColor = Color.FromArgb(248, 245, 241);
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.FlatStyle = FlatStyle.Flat;
+            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
+            btnLamMoi.Location = new Point(176, 431);
+            btnLamMoi.Name = "btnLamMoi";
+            btnLamMoi.Size = new Size(146, 38);
+            btnLamMoi.TabIndex = 14;
+            btnLamMoi.Text = "Làm mới";
+            btnLamMoi.UseVisualStyleBackColor = false;
+            btnLamMoi.Click += btnLamMoi_Click;
             // 
             // btnXoaKhach
             // 
@@ -864,9 +877,6 @@
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
             panelTopbar.Location = new Point(0, 0);
@@ -874,41 +884,6 @@
             panelTopbar.Padding = new Padding(22, 16, 22, 16);
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.DimGray;
-            btnUserMenu.Location = new Point(1088, 24);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 28);
-            btnUserMenu.TabIndex = 4;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.Location = new Point(936, 27);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(135, 23);
-            lblUserName.TabIndex = 3;
-            lblUserName.Text = "Trần Minh Quân";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(221, 206, 189);
-            picAvatar.Location = new Point(892, 20);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(36, 36);
-            picAvatar.TabIndex = 2;
-            picAvatar.TabStop = false;
             // 
             // lblPageTitle
             // 
@@ -958,7 +933,6 @@
             panelDanhSachHeader.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             ResumeLayout(false);
         }
 
@@ -996,6 +970,7 @@
         private Label lblCoDiaChiIcon;
         private TableLayoutPanel tableCenter;
         private Panel panelThongTinKhach;
+        private Button btnLamMoi;
         private Button btnXoaKhach;
         private Button btnCapNhatKhach;
         private Button btnThemKhach;
@@ -1022,9 +997,6 @@
         private Button btnXuatKhach;
         private Label lblDanhSachKhachTitle;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
         private Label lblPageTitle;
     }
 }

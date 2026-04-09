@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Auth;
 
 namespace QuanLyQuanCaPhe.Forms
 {
@@ -11,8 +12,9 @@ namespace QuanLyQuanCaPhe.Forms
     {
         private readonly bool _isEmbedded;
         private readonly BanBUS _banBUS = new();
-        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
-        private bool _isAutoRefreshing;
+        private readonly PermissionBUS _permissionBUS = new();
+        private int? _banDangChonId;
+        private bool _dangDongBoChonTrenGrid;
 
         public frmQuanLiBan(bool isEmbedded = false)
         {
@@ -32,7 +34,17 @@ namespace QuanLyQuanCaPhe.Forms
             cboTrangThai.SelectedIndexChanged += FilterControl_Changed;
             txtSearch.TextChanged += FilterControl_Changed;
             dgvDanhSachBan.KeyDown += dgvDanhSachBan_KeyDown;
-            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+            dgvDanhSachBan.SelectionChanged += dgvDanhSachBan_SelectionChanged;
+            KhoiTaoNutLamMoi();
+
+            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
+            btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
+            btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
+            btnKhachHang.Click += (_, _) => OpenStandaloneForm(new frmKhachHang(), PermissionFeatures.Menu);
+            btnNhanVien.Click += (_, _) => OpenStandaloneForm(new frmNhanVien(), PermissionFeatures.NhanVien);
+            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
+            btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
         private void InitializePlaceholders()
@@ -55,6 +67,8 @@ namespace QuanLyQuanCaPhe.Forms
                 panelMain.Dock = DockStyle.Fill;
             }
 
+            HienThiNguoiDungDangNhap();
+
             try
             {
                 LoadThongKe();
@@ -70,8 +84,6 @@ namespace QuanLyQuanCaPhe.Forms
                 {
                     cboTrangThai.SelectedIndex = 0;
                 }
-
-                _autoRefreshTimer.Start();
             }
             catch
             {
@@ -81,6 +93,33 @@ namespace QuanLyQuanCaPhe.Forms
                 lblDatTruocValue.Text = "0";
                 dgvDanhSachBan.Rows.Clear();
             }
+        }
+
+        private void HienThiNguoiDungDangNhap()
+        {
+        }
+
+        private void KhoiTaoNutLamMoi()
+        {
+            var btnLamMoi = new Button
+            {
+                BackColor = Color.FromArgb(248, 245, 241),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(65, 48, 39),
+                Location = new Point(txtSearch.Right + 12, txtSearch.Top),
+                Name = "btnLamMoiBan",
+                Size = new Size(96, 30),
+                TabStop = false,
+                Text = "Làm mới",
+                UseVisualStyleBackColor = false
+            };
+
+            btnLamMoi.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnLamMoi.Click += btnLamMoi_Click;
+
+            panelTopbar.Controls.Add(btnLamMoi);
+            btnLamMoi.BringToFront();
         }
 
         private void LoadThongKe()
@@ -100,7 +139,10 @@ namespace QuanLyQuanCaPhe.Forms
 
             var dsBan = _banBUS.LayDanhSachBan(khuVuc, trangThai, tuKhoa);
 
+            _banDangChonId ??= dsBan.FirstOrDefault()?.ID;
+
             dgvDanhSachBan.DataSource = dsBan;
+            ChonBanTrenGrid(_banDangChonId);
         }
 
         private void FilterControl_Changed(object? sender, EventArgs e)
@@ -108,22 +150,9 @@ namespace QuanLyQuanCaPhe.Forms
             LoadDanhSachBanLenGrid();
         }
 
-        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
+        private void btnLamMoi_Click(object? sender, EventArgs e)
         {
-            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
-            {
-                return;
-            }
-
-            try
-            {
-                _isAutoRefreshing = true;
-                RefreshView();
-            }
-            finally
-            {
-                _isAutoRefreshing = false;
-            }
+            RefreshView();
         }
 
         private void LoadSoDoBanDong()
@@ -132,8 +161,16 @@ namespace QuanLyQuanCaPhe.Forms
 
             var dsBan = _banBUS.LaySoDoBan();
 
+            if (_banDangChonId.HasValue && dsBan.All(x => x.ID != _banDangChonId.Value))
+            {
+                _banDangChonId = dsBan.FirstOrDefault()?.ID;
+            }
+
+            _banDangChonId ??= dsBan.FirstOrDefault()?.ID;
+
             foreach (var ban in dsBan)
             {
+                var dangChon = _banDangChonId == ban.ID;
                 var trangThaiText = ban.TinhTrang;
 
                 var btnBan = new Button
@@ -141,7 +178,7 @@ namespace QuanLyQuanCaPhe.Forms
                     Width = 120,
                     Height = 80,
                     Margin = new Padding(10),
-                    Text = $"{ban.TenBan}\n\n{trangThaiText}",
+                    Text = $"{ban.TenBan}\n\n{(dangChon ? "Đang chọn" : trangThaiText)}",
                     Font = new Font("Segoe UI", 10, FontStyle.Bold),
                     FlatStyle = FlatStyle.Flat,
                     Tag = ban,
@@ -149,7 +186,8 @@ namespace QuanLyQuanCaPhe.Forms
                     UseVisualStyleBackColor = false
                 };
 
-                btnBan.FlatAppearance.BorderSize = 0;
+                btnBan.FlatAppearance.BorderSize = dangChon ? 2 : 0;
+                btnBan.FlatAppearance.BorderColor = Color.FromArgb(121, 85, 72);
 
                 switch (trangThaiText)
                 {
@@ -179,11 +217,9 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            MessageBox.Show(
-                $"Bạn đang chọn: {ban.TenBan}",
-                "Thông báo",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            _banDangChonId = ban.ID;
+            ChonBanTrenGrid(_banDangChonId);
+            LoadSoDoBanDong();
         }
 
         private void btnThemBan_Click(object sender, EventArgs e)
@@ -331,7 +367,93 @@ namespace QuanLyQuanCaPhe.Forms
 
         private BanDTO? GetBanDangChon()
         {
+            if (_banDangChonId.HasValue)
+            {
+                var banDangChon = TimBanTheoId(_banDangChonId.Value);
+                if (banDangChon != null)
+                {
+                    return banDangChon;
+                }
+            }
+
             return dgvDanhSachBan.CurrentRow?.DataBoundItem as BanDTO;
+        }
+
+        private BanDTO? TimBanTheoId(int banId)
+        {
+            foreach (DataGridViewRow row in dgvDanhSachBan.Rows)
+            {
+                if (row.DataBoundItem is BanDTO ban && ban.ID == banId)
+                {
+                    return ban;
+                }
+            }
+
+            return _banBUS.LaySoDoBan().FirstOrDefault(x => x.ID == banId);
+        }
+
+        private void ChonBanTrenGrid(int? banId)
+        {
+            _dangDongBoChonTrenGrid = true;
+            try
+            {
+                foreach (DataGridViewRow row in dgvDanhSachBan.Rows)
+                {
+                    row.Selected = false;
+                }
+
+                if (!banId.HasValue)
+                {
+                    if (dgvDanhSachBan.Rows.Count == 0)
+                    {
+                        return;
+                    }
+
+                    dgvDanhSachBan.CurrentCell = null;
+                    return;
+                }
+
+                foreach (DataGridViewRow row in dgvDanhSachBan.Rows)
+                {
+                    if (row.DataBoundItem is not BanDTO ban || ban.ID != banId.Value)
+                    {
+                        continue;
+                    }
+
+                    row.Selected = true;
+                    if (row.Cells.Count > 0)
+                    {
+                        dgvDanhSachBan.CurrentCell = row.Cells[0];
+                    }
+
+                    return;
+                }
+
+                if (dgvDanhSachBan.Rows.Count > 0)
+                {
+                    dgvDanhSachBan.CurrentCell = null;
+                }
+            }
+            finally
+            {
+                _dangDongBoChonTrenGrid = false;
+            }
+        }
+
+        private void dgvDanhSachBan_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (_dangDongBoChonTrenGrid || dgvDanhSachBan.CurrentRow?.DataBoundItem is not BanDTO banDangChon)
+            {
+                return;
+            }
+
+            if (_banDangChonId == banDangChon.ID)
+            {
+                return;
+            }
+
+            _banDangChonId = banDangChon.ID;
+            LoadSoDoBanDong();
         }
 
         private void dgvDanhSachBan_KeyDown(object? sender, KeyEventArgs e)
@@ -352,10 +474,49 @@ namespace QuanLyQuanCaPhe.Forms
             LoadDanhSachBanLenGrid();
         }
 
+        private void OpenStandaloneForm(Form targetForm, string feature)
+        {
+            if (_isEmbedded)
+            {
+                targetForm.Dispose();
+                return;
+            }
+
+            if (!_permissionBUS.CheckPermission(feature, PermissionActions.View))
+            {
+                targetForm.Dispose();
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang nay.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Hide();
+            targetForm.FormClosed += (_, _) =>
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    Show();
+                    BringToFront();
+                    Activate();
+                    RefreshView();
+                }
+            };
+
+            targetForm.Show(this);
+        }
+
+        private void MoTinhNangThongKe()
+        {
+            if (!_permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View))
+            {
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang thong ke.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            MessageBox.Show("Chuc nang thong ke dang duoc phat trien.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _autoRefreshTimer.Stop();
-            _autoRefreshTimer.Dispose();
             base.OnFormClosed(e);
         }
 

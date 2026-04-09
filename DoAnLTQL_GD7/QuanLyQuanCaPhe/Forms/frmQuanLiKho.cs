@@ -3,14 +3,14 @@ using System.Linq;
 using System.Text;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Auth;
 
 namespace QuanLyQuanCaPhe.Forms
 {
     public partial class frmQuanLiKho : Form
     {
         private readonly NguyenLieuBUS _nguyenLieuBUS = new();
-        private readonly System.Windows.Forms.Timer _autoRefreshTimer = new() { Interval = 500 };
-        private bool _isAutoRefreshing;
+        private readonly PermissionBUS _permissionBUS = new();
 
         public frmQuanLiKho()
         {
@@ -34,11 +34,34 @@ namespace QuanLyQuanCaPhe.Forms
             btnXoaNguyenLieu.Click += btnXoaNguyenLieu_Click;
             btnNhapKho.Click += btnNhapKho_Click;
             btnXuatKho.Click += btnXuatKho_Click;
-            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+            KhoiTaoNutLamMoi();
+
+            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
+            btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
+            btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
+            btnQuanLyKho.Click += (_, _) => OpenStandaloneForm(new frmQuanLiKho(), PermissionFeatures.NguyenLieu);
+            btnNhanVien.Click += (_, _) => OpenStandaloneForm(new frmNhanVien(), PermissionFeatures.NhanVien);
+            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
+            btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
         private void frmQuanLiKho_Load(object? sender, EventArgs e)
         {
+            try
+            {
+                _permissionBUS.EnsurePermission(PermissionFeatures.NguyenLieu, PermissionActions.View, "Ban khong co quyen truy cap chuc nang quan ly kho.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show(ex.Message, "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Close();
+                return;
+            }
+
+            HienThiNguoiDungDangNhap();
+            ApDungPhanQuyenLenUI();
+
             if (cboDonViTinh.Items.Count > 0)
             {
                 cboDonViTinh.SelectedIndex = 0;
@@ -51,7 +74,80 @@ namespace QuanLyQuanCaPhe.Forms
 
             LoadDanhSachKho();
             ResetForm();
-            _autoRefreshTimer.Start();
+        }
+
+        private void HienThiNguoiDungDangNhap()
+        {
+        }
+
+        private void ApDungPhanQuyenLenUI()
+        {
+            if (_permissionBUS.IsAdmin())
+            {
+                btnThemNguyenLieu.Enabled = true;
+                btnCapNhatNguyenLieu.Enabled = true;
+                btnXoaNguyenLieu.Enabled = true;
+                btnNhapKho.Enabled = true;
+                btnXuatKho.Enabled = true;
+                txtTimNguyenLieu.Enabled = true;
+                dgvDanhSachKho.Enabled = true;
+
+                btnBanHang.Visible = true;
+                btnQuanLyBan.Visible = true;
+                btnQuanLyMon.Visible = true;
+                btnQuanLyKho.Visible = true;
+                btnNhanVien.Visible = true;
+                btnHoaDon.Visible = true;
+                btnThongKe.Visible = true;
+                return;
+            }
+
+            var coQuyenKhoXem = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.View);
+            var coQuyenKhoThem = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Create);
+            var coQuyenKhoCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Update);
+            var coQuyenKhoXoa = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Delete);
+            var coQuyenMenu = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
+            var coQuyenHoaDon = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
+
+            btnThemNguyenLieu.Enabled = coQuyenKhoThem;
+            btnCapNhatNguyenLieu.Enabled = coQuyenKhoCapNhat;
+            btnXoaNguyenLieu.Enabled = coQuyenKhoXoa;
+            btnNhapKho.Enabled = coQuyenKhoCapNhat;
+            btnXuatKho.Enabled = coQuyenKhoXem;
+            txtTimNguyenLieu.Enabled = coQuyenKhoXem;
+            dgvDanhSachKho.Enabled = coQuyenKhoXem;
+
+            btnBanHang.Visible = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
+            btnQuanLyBan.Visible = coQuyenMenu;
+            btnQuanLyMon.Visible = coQuyenMenu;
+            btnQuanLyKho.Visible = coQuyenKhoXem;
+            btnNhanVien.Visible = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
+            btnHoaDon.Visible = coQuyenHoaDon;
+            btnThongKe.Visible = _permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View);
+        }
+
+        private void KhoiTaoNutLamMoi()
+        {
+            var btnLamMoi = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(248, 245, 241),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = Color.FromArgb(65, 48, 39),
+                Location = new Point(Math.Max(0, btnNhapKho.Left - 101), btnNhapKho.Top),
+                Name = "btnLamMoiKho",
+                Size = new Size(95, 32),
+                TabStop = false,
+                Text = "Làm mới",
+                UseVisualStyleBackColor = false
+            };
+
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.Click += btnLamMoi_Click;
+
+            panelDanhSachHeader.Controls.Add(btnLamMoi);
+            btnLamMoi.BringToFront();
         }
 
         private void LoadDanhSachKho()
@@ -146,28 +242,61 @@ namespace QuanLyQuanCaPhe.Forms
             MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void AutoRefreshTimer_Tick(object? sender, EventArgs e)
+        private void btnLamMoi_Click(object? sender, EventArgs e)
         {
-            if (_isAutoRefreshing || !Visible || IsDisposed || Disposing)
-            {
-                return;
-            }
-
-            try
-            {
-                _isAutoRefreshing = true;
-                LoadDanhSachKho();
-            }
-            finally
-            {
-                _isAutoRefreshing = false;
-            }
+            txtTimNguyenLieu.Clear();
+            LoadDanhSachKho();
+            ResetForm();
         }
 
         private void btnNhapKho_Click(object? sender, EventArgs e)
         {
+            if (dgvDanhSachKho.CurrentRow?.DataBoundItem is not NguyenLieuDTO nguyenLieuDangChon)
+            {
+                MessageBox.Show("Vui lòng chọn nguyên liệu để nhập kho.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!decimal.TryParse(txtSoLuongTon.Text.Trim(), out var soLuongNhap) || soLuongNhap <= 0)
+            {
+                MessageBox.Show("Vui lòng nhập số lượng nhập lớn hơn 0 vào ô Số lượng tồn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtSoLuongTon.Focus();
+                return;
+            }
+
+            if (!decimal.TryParse(txtGiaNhapGanNhat.Text.Trim(), out var giaNhap) || giaNhap < 0)
+            {
+                MessageBox.Show("Giá nhập không hợp lệ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtGiaNhapGanNhat.Focus();
+                return;
+            }
+
+            var xacNhan = MessageBox.Show(
+                $"Xác nhận nhập thêm {soLuongNhap:N2} {nguyenLieuDangChon.DonViTinh} cho '{nguyenLieuDangChon.TenNguyenLieu}'?",
+                "Xác nhận nhập kho",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (xacNhan != DialogResult.Yes)
+            {
+                return;
+            }
+
+            var result = _nguyenLieuBUS.NhapKho(
+                nguyenLieuDangChon.MaNguyenLieu,
+                soLuongNhap,
+                giaNhap,
+                "Nhap kho thu cong tu man hinh quan ly kho.");
+
+            if (!result.ThanhCong)
+            {
+                MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             LoadDanhSachKho();
-            MessageBox.Show("Đã tải lại dữ liệu kho.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SelectRow(nguyenLieuDangChon.MaNguyenLieu);
+            MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnXuatKho_Click(object? sender, EventArgs e)
@@ -353,10 +482,47 @@ namespace QuanLyQuanCaPhe.Forms
             return $"\"{value.Replace("\"", "\"\"")}\"";
         }
 
+        private void OpenStandaloneForm(Form targetForm, string feature)
+        {
+            try
+            {
+                _permissionBUS.EnsurePermission(feature, PermissionActions.View, "Ban khong co quyen truy cap chuc nang nay.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                targetForm.Dispose();
+                MessageBox.Show(ex.Message, "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Hide();
+            targetForm.FormClosed += (_, _) =>
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    Show();
+                    BringToFront();
+                    Activate();
+                    LoadDanhSachKho();
+                }
+            };
+
+            targetForm.Show(this);
+        }
+
+        private void MoTinhNangThongKe()
+        {
+            if (!_permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View))
+            {
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang thong ke.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            MessageBox.Show("Chuc nang thong ke dang duoc phat trien.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _autoRefreshTimer.Stop();
-            _autoRefreshTimer.Dispose();
             base.OnFormClosed(e);
         }
     }

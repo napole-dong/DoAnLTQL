@@ -1,3 +1,6 @@
+using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Diagnostics;
+
 namespace QuanLyQuanCaPhe
 {
     internal static class Program
@@ -8,26 +11,93 @@ namespace QuanLyQuanCaPhe
         [STAThread]
         static void Main()
         {
+            var logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "QuanLyQuanCaPhe",
+                "logs");
+
+            AppLogger.Initialize(logDirectory);
+            ConfigureGlobalExceptionHandling();
+
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
 
-            using var frmDangNhap = new Forms.frmDangNhap();
-            if (frmDangNhap.ShowDialog() != DialogResult.OK)
+            try
             {
-                return;
-            }
+                using var startupScope = CorrelationContext.BeginScope();
+                AppLogger.Info("Application startup.", nameof(Program));
 
-            if (frmDangNhap.ThongTinDangNhap == null)
+                while (true)
+                {
+                    DangXuatDieuHuongService.DatLaiYeuCauDangNhapLai();
+
+                    using var frmDangNhap = new Forms.frmDangNhap();
+                    if (frmDangNhap.ShowDialog() != DialogResult.OK)
+                    {
+                        AppLogger.Info("Login canceled by user.", nameof(Program));
+                        break;
+                    }
+
+                    if (frmDangNhap.ThongTinDangNhap == null)
+                    {
+                        AppLogger.Warning("Login returned OK but login information is null.", nameof(Program));
+                        break;
+                    }
+
+                    NguoiDungHienTaiService.DatNguoiDungDangNhap(frmDangNhap.ThongTinDangNhap);
+                    AppLogger.Info("Login succeeded.", nameof(Program));
+
+                    Application.Run(new Forms.frmBanHang());
+                    NguoiDungHienTaiService.XoaNguoiDungDangNhap();
+
+                    if (!DangXuatDieuHuongService.DaYeuCauDangNhapLai)
+                    {
+                        break;
+                    }
+
+                    AppLogger.Info("User logged out. Returning to login screen.", nameof(Program));
+                }
+            }
+            catch (Exception ex)
             {
-                return;
+                AppExceptionHandler.Handle(ex, "Program.Main", showDialog: true);
             }
+            finally
+            {
+                NguoiDungHienTaiService.XoaNguoiDungDangNhap();
+                CorrelationContext.Clear();
+                AppLogger.Info("Application shutdown.", nameof(Program));
+                AppLogger.Shutdown();
+            }
+        }
 
-            Services.Auth.NguoiDungHienTaiService.DatNguoiDungDangNhap(frmDangNhap.ThongTinDangNhap);
+        private static void ConfigureGlobalExceptionHandling()
+        {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 
-            Application.Run(new Forms.frmBanHang());
+            Application.ThreadException += (_, args) =>
+            {
+                using var scope = CorrelationContext.BeginScope();
+                AppExceptionHandler.Handle(args.Exception, "Application.ThreadException", showDialog: true);
+            };
 
-            Services.Auth.NguoiDungHienTaiService.XoaNguoiDungDangNhap();
+            AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            {
+                using var scope = CorrelationContext.BeginScope();
+
+                var exception = args.ExceptionObject as Exception
+                    ?? new Exception(args.ExceptionObject?.ToString() ?? "Unhandled non-exception object.");
+
+                AppExceptionHandler.Handle(exception, "AppDomain.CurrentDomain.UnhandledException", showDialog: true);
+            };
+
+            TaskScheduler.UnobservedTaskException += (_, args) =>
+            {
+                using var scope = CorrelationContext.BeginScope();
+                AppExceptionHandler.Handle(args.Exception, "TaskScheduler.UnobservedTaskException", showDialog: false);
+                args.SetObserved();
+            };
         }
     }
 }

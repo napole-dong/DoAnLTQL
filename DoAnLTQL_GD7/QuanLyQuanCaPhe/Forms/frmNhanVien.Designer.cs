@@ -95,9 +95,6 @@
             btnXuatNhanVien = new Button();
             lblDanhSachNhanVienTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             lblPageTitle = new Label();
             panelSidebar.SuspendLayout();
             flowSidebarMenu.SuspendLayout();
@@ -115,7 +112,6 @@
             ((System.ComponentModel.ISupportInitialize)dgvDanhSachNhanVien).BeginInit();
             panelDanhSachHeader.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             SuspendLayout();
             // 
             // panelSidebar
@@ -933,9 +929,6 @@
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
             panelTopbar.Location = new Point(0, 0);
@@ -943,41 +936,6 @@
             panelTopbar.Padding = new Padding(22, 16, 22, 16);
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.DimGray;
-            btnUserMenu.Location = new Point(1088, 24);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 28);
-            btnUserMenu.TabIndex = 3;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.Location = new Point(936, 27);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(135, 23);
-            lblUserName.TabIndex = 2;
-            lblUserName.Text = "Manager Coffee";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(221, 206, 189);
-            picAvatar.Location = new Point(892, 20);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(36, 36);
-            picAvatar.TabIndex = 1;
-            picAvatar.TabStop = false;
             // 
             // lblPageTitle
             // 
@@ -1027,7 +985,6 @@
             panelDanhSachHeader.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             ResumeLayout(false);
         }
 
@@ -1098,9 +1055,6 @@
         private Button btnXuatNhanVien;
         private Label lblDanhSachNhanVienTitle;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
         private Label lblPageTitle;
     }
 }

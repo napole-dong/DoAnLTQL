@@ -55,7 +55,7 @@ public class DangNhapDAL
                 TenDangNhap = x.TenDangNhap,
                 MatKhau = x.MatKhau,
                 HoVaTen = x.NhanVien != null ? x.NhanVien.HoVaTen : x.TenDangNhap,
-                QuyenHan = x.VaiTro != null ? x.VaiTro.TenVaiTro : "Staff"
+                QuyenHan = x.VaiTro != null ? x.VaiTro.TenVaiTro : RoleMapper.ToRoleName(Role.Staff)
             })
             .FirstOrDefault();
     }

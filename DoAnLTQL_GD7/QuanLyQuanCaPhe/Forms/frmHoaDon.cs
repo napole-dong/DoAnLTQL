@@ -1,5 +1,6 @@
 ﻿using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.HoaDon;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -7,6 +8,7 @@ namespace QuanLyQuanCaPhe.Forms
     public partial class frmHoaDon : Form
     {
         private readonly HoaDonBUS _hoaDonBUS = new();
+        private readonly PermissionBUS _permissionBUS = new();
         private readonly HoaDonPreviewService _hoaDonPreviewService = new();
         private readonly HoaDonTienService _hoaDonTienService = new();
         private readonly HoaDonFormStateService _hoaDonFormStateService = new();
@@ -58,6 +60,7 @@ namespace QuanLyQuanCaPhe.Forms
             dgvDanhSachHoaDon.SelectionChanged += dgvDanhSachHoaDon_SelectionChanged;
             txtTimKiemHoaDon.KeyDown += txtTimKiemHoaDon_KeyDown;
             btnLocXem.Click += (_, _) => TaiDanhSachHoaDon();
+            btnLamMoi.Click += btnLamMoi_Click;
 
             btnThemMoi.Click += btnThemMoi_Click;
             btnSua.Click += btnSua_Click;
@@ -70,16 +73,66 @@ namespace QuanLyQuanCaPhe.Forms
             btnInHoaDon.Click += btnInHoaDon_Click;
 
             txtTienKhachDua.TextChanged += txtTienKhachDua_TextChanged;
+
+            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
+            btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
+            btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
+            btnKhachHang.Click += (_, _) => OpenStandaloneForm(new frmKhachHang(), PermissionFeatures.Menu);
+            btnNhanVien.Click += (_, _) => OpenStandaloneForm(new frmNhanVien(), PermissionFeatures.NhanVien);
+            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
+            btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
         private void frmHoaDon_Load(object? sender, EventArgs e)
         {
+            try
+            {
+                _permissionBUS.EnsurePermission(PermissionFeatures.HoaDon, PermissionActions.View, "Ban khong co quyen truy cap chuc nang hoa don.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show(ex.Message, "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Close();
+                return;
+            }
+
+            HienThiNguoiDungDangNhap();
+            ApDungPhanQuyenDieuHuong();
             KhoiTaoBoLocMacDinh();
             KhoiTaoComboTrangThai();
             TaiDanhSachBanKhach();
             TaiDanhSachMon();
             TaiDanhSachHoaDon(giuHoaDonDangChon: false);
             ChuyenStateManHinh(HoaDonManHinhState.Xem);
+        }
+
+        private void ApDungPhanQuyenDieuHuong()
+        {
+            if (_permissionBUS.IsAdmin())
+            {
+                btnBanHang.Visible = true;
+                btnQuanLyBan.Visible = true;
+                btnQuanLyMon.Visible = true;
+                btnKhachHang.Visible = true;
+                btnNhanVien.Visible = true;
+                btnHoaDon.Visible = true;
+                btnThongKe.Visible = true;
+                return;
+            }
+
+            var coQuyenMenu = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
+            btnBanHang.Visible = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
+            btnQuanLyBan.Visible = coQuyenMenu;
+            btnQuanLyMon.Visible = coQuyenMenu;
+            btnKhachHang.Visible = coQuyenMenu;
+            btnNhanVien.Visible = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
+            btnHoaDon.Visible = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
+            btnThongKe.Visible = _permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View);
+        }
+
+        private void HienThiNguoiDungDangNhap()
+        {
         }
 
         private void KhoiTaoBoLocMacDinh()
@@ -272,6 +325,13 @@ namespace QuanLyQuanCaPhe.Forms
 
             TaiDanhSachHoaDon();
             e.SuppressKeyPress = true;
+        }
+
+        private void btnLamMoi_Click(object? sender, EventArgs e)
+        {
+            txtTimKiemHoaDon.Clear();
+            KhoiTaoBoLocMacDinh();
+            TaiDanhSachHoaDon(giuHoaDonDangChon: false);
         }
 
         private void btnThemMoi_Click(object? sender, EventArgs e)
@@ -538,23 +598,28 @@ namespace QuanLyQuanCaPhe.Forms
         private void ApDungTrangThaiDieuKhien(HoaDonDTO? hoaDon)
         {
             var trangThai = _hoaDonFormStateService.TaoTrangThai(_manHinhState, hoaDon);
+            var isAdmin = _permissionBUS.IsAdmin();
+            var coQuyenXem = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
+            var coQuyenTao = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Create);
+            var coQuyenCapNhat = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update);
+            var coQuyenXoa = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Delete);
 
-            cboBanKhach.Enabled = trangThai.ChoPhepSuaThongTinChung;
-            dtpNgayTao.Enabled = trangThai.ChoPhepSuaThongTinChung;
+            cboBanKhach.Enabled = trangThai.ChoPhepSuaThongTinChung && (coQuyenTao || coQuyenCapNhat);
+            dtpNgayTao.Enabled = trangThai.ChoPhepSuaThongTinChung && (coQuyenTao || coQuyenCapNhat);
             cboTrangThai.Enabled = false;
 
-            panelMasterFilter.Enabled = trangThai.ChoPhepLocMaster;
-            dgvDanhSachHoaDon.Enabled = trangThai.ChoPhepGridMaster;
+            panelMasterFilter.Enabled = trangThai.ChoPhepLocMaster && coQuyenXem;
+            dgvDanhSachHoaDon.Enabled = trangThai.ChoPhepGridMaster && coQuyenXem;
 
-            btnThemMoi.Enabled = trangThai.ChoPhepThemMoi;
-            btnSua.Enabled = trangThai.ChoPhepSua;
-            btnXoaHuy.Enabled = trangThai.ChoPhepHuy;
-            btnLuu.Enabled = trangThai.ChoPhepLuu;
+            btnThemMoi.Enabled = trangThai.ChoPhepThemMoi && coQuyenTao;
+            btnSua.Enabled = trangThai.ChoPhepSua && coQuyenCapNhat;
+            btnXoaHuy.Enabled = trangThai.ChoPhepHuy && coQuyenXoa;
+            btnLuu.Enabled = trangThai.ChoPhepLuu && (coQuyenTao || coQuyenCapNhat);
             btnBoQua.Enabled = trangThai.ChoPhepBoQua;
 
-            btnThemMonVaoHoaDon.Enabled = trangThai.ChoPhepThemMon;
-            btnXacNhanThuTien.Enabled = trangThai.ChoPhepThuTien;
-            btnInHoaDon.Enabled = trangThai.ChoPhepIn;
+            btnThemMonVaoHoaDon.Enabled = trangThai.ChoPhepThemMon && coQuyenCapNhat;
+            btnXacNhanThuTien.Enabled = trangThai.ChoPhepThuTien && coQuyenCapNhat;
+            btnInHoaDon.Enabled = trangThai.ChoPhepIn && coQuyenXem;
         }
 
         private HoaDonDTO? LayHoaDonDangChon()
@@ -565,6 +630,50 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             return _hoaDonBUS.LayHoaDonTheoId(_hoaDonDangChonId.Value);
+        }
+
+        private void OpenStandaloneForm(Form targetForm, string feature)
+        {
+            try
+            {
+                _permissionBUS.EnsurePermission(feature, PermissionActions.View, "Ban khong co quyen truy cap chuc nang nay.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                targetForm.Dispose();
+                MessageBox.Show(ex.Message, "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Hide();
+            targetForm.FormClosed += (_, _) =>
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    Show();
+                    BringToFront();
+                    Activate();
+                    TaiDanhSachHoaDon();
+                }
+            };
+
+            targetForm.Show(this);
+        }
+
+        private void MoTinhNangThongKe()
+        {
+            if (!_permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View))
+            {
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang thong ke.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            MessageBox.Show("Chuc nang thong ke dang duoc phat trien.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            base.OnFormClosed(e);
         }
 
     }

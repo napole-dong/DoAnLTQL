@@ -272,13 +272,8 @@ public class BanHangBUS
         }
 
         var tenLoai = ChuanHoaKhongDau(tenLoaiMon);
-        return boLocLoaiMon switch
-        {
-            "cafe" => tenLoai.Contains("ca phe") || tenLoai.Contains("cafe"),
-            "da xay" => tenLoai.Contains("da xay"),
-            "tra" => tenLoai.Contains("tra"),
-            _ => true
-        };
+        var boLoc = ChuanHoaKhongDau(boLocLoaiMon);
+        return boLoc.Length == 0 || tenLoai == boLoc;
     }
 
     private static string ChuanHoaKhongDau(string text)

@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <EnableLocalDevCodeSigning Condition="'$(EnableLocalDevCodeSigning)' == ''">true</EnableLocalDevCodeSigning>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,15 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
+
+  <Target Name="SignLocalOutputsForAppControl"
+          AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' and '$(Configuration)' == 'Debug' and '$(EnableLocalDevCodeSigning)' == 'true'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\build\Sign-LocalOutputs.ps1&quot; -TargetPath &quot;$(TargetPath)&quot;" />
+  </Target>
 
 </Project>

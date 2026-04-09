@@ -138,8 +138,10 @@ public class LoaiMonBUS
 
     public LoaiMonImportResultDTO NhapLoaiMonTuCsv(string[] lines)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create)
-            && !_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        var coQuyenThemMoi = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create);
+        var coQuyenCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update);
+
+        if (!coQuyenThemMoi && !coQuyenCapNhat)
         {
             return new LoaiMonImportResultDTO { SoBoQua = lines.Length };
         }
@@ -188,7 +190,7 @@ public class LoaiMonBUS
             });
         }
 
-        var result = _loaiMonDAL.NhapLoaiMon(dsLoaiNhap);
+        var result = _loaiMonDAL.NhapLoaiMon(dsLoaiNhap, coQuyenThemMoi, coQuyenCapNhat);
         result.SoBoQua += soBoQua;
         return result;
     }

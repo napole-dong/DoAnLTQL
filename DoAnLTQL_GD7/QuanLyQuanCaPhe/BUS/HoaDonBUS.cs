@@ -11,7 +11,7 @@ public class HoaDonBUS
 
     public List<HoaDonDTO> LayDanhSachHoaDon(HoaDonFilterDTO boLoc)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View))
         {
             return new List<HoaDonDTO>();
         }
@@ -26,7 +26,7 @@ public class HoaDonBUS
 
     public HoaDonDTO? LayHoaDonTheoId(int hoaDonId)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View))
         {
             return null;
         }
@@ -48,7 +48,7 @@ public class HoaDonBUS
 
     public int LayMaHoaDonTiepTheo()
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Create))
         {
             return 0;
         }
@@ -58,7 +58,7 @@ public class HoaDonBUS
 
     public List<HoaDonBanKhachItemDTO> LayDanhSachBanKhach()
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View))
         {
             return new List<HoaDonBanKhachItemDTO>();
         }
@@ -68,7 +68,7 @@ public class HoaDonBUS
 
     public List<HoaDonMonItemDTO> LayDanhSachMonDangKinhDoanh()
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View))
         {
             return new List<HoaDonMonItemDTO>();
         }
@@ -78,7 +78,7 @@ public class HoaDonBUS
 
     public (BanActionResultDTO Result, int HoaDonId) ThemHoaDon(HoaDonSaveRequestDTO request)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Create))
         {
             return (BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền tạo hóa đơn."), 0);
         }
@@ -95,9 +95,38 @@ public class HoaDonBUS
         return (BusMessageCatalog.CreateActionResult(ketQua.ThanhCong, ketQua.ThongBao), ketQua.HoaDonId);
     }
 
+    public int CreateInvoice(HoaDonSaveRequestDTO request)
+    {
+        if (!_permissionBUS.IsAdmin() && !_permissionBUS.IsManager() && !_permissionBUS.IsStaff())
+        {
+            throw new Exception("Không có quyền");
+        }
+
+        if (!_permissionBUS.CheckPermission(ActionType.Create, Feature.Invoice))
+        {
+            throw new Exception("Không có quyền");
+        }
+
+        if (request.BanID <= 0)
+        {
+            throw new Exception("Vui lòng chọn bàn trước khi tạo hóa đơn.");
+        }
+
+        request.NgayLap = request.NgayLap == default ? DateTime.Now : request.NgayLap;
+        request.TrangThai = 0;
+
+        var ketQua = _hoaDonDAL.ThemHoaDon(request);
+        if (!ketQua.ThanhCong)
+        {
+            throw new Exception(ketQua.ThongBao);
+        }
+
+        return ketQua.HoaDonId;
+    }
+
     public BanActionResultDTO CapNhatHoaDon(HoaDonSaveRequestDTO request)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update))
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền cập nhật hóa đơn.");
         }
@@ -118,7 +147,7 @@ public class HoaDonBUS
 
     public BanActionResultDTO ThemMonVaoHoaDon(int hoaDonId, int monId, short soLuong)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update))
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền chỉnh sửa món trong hóa đơn.");
         }
@@ -143,7 +172,7 @@ public class HoaDonBUS
 
     public BanActionResultDTO HuyHoaDon(int hoaDonId)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Delete))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Delete))
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền hủy hóa đơn.");
         }
@@ -158,7 +187,7 @@ public class HoaDonBUS
 
     public BanActionResultDTO XacNhanThuTien(int hoaDonId, decimal tienKhachDua)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update))
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền xác nhận thu tiền.");
         }

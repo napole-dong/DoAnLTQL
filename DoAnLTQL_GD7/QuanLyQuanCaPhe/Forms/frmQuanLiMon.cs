@@ -8,6 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.Mon;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -16,6 +17,7 @@ namespace QuanLyQuanCaPhe.Forms
     {
         private readonly MonBUS _monBUS = new();
         private readonly LoaiMonBUS _loaiMonBUS = new();
+        private readonly PermissionBUS _permissionBUS = new();
         private readonly MonInputValidator _monInputValidator = new();
         private readonly MonCsvService _monCsvService = new();
 
@@ -44,7 +46,9 @@ namespace QuanLyQuanCaPhe.Forms
             tabDanhSach.SelectedIndexChanged += tabDanhSach_SelectedIndexChanged;
 
             dgvDanhSachMon.SelectionChanged += dgvDanhSachMon_SelectionChanged;
+            dgvDanhSachMon.CellClick += dgvDanhSachMon_CellClick;
             dgvDanhSachLoaiMon.SelectionChanged += dgvDanhSachLoaiMon_SelectionChanged;
+            dgvDanhSachLoaiMon.CellClick += dgvDanhSachLoaiMon_CellClick;
 
             btnThemMon.Click += btnThemMon_Click;
             btnCapNhatMon.Click += btnCapNhatMon_Click;
@@ -54,15 +58,27 @@ namespace QuanLyQuanCaPhe.Forms
             btnXoaLoaiMon.Click += btnXoaLoaiMon_Click;
             btnNhap.Click += btnNhap_Click;
             btnXuat.Click += btnXuat_Click;
+
+            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
+            btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
+            btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
+            btnQuanLyKho.Click += (_, _) => OpenStandaloneForm(new frmQuanLiKho(), PermissionFeatures.NguyenLieu);
+            btnNhanVien.Click += (_, _) => OpenStandaloneForm(new frmNhanVien(), PermissionFeatures.NhanVien);
+            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
+            btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
         private void FrmQuanLiMon_Load(object? sender, EventArgs e)
         {
+            HienThiNguoiDungDangNhap();
             ApplyRoundedUi();
             LoadLoaiMonComboBox();
             RefreshAllData();
-            ResetFormMon();
-            ResetFormLoai();
+        }
+
+        private void HienThiNguoiDungDangNhap()
+        {
         }
 
         private void FrmQuanLiMon_SizeChanged(object? sender, EventArgs e)
@@ -106,6 +122,13 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void RefreshAllData()
         {
+            var maMonDangChon = dgvDanhSachMon.CurrentRow?.DataBoundItem is MonDTO monDangChon
+                ? monDangChon.ID
+                : (int?)null;
+            var maLoaiDangChon = dgvDanhSachLoaiMon.CurrentRow?.DataBoundItem is LoaiMonDTO loaiDangChon
+                ? loaiDangChon.ID
+                : (int?)null;
+
             var tuKhoa = txtTimKiem.Text.Trim();
             var dsMon = _monBUS.LayDanhSachMon(tuKhoa, null);
             var dsLoai = _loaiMonBUS.LayDanhSachLoai(tuKhoa, null);
@@ -118,8 +141,15 @@ namespace QuanLyQuanCaPhe.Forms
             lblTongLoaiValue.Text = dsLoai.Count.ToString();
             lblNgungBanValue.Text = dsMon.Count(x => x.TrangThai == 0).ToString();
 
-            txtMaMon.Text = _monBUS.LayMaMonTiepTheo().ToString();
-            txtMaLoai.Text = _loaiMonBUS.LayMaLoaiTiepTheo().ToString();
+            if (!maMonDangChon.HasValue || !SelectMonRow(maMonDangChon.Value))
+            {
+                SelectFirstMonRow();
+            }
+
+            if (!maLoaiDangChon.HasValue || !SelectLoaiRow(maLoaiDangChon.Value))
+            {
+                SelectFirstLoaiRow();
+            }
         }
 
         private void txtTimKiem_TextChanged(object? sender, EventArgs e)
@@ -525,13 +555,20 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            txtMaMon.Text = mon.ID.ToString();
-            txtTenMon.Text = mon.TenMon;
-            txtDonGia.Text = mon.DonGia.ToString();
-            cboLoaiMon.SelectedValue = mon.LoaiMonID;
+            HienThiThongTinMon(mon);
+        }
 
-            var trangThaiIndex = cboTrangThai.FindStringExact(mon.TrangThaiHienThi);
-            cboTrangThai.SelectedIndex = trangThaiIndex >= 0 ? trangThaiIndex : 0;
+        private void dgvDanhSachMon_CellClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0)
+            {
+                return;
+            }
+
+            if (dgvDanhSachMon.Rows[e.RowIndex].DataBoundItem is MonDTO mon)
+            {
+                HienThiThongTinMon(mon);
+            }
         }
 
         private void dgvDanhSachLoaiMon_SelectionChanged(object? sender, EventArgs e)
@@ -541,13 +578,26 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            txtMaLoai.Text = loaiMon.ID.ToString();
-            txtTenLoai.Text = loaiMon.TenLoai;
-            txtMoTaLoai.Text = loaiMon.MoTa;
+            HienThiThongTinLoaiMon(loaiMon);
         }
 
-        private void SelectMonRow(int maMon)
+        private void dgvDanhSachLoaiMon_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
+            if (e.RowIndex < 0)
+            {
+                return;
+            }
+
+            if (dgvDanhSachLoaiMon.Rows[e.RowIndex].DataBoundItem is LoaiMonDTO loaiMon)
+            {
+                HienThiThongTinLoaiMon(loaiMon);
+            }
+        }
+
+        private bool SelectMonRow(int maMon)
+        {
+            dgvDanhSachMon.ClearSelection();
+
             foreach (DataGridViewRow row in dgvDanhSachMon.Rows)
             {
                 if (row.DataBoundItem is not MonDTO mon || mon.ID != maMon)
@@ -557,12 +607,17 @@ namespace QuanLyQuanCaPhe.Forms
 
                 row.Selected = true;
                 dgvDanhSachMon.CurrentCell = row.Cells[0];
-                break;
+                HienThiThongTinMon(mon);
+                return true;
             }
+
+            return false;
         }
 
-        private void SelectLoaiRow(int maLoai)
+        private bool SelectLoaiRow(int maLoai)
         {
+            dgvDanhSachLoaiMon.ClearSelection();
+
             foreach (DataGridViewRow row in dgvDanhSachLoaiMon.Rows)
             {
                 if (row.DataBoundItem is not LoaiMonDTO loaiMon || loaiMon.ID != maLoai)
@@ -572,8 +627,67 @@ namespace QuanLyQuanCaPhe.Forms
 
                 row.Selected = true;
                 dgvDanhSachLoaiMon.CurrentCell = row.Cells[0];
-                break;
+                HienThiThongTinLoaiMon(loaiMon);
+                return true;
             }
+
+            return false;
+        }
+
+        private void SelectFirstMonRow()
+        {
+            if (dgvDanhSachMon.Rows.Count == 0)
+            {
+                ResetFormMon();
+                return;
+            }
+
+            var row = dgvDanhSachMon.Rows[0];
+            dgvDanhSachMon.ClearSelection();
+            row.Selected = true;
+            dgvDanhSachMon.CurrentCell = row.Cells[0];
+
+            if (row.DataBoundItem is MonDTO mon)
+            {
+                HienThiThongTinMon(mon);
+            }
+        }
+
+        private void SelectFirstLoaiRow()
+        {
+            if (dgvDanhSachLoaiMon.Rows.Count == 0)
+            {
+                ResetFormLoai();
+                return;
+            }
+
+            var row = dgvDanhSachLoaiMon.Rows[0];
+            dgvDanhSachLoaiMon.ClearSelection();
+            row.Selected = true;
+            dgvDanhSachLoaiMon.CurrentCell = row.Cells[0];
+
+            if (row.DataBoundItem is LoaiMonDTO loaiMon)
+            {
+                HienThiThongTinLoaiMon(loaiMon);
+            }
+        }
+
+        private void HienThiThongTinMon(MonDTO mon)
+        {
+            txtMaMon.Text = mon.ID.ToString();
+            txtTenMon.Text = mon.TenMon;
+            txtDonGia.Text = mon.DonGia.ToString();
+            cboLoaiMon.SelectedValue = mon.LoaiMonID;
+
+            var trangThaiIndex = cboTrangThai.FindStringExact(mon.TrangThaiHienThi);
+            cboTrangThai.SelectedIndex = trangThaiIndex >= 0 ? trangThaiIndex : 0;
+        }
+
+        private void HienThiThongTinLoaiMon(LoaiMonDTO loaiMon)
+        {
+            txtMaLoai.Text = loaiMon.ID.ToString();
+            txtTenLoai.Text = loaiMon.TenLoai;
+            txtMoTaLoai.Text = loaiMon.MoTa;
         }
 
         private void ResetFormMon()
@@ -628,6 +742,46 @@ namespace QuanLyQuanCaPhe.Forms
             path.CloseFigure();
 
             control.Region = new Region(path);
+        }
+
+        private void OpenStandaloneForm(Form targetForm, string feature)
+        {
+            if (!_permissionBUS.CheckPermission(feature, PermissionActions.View))
+            {
+                targetForm.Dispose();
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang nay.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Hide();
+            targetForm.FormClosed += (_, _) =>
+            {
+                if (!IsDisposed && !Disposing)
+                {
+                    Show();
+                    BringToFront();
+                    Activate();
+                    RefreshAllData();
+                }
+            };
+
+            targetForm.Show(this);
+        }
+
+        private void MoTinhNangThongKe()
+        {
+            if (!_permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View))
+            {
+                MessageBox.Show("Ban khong co quyen truy cap chuc nang thong ke.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            MessageBox.Show("Chuc nang thong ke dang duoc phat trien.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            base.OnFormClosed(e);
         }
     }
 }

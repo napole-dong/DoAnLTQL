@@ -23,6 +23,14 @@ public static class NguoiDungHienTaiService
         }
     }
 
+    public static Session? LaySession()
+    {
+        lock (SyncLock)
+        {
+            return Session.FromLoginInfo(_nguoiDungDangNhap);
+        }
+    }
+
     public static void XoaNguoiDungDangNhap()
     {
         lock (SyncLock)

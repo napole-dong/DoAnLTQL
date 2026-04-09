@@ -110,13 +110,11 @@
             panelDanhSachHeader = new Panel();
             btnXuat = new Button();
             btnNhap = new Button();
+            btnLamMoi = new Button();
             txtTimKiem = new TextBox();
             lblTimKiem = new Label();
             lblDanhSachTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             lblPageTitle = new Label();
             panelSidebar.SuspendLayout();
             flowSidebarMenu.SuspendLayout();
@@ -139,7 +137,6 @@
             ((System.ComponentModel.ISupportInitialize)dgvDanhSachLoaiMon).BeginInit();
             panelDanhSachHeader.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             SuspendLayout();
             // 
             // panelSidebar
@@ -1077,6 +1074,7 @@
             // 
             panelDanhSachHeader.Controls.Add(btnXuat);
             panelDanhSachHeader.Controls.Add(btnNhap);
+            panelDanhSachHeader.Controls.Add(btnLamMoi);
             panelDanhSachHeader.Controls.Add(txtTimKiem);
             panelDanhSachHeader.Controls.Add(lblTimKiem);
             panelDanhSachHeader.Controls.Add(lblDanhSachTitle);
@@ -1115,6 +1113,20 @@
             btnNhap.UseVisualStyleBackColor = false;
             btnNhap.Click += btnNhap_Click;
             // 
+            // btnLamMoi
+            // 
+            btnLamMoi.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnLamMoi.BackColor = Color.FromArgb(248, 245, 241);
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.FlatStyle = FlatStyle.Flat;
+            btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
+            btnLamMoi.Location = new Point(461, 43);
+            btnLamMoi.Name = "btnLamMoi";
+            btnLamMoi.Size = new Size(82, 28);
+            btnLamMoi.TabIndex = 5;
+            btnLamMoi.Text = "Làm mới";
+            btnLamMoi.UseVisualStyleBackColor = false;
+            // 
             // txtTimKiem
             // 
             txtTimKiem.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -1148,48 +1160,12 @@
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
             panelTopbar.Location = new Point(0, 0);
             panelTopbar.Name = "panelTopbar";
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Location = new Point(1094, 26);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 24);
-            btnUserMenu.TabIndex = 3;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.ForeColor = Color.FromArgb(82, 63, 50);
-            lblUserName.Location = new Point(949, 29);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(112, 20);
-            lblUserName.TabIndex = 2;
-            lblUserName.Text = "Nguyễn quản lý";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(244, 233, 220);
-            picAvatar.Location = new Point(907, 22);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(34, 34);
-            picAvatar.TabIndex = 1;
-            picAvatar.TabStop = false;
             // 
             // lblPageTitle
             // 
@@ -1209,7 +1185,7 @@
             ClientSize = new Size(1364, 760);
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
-            MinimumSize = new Size(1280, 720);
+            MinimumSize = new Size(1220, 720);
             Name = "frmQuanLiMon";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Quản lý món";
@@ -1242,7 +1218,6 @@
             panelDanhSachHeader.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             ResumeLayout(false);
         }
 
@@ -1324,15 +1299,13 @@
         private DataGridViewTextBoxColumn colSoLuongMon;
         private DataGridViewTextBoxColumn colMoTaLoaiMon;
         private Panel panelDanhSachHeader;
+        private Button btnLamMoi;
         private Button btnXuat;
         private Button btnNhap;
         private TextBox txtTimKiem;
         private Label lblTimKiem;
         private Label lblDanhSachTitle;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
         private Label lblPageTitle;
     }
 }

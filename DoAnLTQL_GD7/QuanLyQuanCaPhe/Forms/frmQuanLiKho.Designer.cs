@@ -62,6 +62,7 @@
             lblTenNguyenLieu = new Label();
             txtMaNguyenLieu = new TextBox();
             lblMaNguyenLieu = new Label();
+            btnLamMoi = new Button();
             btnXoaNguyenLieu = new Button();
             btnCapNhatNguyenLieu = new Button();
             btnThemNguyenLieu = new Button();
@@ -82,9 +83,6 @@
             lblTimNguyenLieu = new Label();
             lblDanhSachKhoTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             lblPageTitle = new Label();
             tableStats = new TableLayoutPanel();
             cardTongNguyenLieu = new Panel();
@@ -115,7 +113,6 @@
             ((System.ComponentModel.ISupportInitialize)dgvDanhSachKho).BeginInit();
             panelDanhSachHeader.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             tableStats.SuspendLayout();
             cardTongNguyenLieu.SuspendLayout();
             cardSapHet.SuspendLayout();
@@ -381,6 +378,7 @@
             panelThongTinNguyenLieu.Controls.Add(lblTenNguyenLieu);
             panelThongTinNguyenLieu.Controls.Add(txtMaNguyenLieu);
             panelThongTinNguyenLieu.Controls.Add(lblMaNguyenLieu);
+            panelThongTinNguyenLieu.Controls.Add(btnLamMoi);
             panelThongTinNguyenLieu.Controls.Add(btnXoaNguyenLieu);
             panelThongTinNguyenLieu.Controls.Add(btnCapNhatNguyenLieu);
             panelThongTinNguyenLieu.Controls.Add(btnThemNguyenLieu);
@@ -524,6 +522,20 @@
             lblMaNguyenLieu.Size = new Size(52, 20);
             lblMaNguyenLieu.TabIndex = 1;
             lblMaNguyenLieu.Text = "Mã NL";
+            // 
+            // btnLamMoi
+            // 
+            btnLamMoi.BackColor = Color.FromArgb(248, 245, 241);
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.FlatStyle = FlatStyle.Flat;
+            btnLamMoi.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
+            btnLamMoi.Location = new Point(174, 557);
+            btnLamMoi.Name = "btnLamMoi";
+            btnLamMoi.Size = new Size(145, 36);
+            btnLamMoi.TabIndex = 18;
+            btnLamMoi.Text = "Làm mới";
+            btnLamMoi.UseVisualStyleBackColor = false;
             // 
             // btnXoaNguyenLieu
             // 
@@ -776,51 +788,12 @@
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
             panelTopbar.Location = new Point(0, 0);
             panelTopbar.Name = "panelTopbar";
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.FromArgb(104, 89, 75);
-            btnUserMenu.Location = new Point(1096, 27);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 30);
-            btnUserMenu.TabIndex = 3;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.ForeColor = Color.FromArgb(84, 64, 51);
-            lblUserName.Location = new Point(980, 30);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(104, 23);
-            lblUserName.TabIndex = 2;
-            lblUserName.Text = "Quản lý kho";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(242, 232, 222);
-            picAvatar.Location = new Point(940, 22);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(34, 34);
-            picAvatar.TabIndex = 1;
-            picAvatar.TabStop = false;
             // 
             // lblPageTitle
             // 
@@ -1044,7 +1017,7 @@
             ClientSize = new Size(1364, 760);
             Controls.Add(panelMain);
             Controls.Add(panelSidebar);
-            FormBorderStyle = FormBorderStyle.None;
+            MinimumSize = new Size(1220, 720);
             Name = "frmQuanLiKho";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Quản lí kho";
@@ -1064,7 +1037,6 @@
             panelDanhSachHeader.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             tableStats.ResumeLayout(false);
             cardTongNguyenLieu.ResumeLayout(false);
             cardTongNguyenLieu.PerformLayout();
@@ -1128,6 +1100,7 @@
         private Label lblTenNguyenLieu;
         private TextBox txtMaNguyenLieu;
         private Label lblMaNguyenLieu;
+        private Button btnLamMoi;
         private Button btnXoaNguyenLieu;
         private Button btnCapNhatNguyenLieu;
         private Button btnThemNguyenLieu;
@@ -1141,9 +1114,6 @@
         private Label lblTimNguyenLieu;
         private Label lblDanhSachKhoTitle;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
         private Label lblPageTitle;
         private DataGridViewTextBoxColumn colMaNguyenLieu;
         private DataGridViewTextBoxColumn colTenNguyenLieu;

@@ -11,7 +11,7 @@ public class NguyenLieuBUS
 
     public List<NguyenLieuDTO> LayDanhSachNguyenLieu(string? tuKhoa)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.View))
         {
             return new List<NguyenLieuDTO>();
         }
@@ -19,9 +19,19 @@ public class NguyenLieuBUS
         return _nguyenLieuDAL.GetDanhSachNguyenLieu(BusInputHelper.NormalizeNullableText(tuKhoa));
     }
 
+    public List<NguyenLieuDTO> LayDanhSachNguyenLieuSapHet()
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.View))
+        {
+            return new List<NguyenLieuDTO>();
+        }
+
+        return _nguyenLieuDAL.GetDanhSachNguyenLieuSapHet();
+    }
+
     public int LayMaNguyenLieuTiepTheo()
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Create))
         {
             return 0;
         }
@@ -31,7 +41,7 @@ public class NguyenLieuBUS
 
     public (bool ThanhCong, string ThongBao, NguyenLieuDTO? NguyenLieuMoi) ThemNguyenLieu(NguyenLieuDTO nguyenLieuDTO)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Create))
         {
             return (false, "Bạn không có quyền thêm nguyên liệu.", null);
         }
@@ -51,7 +61,7 @@ public class NguyenLieuBUS
 
     public (bool ThanhCong, string ThongBao) CapNhatNguyenLieu(NguyenLieuDTO nguyenLieuDTO)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Update))
         {
             return (false, "Bạn không có quyền cập nhật nguyên liệu.");
         }
@@ -79,7 +89,7 @@ public class NguyenLieuBUS
 
     public (bool ThanhCong, string ThongBao) XoaNguyenLieu(int maNguyenLieu)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Delete))
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Delete))
         {
             return (false, "Bạn không có quyền xóa nguyên liệu.");
         }
@@ -93,6 +103,36 @@ public class NguyenLieuBUS
         return daXoa
             ? (true, "Xóa nguyên liệu thành công.")
             : (false, "Không tìm thấy nguyên liệu để xóa.");
+    }
+
+    public (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu)
+    {
+        try
+        {
+            _permissionBUS.EnsurePermission(PermissionFeatures.NguyenLieu, PermissionActions.NhapKho, "Bạn không có quyền nhập kho.");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return (false, ex.Message);
+        }
+
+        if (maNguyenLieu <= 0)
+        {
+            return (false, "Vui lòng chọn nguyên liệu để nhập kho.");
+        }
+
+        if (soLuongNhap <= 0)
+        {
+            return (false, "Số lượng nhập phải lớn hơn 0.");
+        }
+
+        if (giaNhap < 0)
+        {
+            return (false, "Giá nhập không hợp lệ.");
+        }
+
+        var ghiChuDaChuanHoa = BusInputHelper.NormalizeNullableText(ghiChu);
+        return _nguyenLieuDAL.NhapKho(maNguyenLieu, soLuongNhap, giaNhap, ghiChuDaChuanHoa);
     }
 
     private static (bool HopLe, string ThongBaoLoi) KiemTraThongTin(NguyenLieuDTO nguyenLieuDTO)

@@ -104,10 +104,35 @@ public class MonBUS
             : (false, "Không tìm thấy món để xóa.");
     }
 
+    public void DeleteMenu(int monId)
+    {
+        if (!_permissionBUS.IsAdmin() && !_permissionBUS.IsManager())
+        {
+            throw new Exception("Không có quyền");
+        }
+
+        if (monId <= 0)
+        {
+            throw new Exception("Mã món không hợp lệ.");
+        }
+
+        if (_monDAL.MonDaPhatSinhHoaDon(monId))
+        {
+            throw new Exception("Món đã phát sinh hóa đơn, không thể xóa.");
+        }
+
+        if (!_monDAL.XoaMon(monId))
+        {
+            throw new Exception("Không tìm thấy món để xóa.");
+        }
+    }
+
     public MonImportResultDTO NhapMonTuCsv(string[] lines)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create)
-            && !_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
+        var coQuyenThemMoi = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create);
+        var coQuyenCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update);
+
+        if (!coQuyenThemMoi && !coQuyenCapNhat)
         {
             return new MonImportResultDTO { SoBoQua = lines.Length };
         }
@@ -205,7 +230,7 @@ public class MonBUS
             });
         }
 
-        var result = _monDAL.NhapDanhSachMon(dsMonNhap);
+        var result = _monDAL.NhapDanhSachMon(dsMonNhap, coQuyenThemMoi, coQuyenCapNhat);
         result.SoBoQua += soBoQua;
         return result;
     }

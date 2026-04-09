@@ -65,6 +65,7 @@
             lblDatTruocIcon = new Label();
             tableCenter = new TableLayoutPanel();
             panelFilter = new Panel();
+            btnLamMoi = new Button();
             btnGopBan = new Button();
             btnXoaBan = new Button();
             btnThemBan = new Button();
@@ -85,9 +86,6 @@
             colTinhTrang = new DataGridViewTextBoxColumn();
             lblDanhSachBanTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
             txtSearch = new TextBox();
             lblPageTitle = new Label();
             panelSidebar.SuspendLayout();
@@ -107,7 +105,6 @@
             panelBottom.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvDanhSachBan).BeginInit();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             SuspendLayout();
             // 
             // panelSidebar
@@ -559,6 +556,7 @@
             // panelFilter
             // 
             panelFilter.BackColor = Color.White;
+            panelFilter.Controls.Add(btnLamMoi);
             panelFilter.Controls.Add(btnGopBan);
             panelFilter.Controls.Add(btnXoaBan);
             panelFilter.Controls.Add(btnThemBan);
@@ -574,6 +572,20 @@
             panelFilter.Padding = new Padding(16, 14, 16, 14);
             panelFilter.Size = new Size(319, 308);
             panelFilter.TabIndex = 0;
+            // 
+            // btnLamMoi
+            // 
+            btnLamMoi.BackColor = Color.FromArgb(248, 245, 241);
+            btnLamMoi.FlatAppearance.BorderSize = 0;
+            btnLamMoi.FlatStyle = FlatStyle.Flat;
+            btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
+            btnLamMoi.Location = new Point(165, 158);
+            btnLamMoi.Name = "btnLamMoi";
+            btnLamMoi.Size = new Size(138, 38);
+            btnLamMoi.TabIndex = 8;
+            btnLamMoi.Text = "Làm mới";
+            btnLamMoi.UseVisualStyleBackColor = false;
             // 
             // btnGopBan
             // 
@@ -614,7 +626,7 @@
             btnThemBan.ForeColor = Color.FromArgb(34, 111, 92);
             btnThemBan.Location = new Point(16, 158);
             btnThemBan.Name = "btnThemBan";
-            btnThemBan.Size = new Size(287, 38);
+            btnThemBan.Size = new Size(138, 38);
             btnThemBan.TabIndex = 5;
             btnThemBan.Text = "+ Thêm bàn mới";
             btnThemBan.UseVisualStyleBackColor = false;
@@ -809,9 +821,6 @@
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
             panelTopbar.Controls.Add(txtSearch);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
@@ -820,41 +829,6 @@
             panelTopbar.Padding = new Padding(22, 16, 22, 16);
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.DimGray;
-            btnUserMenu.Location = new Point(1088, 24);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 28);
-            btnUserMenu.TabIndex = 4;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // lblUserName
-            // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.Location = new Point(936, 27);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(135, 23);
-            lblUserName.TabIndex = 3;
-            lblUserName.Text = "Manager Coffee";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(221, 206, 189);
-            picAvatar.Location = new Point(892, 20);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(36, 36);
-            picAvatar.TabIndex = 2;
-            picAvatar.TabStop = false;
             // 
             // txtSearch
             // 
@@ -919,7 +893,6 @@
             ((System.ComponentModel.ISupportInitialize)dgvDanhSachBan).EndInit();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             ResumeLayout(false);
         }
 
@@ -960,6 +933,7 @@
         private Label lblDatTruocIcon;
         private TableLayoutPanel tableCenter;
         private Panel panelFilter;
+        private Button btnLamMoi;
         private Button btnGopBan;
         private Button btnXoaBan;
         private Button btnThemBan;
@@ -980,9 +954,6 @@
         private DataGridViewTextBoxColumn colTinhTrang;
         private Label lblDanhSachBanTitle;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
         private TextBox txtSearch;
         private Label lblPageTitle;
     }

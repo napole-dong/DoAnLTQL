@@ -98,7 +98,7 @@ public class LoaiMonDAL
         return true;
     }
 
-    public LoaiMonImportResultDTO NhapLoaiMon(IEnumerable<LoaiMonDTO> dsLoaiNhap)
+    public LoaiMonImportResultDTO NhapLoaiMon(IEnumerable<LoaiMonDTO> dsLoaiNhap, bool choPhepThemMoi, bool choPhepCapNhat)
     {
         using var context = new CaPheDbContext();
         var result = new LoaiMonImportResultDTO();
@@ -116,8 +116,20 @@ public class LoaiMonDAL
             var loaiDaCo = context.LoaiMon.FirstOrDefault(x => x.TenLoai == tenLoai);
             if (loaiDaCo != null)
             {
+                if (!choPhepCapNhat)
+                {
+                    result.SoBoQua++;
+                    continue;
+                }
+
                 loaiDaCo.MoTa = moTa;
                 result.SoCapNhat++;
+                continue;
+            }
+
+            if (!choPhepThemMoi)
+            {
+                result.SoBoQua++;
                 continue;
             }
 
