@@ -1,6 +1,14 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\DoAnLTQL_GD6\\QuanLyQuanCaPhe",
+    "\\DoAnLTQL_GD6\\QuanLyQuanCaPhe\\Forms",
+    "\\DoAnLTQL_GD7\\QuanLyQuanCaPhe",
+    "\\DoAnLTQL_GD7\\QuanLyQuanCaPhe\\Forms",
+    "\\DoAnLTQL_GD8",
+    "\\DoAnLTQL_GD8\\QuanLyQuanCaPhe",
+    "\\DoAnLTQL_GD8\\QuanLyQuanCaPhe\\Forms"
   ],
+  "SelectedNode": "\\DoAnLTQL_GD8\\QuanLyQuanCaPhe\\Forms\\frmBanHang.cs",
   "PreviewInSolutionExplorer": false
 }
