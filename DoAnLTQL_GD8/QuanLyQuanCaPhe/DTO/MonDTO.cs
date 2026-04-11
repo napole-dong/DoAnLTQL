@@ -18,4 +18,7 @@ public class MonDTO
     };
     public string MoTa { get; set; } = string.Empty;
     public string? HinhAnh { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
 }

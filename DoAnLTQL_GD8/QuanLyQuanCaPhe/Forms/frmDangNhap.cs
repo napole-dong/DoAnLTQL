@@ -34,6 +34,7 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void frmDangNhap_Load(object? sender, EventArgs e)
         {
+            WindowState = FormWindowState.Maximized;
             HienThiThongBaoLoi(string.Empty);
             TaiTaiKhoanDaNho();
 

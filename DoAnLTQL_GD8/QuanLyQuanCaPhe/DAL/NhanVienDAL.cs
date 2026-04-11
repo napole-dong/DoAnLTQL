@@ -3,23 +3,49 @@ using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.Diagnostics;
+using QuanLyQuanCaPhe.Services.SoftDelete;
+using System.Globalization;
+using System.Text.Json;
 
 namespace QuanLyQuanCaPhe.DAL;
 
 public class NhanVienDAL
 {
-    public List<NhanVienDTO> GetDanhSachNhanVien(string? tuKhoa)
-    {
-        using var context = new CaPheDbContext();
+    private readonly ISoftDeleteService _softDeleteService = new SoftDeleteService();
 
-        var nhanVienRows = QueryDanhSachNhanVienRows(context, tuKhoa);
+    public enum DeleteNhanVienOutcome
+    {
+        SuccessHardDelete,
+        SuccessSoftDelete,
+        ForbiddenSelfDelete,
+        ForbiddenAdminAccount,
+        NotFound,
+        AlreadyDeleted,
+        HasInvoices,
+        InvalidInput
+    }
+
+    public sealed record DeleteNhanVienResult(DeleteNhanVienOutcome Outcome)
+    {
+        public bool ThanhCong =>
+            Outcome == DeleteNhanVienOutcome.SuccessHardDelete
+            || Outcome == DeleteNhanVienOutcome.SuccessSoftDelete;
+    }
+
+    public async Task<List<NhanVienDTO>> GetDanhSachNhanVienAsync(string? tuKhoa, bool includeDeleted = false)
+    {
+        await using var context = new CaPheDbContext();
+
+        var nhanVienRows = await QueryDanhSachNhanVienRowsAsync(context, tuKhoa, includeDeleted).ConfigureAwait(false);
         return MapNhanVienDtos(nhanVienRows);
     }
 
     public int GetNextNhanVienId()
     {
         using var context = new CaPheDbContext();
-        return (context.NhanVien.Max(x => (int?)x.ID) ?? 0) + 1;
+        return (context.NhanVien
+            .IgnoreQueryFilters()
+            .Max(x => (int?)x.ID) ?? 0) + 1;
     }
 
     public List<string> LayDanhSachTenVaiTro()
@@ -32,33 +58,34 @@ public class NhanVienDAL
             .ToList();
     }
 
-    public bool TenDangNhapDaTonTai(string tenDangNhap, int? boQuaNhanVienId = null)
+    public async Task<bool> TenDangNhapDaTonTaiAsync(string tenDangNhap, int? boQuaNhanVienId = null)
     {
         if (string.IsNullOrWhiteSpace(tenDangNhap))
         {
             return false;
         }
 
-        using var context = new CaPheDbContext();
-        return context.User.Any(x =>
+        await using var context = new CaPheDbContext();
+        return await context.User.AnyAsync(x =>
             x.TenDangNhap == tenDangNhap
-            && (!boQuaNhanVienId.HasValue || x.NhanVienID != boQuaNhanVienId.Value));
+            && (!boQuaNhanVienId.HasValue || x.NhanVienID != boQuaNhanVienId.Value)).ConfigureAwait(false);
     }
 
-    public NhanVienDTO ThemNhanVien(NhanVienDTO nhanVienDTO)
+    public async Task<NhanVienDTO> ThemNhanVienAsync(NhanVienDTO nhanVienDTO)
     {
         using var correlationScope = CorrelationContext.BeginScope();
-        using var context = new CaPheDbContext();
+        using var strategyContext = new CaPheDbContext();
 
         AppLogger.Info($"Start ThemNhanVien. TenDangNhap={nhanVienDTO.TenDangNhap}.", nameof(NhanVienDAL));
 
-        var strategy = context.Database.CreateExecutionStrategy();
+        var strategy = strategyContext.Database.CreateExecutionStrategy();
 
         try
         {
-            return strategy.Execute(() =>
+            return await strategy.ExecuteAsync(async () =>
             {
-                using var transaction = context.Database.BeginTransaction();
+                await using var context = new CaPheDbContext();
+                await using var transaction = await context.Database.BeginTransactionAsync().ConfigureAwait(false);
 
                 var nhanVien = new dtaNhanVien
                 {
@@ -68,9 +95,9 @@ public class NhanVienDAL
                 };
 
                 context.NhanVien.Add(nhanVien);
-                context.SaveChanges();
+                await context.SaveChangesAsync().ConfigureAwait(false);
 
-                var vaiTroId = LayVaiTroId(context, nhanVienDTO.QuyenHan);
+                var vaiTroId = await LayVaiTroIdAsync(context, nhanVienDTO.QuyenHan).ConfigureAwait(false);
                 if (vaiTroId <= 0)
                 {
                     throw new InvalidOperationException("Vai trò không hợp lệ.");
@@ -85,12 +112,12 @@ public class NhanVienDAL
                     HoatDong = true
                 });
 
-                context.SaveChanges();
-                transaction.Commit();
+                await context.SaveChangesAsync().ConfigureAwait(false);
+                await transaction.CommitAsync().ConfigureAwait(false);
 
                 nhanVienDTO.ID = nhanVien.ID;
                 return nhanVienDTO;
-            });
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -99,13 +126,14 @@ public class NhanVienDAL
         }
     }
 
-    public bool CapNhatNhanVien(NhanVienDTO nhanVienDTO)
+    public async Task<bool> CapNhatNhanVienAsync(NhanVienDTO nhanVienDTO)
     {
-        using var context = new CaPheDbContext();
+        await using var context = new CaPheDbContext();
 
-        var nhanVien = context.NhanVien
+        var nhanVien = await context.NhanVien
             .Include(x => x.User)
-            .FirstOrDefault(x => x.ID == nhanVienDTO.ID);
+            .FirstOrDefaultAsync(x => x.ID == nhanVienDTO.ID)
+            .ConfigureAwait(false);
 
         if (nhanVien == null)
         {
@@ -116,7 +144,7 @@ public class NhanVienDAL
         nhanVien.DienThoai = string.IsNullOrWhiteSpace(nhanVienDTO.DienThoai) ? null : nhanVienDTO.DienThoai;
         nhanVien.DiaChi = string.IsNullOrWhiteSpace(nhanVienDTO.DiaChi) ? null : nhanVienDTO.DiaChi;
 
-        var vaiTroId = LayVaiTroId(context, nhanVienDTO.QuyenHan);
+        var vaiTroId = await LayVaiTroIdAsync(context, nhanVienDTO.QuyenHan).ConfigureAwait(false);
         if (vaiTroId <= 0)
         {
             return false;
@@ -151,7 +179,7 @@ public class NhanVienDAL
             }
         }
 
-        context.SaveChanges();
+        await context.SaveChangesAsync().ConfigureAwait(false);
         return true;
     }
 
@@ -161,38 +189,166 @@ public class NhanVienDAL
         return context.HoaDon.Any(x => x.NhanVienID == nhanVienId);
     }
 
-    public bool XoaNhanVien(int nhanVienId)
+    public DeleteNhanVienResult DeleteNhanVien(int nhanVienId, bool softDelete)
     {
-        using var context = new CaPheDbContext();
-
-        var nhanVien = context.NhanVien.FirstOrDefault(x => x.ID == nhanVienId);
-        if (nhanVien == null)
+        if (nhanVienId <= 0)
         {
-            return false;
+            return new DeleteNhanVienResult(DeleteNhanVienOutcome.InvalidInput);
         }
 
-        context.NhanVien.Remove(nhanVien);
-        context.SaveChanges();
-        return true;
-    }
-
-    public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapDanhSachNhanVien(
-        IEnumerable<NhanVienDTO> dsNhap,
-        bool choPhepThemMoi,
-        bool choPhepCapNhat)
-    {
         using var correlationScope = CorrelationContext.BeginScope();
-        using var context = new CaPheDbContext();
-
-        AppLogger.Info("Start NhapDanhSachNhanVien.", nameof(NhanVienDAL));
-
-        var strategy = context.Database.CreateExecutionStrategy();
+        using var strategyContext = new CaPheDbContext();
+        var strategy = strategyContext.Database.CreateExecutionStrategy();
 
         try
         {
             return strategy.Execute(() =>
             {
+                using var context = new CaPheDbContext();
                 using var transaction = context.Database.BeginTransaction();
+
+                var nhanVien = context.NhanVien
+                    .IgnoreQueryFilters()
+                    .Include(x => x.User)
+                    .ThenInclude(x => x!.VaiTro)
+                    .FirstOrDefault(x => x.ID == nhanVienId);
+
+                if (nhanVien == null)
+                {
+                    return new DeleteNhanVienResult(DeleteNhanVienOutcome.NotFound);
+                }
+
+                if (!softDelete && NhanVienCoHoaDon(context, nhanVienId))
+                {
+                    return new DeleteNhanVienResult(DeleteNhanVienOutcome.HasInvoices);
+                }
+
+                var user = nhanVien.User;
+                var currentUserId = NguoiDungHienTaiService.LayNguoiDungDangNhap()?.UserId ?? 0;
+                if (user != null && currentUserId > 0 && user.ID == currentUserId)
+                {
+                    return new DeleteNhanVienResult(DeleteNhanVienOutcome.ForbiddenSelfDelete);
+                }
+
+                var laTaiKhoanAdmin = IsAdminUser(user);
+                var oldSnapshot = TaoNhanVienDeleteSnapshot(nhanVien);
+
+                if (laTaiKhoanAdmin)
+                {
+                    return new DeleteNhanVienResult(DeleteNhanVienOutcome.ForbiddenAdminAccount);
+                }
+
+                if (softDelete)
+                {
+                    if (nhanVien.IsDeleted)
+                    {
+                        return new DeleteNhanVienResult(DeleteNhanVienOutcome.AlreadyDeleted);
+                    }
+
+                    if (user != null)
+                    {
+                        user.HoatDong = false;
+                    }
+
+                    GhiNhanVienAuditLog(context, "SoftDeleteNhanVien", nhanVien.ID, oldSnapshot, new
+                    {
+                        Mode = "SoftDelete",
+                        IsDeleted = true,
+                        AccountStatus = user == null ? "NoAccount" : "Disabled"
+                    });
+
+                    _softDeleteService.SoftDelete(context, nhanVien);
+                    transaction.Commit();
+                    return new DeleteNhanVienResult(DeleteNhanVienOutcome.SuccessSoftDelete);
+                }
+
+                GhiNhanVienAuditLog(context, "HardDeleteNhanVien", nhanVien.ID, oldSnapshot, new
+                {
+                    Mode = "HardDelete",
+                    CascadeDeleteUser = true
+                });
+
+                if (!nhanVien.IsDeleted)
+                {
+                    nhanVien.IsDeleted = true;
+                }
+
+                context.Entry(nhanVien).State = EntityState.Deleted;
+                context.SaveChanges();
+
+                transaction.Commit();
+                return new DeleteNhanVienResult(DeleteNhanVienOutcome.SuccessHardDelete);
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error(
+                ex,
+                $"Unexpected failure in DeleteNhanVien. NhanVienId={nhanVienId}, SoftDelete={softDelete}.",
+                nameof(NhanVienDAL));
+            throw;
+        }
+    }
+
+    public bool XoaNhanVien(int nhanVienId)
+    {
+        return DeleteNhanVien(nhanVienId, softDelete: true).ThanhCong;
+    }
+
+    public bool RestoreNhanVien(int nhanVienId)
+    {
+        using var context = new CaPheDbContext();
+
+        var nhanVien = context.NhanVien
+            .IgnoreQueryFilters()
+            .Include(x => x.User)
+            .FirstOrDefault(x => x.ID == nhanVienId);
+        if (nhanVien == null || !nhanVien.IsDeleted)
+        {
+            return false;
+        }
+
+        var oldSnapshot = TaoNhanVienDeleteSnapshot(nhanVien);
+        if (nhanVien.User != null)
+        {
+            nhanVien.User.HoatDong = true;
+        }
+
+        GhiNhanVienAuditLog(context, "RestoreNhanVien", nhanVien.ID, oldSnapshot, new
+        {
+            Mode = "Restore",
+            IsDeleted = false,
+            AccountStatus = nhanVien.User == null ? "NoAccount" : "Enabled"
+        });
+
+        _softDeleteService.Restore(context, nhanVien);
+        return true;
+    }
+
+    public bool HardDeleteNhanVien(int nhanVienId)
+    {
+        var result = DeleteNhanVien(nhanVienId, softDelete: false);
+        return result.Outcome == DeleteNhanVienOutcome.SuccessHardDelete;
+    }
+
+    public async Task<(int SoThemMoi, int SoCapNhat, int SoBoQua)> NhapDanhSachNhanVienAsync(
+        IEnumerable<NhanVienDTO> dsNhap,
+        bool choPhepThemMoi,
+        bool choPhepCapNhat)
+    {
+        using var correlationScope = CorrelationContext.BeginScope();
+        using var strategyContext = new CaPheDbContext();
+
+        AppLogger.Info("Start NhapDanhSachNhanVien.", nameof(NhanVienDAL));
+
+        var strategy = strategyContext.Database.CreateExecutionStrategy();
+
+        try
+        {
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var context = new CaPheDbContext();
+                await using var transaction = await context.Database.BeginTransactionAsync().ConfigureAwait(false);
 
                 var soThemMoi = 0;
                 var soCapNhat = 0;
@@ -208,9 +364,10 @@ public class NhanVienDAL
                         continue;
                     }
 
-                    var user = context.User
+                    var user = await context.User
                         .Include(x => x.NhanVien)
-                        .FirstOrDefault(x => x.TenDangNhap == nhanVienNhap.TenDangNhap);
+                        .FirstOrDefaultAsync(x => x.TenDangNhap == nhanVienNhap.TenDangNhap)
+                        .ConfigureAwait(false);
 
                     if (user == null && !choPhepThemMoi)
                     {
@@ -224,7 +381,7 @@ public class NhanVienDAL
                         continue;
                     }
 
-                    var vaiTroId = LayVaiTroId(context, nhanVienNhap.QuyenHan);
+                    var vaiTroId = await LayVaiTroIdAsync(context, nhanVienNhap.QuyenHan).ConfigureAwait(false);
                     if (vaiTroId <= 0)
                     {
                         soBoQua++;
@@ -248,7 +405,7 @@ public class NhanVienDAL
                         };
 
                         context.NhanVien.Add(nhanVienMoi);
-                        context.SaveChanges();
+                        await context.SaveChangesAsync().ConfigureAwait(false);
 
                         context.User.Add(new dtaUser
                         {
@@ -278,11 +435,11 @@ public class NhanVienDAL
                     }
                 }
 
-                context.SaveChanges();
-                transaction.Commit();
+                await context.SaveChangesAsync().ConfigureAwait(false);
+                await transaction.CommitAsync().ConfigureAwait(false);
 
                 return (soThemMoi, soCapNhat, soBoQua);
-            });
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -291,7 +448,7 @@ public class NhanVienDAL
         }
     }
 
-    private static int LayVaiTroId(CaPheDbContext context, string tenVaiTro)
+    private static async Task<int> LayVaiTroIdAsync(CaPheDbContext context, string tenVaiTro)
     {
         var tenVaiTroChuan = string.IsNullOrWhiteSpace(tenVaiTro) ? string.Empty : tenVaiTro.Trim();
         if (tenVaiTroChuan.Length == 0)
@@ -299,11 +456,12 @@ public class NhanVienDAL
             return 0;
         }
 
-        return context.VaiTro
+        return await context.VaiTro
             .AsNoTracking()
             .Where(x => x.TenVaiTro == tenVaiTroChuan)
             .Select(x => x.ID)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false);
     }
 
     private static string LayMatKhauBatBuoc(string? matKhau)
@@ -324,9 +482,77 @@ public class NhanVienDAL
             : matKhau.Trim();
     }
 
-    private static List<NhanVienReadModel> QueryDanhSachNhanVienRows(CaPheDbContext context, string? tuKhoa)
+    private static bool NhanVienCoHoaDon(CaPheDbContext context, int nhanVienId)
     {
-        var query = context.NhanVien
+        return context.HoaDon
+            .AsNoTracking()
+            .Any(x => x.NhanVienID == nhanVienId);
+    }
+
+    private static bool IsAdminUser(dtaUser? user)
+    {
+        if (user == null)
+        {
+            return false;
+        }
+
+        var role = RoleMapper.ParseRoleEnum(user.VaiTro?.TenVaiTro, RoleEnum.Staff);
+        return role == RoleEnum.Admin;
+    }
+
+    private static object TaoNhanVienDeleteSnapshot(dtaNhanVien nhanVien)
+    {
+        return new
+        {
+            NhanVienId = nhanVien.ID,
+            nhanVien.HoVaTen,
+            nhanVien.IsDeleted,
+            nhanVien.DeletedAt,
+            nhanVien.DeletedBy,
+            User = nhanVien.User == null
+                ? null
+                : new
+                {
+                    UserId = nhanVien.User.ID,
+                    Username = nhanVien.User.TenDangNhap,
+                    RoleId = nhanVien.User.VaiTroID,
+                    RoleName = nhanVien.User.VaiTro?.TenVaiTro ?? string.Empty,
+                    IsActive = nhanVien.User.HoatDong
+                }
+        };
+    }
+
+    private static void GhiNhanVienAuditLog(
+        CaPheDbContext context,
+        string action,
+        int nhanVienId,
+        object oldValue,
+        object? newValue)
+    {
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        var performedBy = string.IsNullOrWhiteSpace(nguoiDung?.TenDangNhap)
+            ? "system"
+            : nguoiDung!.TenDangNhap;
+
+        context.AuditLog.Add(new dtaAuditLog
+        {
+            Action = action,
+            EntityName = "NhanVien",
+            EntityId = nhanVienId.ToString(CultureInfo.InvariantCulture),
+            OldValue = JsonSerializer.Serialize(oldValue),
+            NewValue = newValue == null ? null : JsonSerializer.Serialize(newValue),
+            PerformedBy = performedBy,
+            CreatedAt = DateTime.Now
+        });
+    }
+
+    private static async Task<List<NhanVienReadModel>> QueryDanhSachNhanVienRowsAsync(CaPheDbContext context, string? tuKhoa, bool includeDeleted)
+    {
+        var queryBase = includeDeleted
+            ? context.NhanVien.IgnoreQueryFilters()
+            : context.NhanVien;
+
+        var query = queryBase
             .AsNoTracking()
             .AsQueryable();
 
@@ -345,7 +571,7 @@ public class NhanVienDAL
                 || (x.User != null && x.User.VaiTro != null && EF.Functions.Like(x.User.VaiTro.TenVaiTro, keywordPattern)));
         }
 
-        return query
+        return await query
             .OrderBy(x => x.ID)
             .Select(x => new NhanVienReadModel
             {
@@ -356,9 +582,13 @@ public class NhanVienDAL
                 TenDangNhap = x.User != null ? x.User.TenDangNhap : string.Empty,
                 QuyenHan = x.User != null && x.User.VaiTro != null
                     ? x.User.VaiTro.TenVaiTro
-                    : "Nhân viên"
+                    : "Nhân viên",
+                IsDeleted = x.IsDeleted,
+                DeletedAt = x.DeletedAt,
+                DeletedBy = x.DeletedBy
             })
-            .ToList();
+            .ToListAsync()
+            .ConfigureAwait(false);
     }
 
     private static List<NhanVienDTO> MapNhanVienDtos(IEnumerable<NhanVienReadModel> nhanVienRows)
@@ -377,7 +607,10 @@ public class NhanVienDAL
             DienThoai = nhanVienRow.DienThoai,
             DiaChi = nhanVienRow.DiaChi,
             TenDangNhap = nhanVienRow.TenDangNhap,
-            QuyenHan = nhanVienRow.QuyenHan
+            QuyenHan = nhanVienRow.QuyenHan,
+            IsDeleted = nhanVienRow.IsDeleted,
+            DeletedAt = nhanVienRow.DeletedAt,
+            DeletedBy = nhanVienRow.DeletedBy
         };
     }
 
@@ -389,5 +622,8 @@ public class NhanVienDAL
         public string? DiaChi { get; init; }
         public string TenDangNhap { get; init; } = string.Empty;
         public string QuyenHan { get; init; } = string.Empty;
+        public bool IsDeleted { get; init; }
+        public DateTime? DeletedAt { get; init; }
+        public string? DeletedBy { get; init; }
     }
 }

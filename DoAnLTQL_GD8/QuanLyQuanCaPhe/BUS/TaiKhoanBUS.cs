@@ -20,9 +20,7 @@ public class TaiKhoanBUS
             return (false, "Mã tài khoản không hợp lệ.");
         }
 
-        var daXoa = _taiKhoanDAL.DeleteUser(userId);
-        return daXoa
-            ? (true, "Xóa tài khoản thành công.")
-            : (false, "Không tìm thấy tài khoản cần xóa.");
+        var ketQua = _taiKhoanDAL.DeleteUser(userId);
+        return (ketQua.ThanhCong, ketQua.ThongBao);
     }
 }

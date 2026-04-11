@@ -11,6 +11,7 @@ public class HoaDonDTO
     public int NhanVienID { get; set; }
     public string TenNhanVien { get; set; } = string.Empty;
     public int TrangThai { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     public string TrangThaiText { get; set; } = string.Empty;
     public decimal TongTien { get; set; }
     public List<HoaDonChiTietDTO> ChiTiet { get; set; } = new();

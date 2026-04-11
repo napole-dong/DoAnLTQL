@@ -110,17 +110,19 @@ public class NguyenLieuDAL
 
         try
         {
-            return strategy.Execute(() =>
+            return strategy.ExecuteAsync(async () =>
             {
-                using var context = new CaPheDbContext();
-                using var transaction = context.Database.BeginTransaction();
+                await using var context = new CaPheDbContext();
+                await using var transaction = await context.Database.BeginTransactionAsync().ConfigureAwait(false);
 
                 try
                 {
-                    var nguyenLieu = context.NguyenLieu.FirstOrDefault(x => x.ID == maNguyenLieu);
+                    var nguyenLieu = await context.NguyenLieu
+                        .FirstOrDefaultAsync(x => x.ID == maNguyenLieu)
+                        .ConfigureAwait(false);
                     if (nguyenLieu == null)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync().ConfigureAwait(false);
                         AppLogger.Audit(
                             "Inventory.Import.Rejected",
                             "Khong tim thay nguyen lieu de nhap kho.",
@@ -147,8 +149,8 @@ public class NguyenLieuDAL
                     nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
                     nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
 
-                    context.SaveChanges();
-                    transaction.Commit();
+                    await context.SaveChangesAsync().ConfigureAwait(false);
+                    await transaction.CommitAsync().ConfigureAwait(false);
 
                     AppLogger.Audit(
                         "Inventory.Import.Success",
@@ -167,10 +169,10 @@ public class NguyenLieuDAL
                 }
                 catch
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync().ConfigureAwait(false);
                     throw;
                 }
-            });
+            }).ConfigureAwait(false).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {

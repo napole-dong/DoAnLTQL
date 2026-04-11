@@ -37,7 +37,7 @@ public class PermissionDAL
         [PermissionFeatures.Menu] = new PermissionTemplate(canView: true, canCreate: false, canUpdate: false, canDelete: false),
         [PermissionFeatures.KhachHang] = new PermissionTemplate(canView: false, canCreate: false, canUpdate: false, canDelete: false),
         [PermissionFeatures.NguyenLieu] = new PermissionTemplate(canView: false, canCreate: false, canUpdate: false, canDelete: false),
-        [PermissionFeatures.HoaDon] = new PermissionTemplate(canView: false, canCreate: false, canUpdate: false, canDelete: false),
+        [PermissionFeatures.HoaDon] = new PermissionTemplate(canView: true, canCreate: false, canUpdate: false, canDelete: false),
         [PermissionFeatures.ThongKe] = new PermissionTemplate(canView: false, canCreate: false, canUpdate: false, canDelete: false),
         [PermissionFeatures.TaiKhoan] = new PermissionTemplate(canView: false, canCreate: false, canUpdate: false, canDelete: false)
     };

@@ -7,6 +7,7 @@ namespace QuanLyQuanCaPhe.BUS;
 public class HoaDonBUS
 {
     private readonly HoaDonDAL _hoaDonDAL = new();
+    private readonly OrderService _orderService = new();
     private readonly PermissionBUS _permissionBUS = new();
 
     public List<HoaDonDTO> LayDanhSachHoaDon(HoaDonFilterDTO boLoc)
@@ -89,7 +90,7 @@ public class HoaDonBUS
         }
 
         request.NgayLap = request.NgayLap == default ? DateTime.Now : request.NgayLap;
-        request.TrangThai = 0;
+        request.TrangThai = (int)HoaDonTrangThai.ChuaThanhToan;
 
         var ketQua = _hoaDonDAL.ThemHoaDon(request);
         return (BusMessageCatalog.CreateActionResult(ketQua.ThanhCong, ketQua.ThongBao), ketQua.HoaDonId);
@@ -112,7 +113,7 @@ public class HoaDonBUS
 
     public BanActionResultDTO CapNhatHoaDon(HoaDonSaveRequestDTO request)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update))
+        if (!CoTheChinhSuaHoaDon())
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền cập nhật hóa đơn.");
         }
@@ -127,13 +128,18 @@ public class HoaDonBUS
             return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn hợp lệ.");
         }
 
+        if (request.RowVersion == null || request.RowVersion.Length == 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Dữ liệu đã bị thay đổi bởi nhân viên khác. Vui lòng tải lại!");
+        }
+
         request.NgayLap = request.NgayLap == default ? DateTime.Now : request.NgayLap;
         return BusMessageCatalog.NormalizeActionResult(_hoaDonDAL.CapNhatHoaDon(request));
     }
 
-    public BanActionResultDTO ThemMonVaoHoaDon(int hoaDonId, int monId, short soLuong)
+    public BanActionResultDTO ThemMonVaoHoaDon(int hoaDonId, int monId, short soLuong, byte[]? rowVersion = null)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update))
+        if (!CoTheChinhSuaHoaDon())
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền chỉnh sửa món trong hóa đơn.");
         }
@@ -153,10 +159,35 @@ public class HoaDonBUS
             return BusMessageCatalog.CreateActionResult(false, "Số lượng món phải lớn hơn 0.");
         }
 
-        return BusMessageCatalog.NormalizeActionResult(_hoaDonDAL.ThemMonVaoHoaDon(hoaDonId, monId, soLuong));
+        return BusMessageCatalog.NormalizeActionResult(_orderService.AddItemToOrder(hoaDonId, monId, soLuong, rowVersion));
     }
 
-    public BanActionResultDTO HuyHoaDon(int hoaDonId)
+    public BanActionResultDTO CapNhatSoLuongMonTrongHoaDon(int hoaDonId, int monId, short soLuong, byte[]? rowVersion = null)
+    {
+        if (!CoTheChinhSuaHoaDon())
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền chỉnh sửa món trong hóa đơn.");
+        }
+
+        if (hoaDonId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn hóa đơn trước khi thêm món.");
+        }
+
+        if (monId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn món hợp lệ.");
+        }
+
+        if (soLuong <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Số lượng món phải lớn hơn 0.");
+        }
+
+        return BusMessageCatalog.NormalizeActionResult(_orderService.UpdateItemQuantity(hoaDonId, monId, soLuong, rowVersion));
+    }
+
+    public BanActionResultDTO HuyHoaDon(int hoaDonId, byte[]? rowVersion = null)
     {
         if (!_permissionBUS.CanDeleteInvoice())
         {
@@ -173,12 +204,35 @@ public class HoaDonBUS
             return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn hóa đơn cần hủy.");
         }
 
-        return BusMessageCatalog.NormalizeActionResult(_hoaDonDAL.HuyHoaDon(hoaDonId));
+        return BusMessageCatalog.NormalizeActionResult(_orderService.CancelOrder(hoaDonId, rowVersion));
     }
 
-    public BanActionResultDTO XacNhanThuTien(int hoaDonId, decimal tienKhachDua)
+    public BanActionResultDTO HuyHoaDon(int hoaDonId, string reason, string user, byte[]? rowVersion = null)
     {
-        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update))
+        if (!_permissionBUS.CanDeleteInvoice())
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Chỉ Admin mới được hủy hoặc xóa hóa đơn.");
+        }
+
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Delete))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền hủy hóa đơn.");
+        }
+
+        if (hoaDonId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn hóa đơn cần hủy.");
+        }
+
+        return BusMessageCatalog.NormalizeActionResult(_hoaDonDAL.HuyHoaDon(hoaDonId, reason, user, rowVersion));
+    }
+
+    public BanActionResultDTO XacNhanThuTien(int hoaDonId, decimal tienKhachDua, byte[]? rowVersion = null)
+    {
+        var coQuyenThuTien = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update)
+            || _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
+
+        if (!coQuyenThuTien)
         {
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền xác nhận thu tiền.");
         }
@@ -209,7 +263,7 @@ public class HoaDonBUS
             return BusMessageCatalog.CreateActionResult(false, "Tiền khách đưa chưa đủ để thanh toán hóa đơn.");
         }
 
-        return BusMessageCatalog.NormalizeActionResult(_hoaDonDAL.XacNhanThuTien(hoaDonId));
+        return BusMessageCatalog.NormalizeActionResult(_orderService.Checkout(hoaDonId, rowVersion));
     }
 
     public decimal TinhTienThoi(decimal tongTien, decimal tienKhachDua)
@@ -231,9 +285,10 @@ public class HoaDonBUS
 
         return trangThaiText switch
         {
-            "Chưa thanh toán" => 0,
-            "Đã thanh toán" => 1,
-            "Đã hủy" => 2,
+            "Draft" or "Chưa thanh toán" => (int)HoaDonTrangThai.Draft,
+            "Paid" or "Đã thanh toán" => (int)HoaDonTrangThai.Paid,
+            "Closed" or "Đã hoàn tất" => (int)HoaDonTrangThai.Closed,
+            "Cancelled" or "Đã hủy" => (int)HoaDonTrangThai.Cancelled,
             _ => null
         };
     }
@@ -245,12 +300,18 @@ public class HoaDonBUS
 
     public static string ChuyenTrangThaiHoaDon(int trangThai)
     {
-        return trangThai switch
+        return (HoaDonTrangThai)trangThai switch
         {
-            1 => "Đã thanh toán",
-            2 => "Đã hủy",
-            _ => "Chưa thanh toán"
+            HoaDonTrangThai.Paid => "Paid",
+            HoaDonTrangThai.Closed => "Closed",
+            HoaDonTrangThai.Cancelled => "Cancelled",
+            _ => "Draft"
         };
+    }
+
+    private static bool CoTheChinhSuaHoaDon()
+    {
+        return NguoiDungHienTaiService.LayNguoiDungDangNhap() != null;
     }
 
     private static HoaDonFilterDTO ChuanHoaBoLoc(HoaDonFilterDTO boLoc)

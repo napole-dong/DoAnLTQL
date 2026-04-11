@@ -1,6 +1,7 @@
 ﻿using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Navigation;
 using System.Reflection;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -8,18 +9,35 @@ namespace QuanLyQuanCaPhe.Forms
     public partial class frmBanHang : Form
     {
         private const string MenuItemCardTag = "menu-card";
+        private readonly bool _isEmbedded;
         private readonly BanBUS _banBUS = new();
         private readonly MonBUS _monBUS = new();
         private readonly BanHangBUS _banHangBUS = new();
+        private readonly KhachHangBUS _khachHangBUS = new();
         private readonly PermissionBUS _permissionBUS = new();
+        private readonly Dictionary<int, int?> _khachHangChonTheoBan = new();
         private int? _banDangChonId;
         private string? _boLocLoaiMon;
+        private bool _dangDongBoKhachHangUI;
+        private bool _dangXuLyBanHang;
         private readonly FlowLayoutPanel _flowBoLocLoaiMon = new();
         private readonly List<Button> _cacNutBoLocLoaiMon = new();
         private Button? _nutTatCaLoaiMon;
+        private Form? _childFormDangMo;
+        private readonly FlowLayoutPanel _flowHinhThucPhucVu = new();
+        private readonly RadioButton _rdoTaiQuan = new();
+        private readonly RadioButton _rdoMangDi = new();
+        private readonly ContextMenuStrip _menuNguCanhBan = new();
+        private readonly ToolStripMenuItem _menuItemDonBan = new("Dọn bàn");
+        private bool _cheDoMangDi;
+        private bool _dangDongBoCheDoPhucVu;
+        private int? _banMangDiId;
+        private int? _banTaiQuanDangChonId;
+        private int? _banNguCanhId;
 
-        public frmBanHang()
+        public frmBanHang(bool isEmbedded = false)
         {
+            _isEmbedded = isEmbedded;
             InitializeComponent();
 
             dgvOrder.AutoGenerateColumns = false;
@@ -27,24 +45,32 @@ namespace QuanLyQuanCaPhe.Forms
             colSoLuong.DataPropertyName = nameof(BanHangOrderItemDTO.SoLuong);
             colDonGia.DataPropertyName = nameof(BanHangOrderItemDTO.DonGiaHienThi);
             colThanhTien.DataPropertyName = nameof(BanHangOrderItemDTO.ThanhTienHienThi);
+            dgvOrder.CellContentClick += dgvOrder_CellContentClick;
 
             Load += frmBanHang_Load;
             txtSearch.TextChanged += txtSearch_TextChanged;
             btnLamMoi.Click += btnLamMoi_Click;
+            cboKhachHang.SelectedIndexChanged += cboKhachHang_SelectedIndexChanged;
+            btnTaiLaiKhach.Click += (_, _) => TaiDanhSachKhachHang();
+            btnThemNhanhKhach.Click += btnThemNhanhKhach_Click;
             KhoiTaoKhungBoLocLoaiMon();
             ToiUuGiaoDienMenu();
+            KhoiTaoLuaChonHinhThucPhucVu();
+            KhoiTaoMenuNguCanhBan();
 
             btnTamTinh.Click += btnTamTinh_Click;
             btnThanhToan.Click += btnThanhToan_Click;
             btnChuyenBan.Click += (_, _) => ThucHienChuyenHoacGopBan(true);
             btnGopBan.Click += (_, _) => ThucHienChuyenHoacGopBan(false);
 
-            btnQuanLyBan.Click += (_, _) => OpenManagementForm(new frmQuanLiBan(), PermissionFeatures.Menu);
-            btnQuanLyMon.Click += (_, _) => OpenManagementForm(new frmQuanLiMon(), PermissionFeatures.Menu);
-            btnKhachHang.Click += (_, _) => OpenManagementForm(new frmKhachHang(), PermissionFeatures.KhachHang);
-            btnNhanVien.Click += (_, _) => OpenManagementForm(new frmNhanVien(), PermissionFeatures.NhanVien);
-            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
-            btnHoaDon.Click += (_, _) => OpenManagementForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            btnBanHang.Click += (_, _) => HienThiManHinhBanHang();
+            btnQuanLyBan.Click += (_, _) => DieuHuongManHinhCon(btnQuanLyBan, PermissionFeatures.Menu, "Bạn không có quyền truy cập chức năng Quản lý bàn.", () => new frmQuanLiBan(isEmbedded: true));
+            btnQuanLyMon.Click += (_, _) => DieuHuongManHinhCon(btnQuanLyMon, PermissionFeatures.Menu, "Bạn không có quyền truy cập chức năng Quản lý món.", () => new frmQuanLiMon(isEmbedded: true));
+            btnCongThuc.Click += (_, _) => DieuHuongManHinhCon(btnCongThuc, PermissionFeatures.Menu, "Bạn không có quyền truy cập chức năng Công thức.", () => new frmCongThuc(isEmbedded: true));
+            btnKhachHang.Click += (_, _) => DieuHuongManHinhCon(btnKhachHang, PermissionFeatures.KhachHang, "Bạn không có quyền truy cập chức năng Khách hàng.", () => new frmKhachHang(isEmbedded: true));
+            btnNhanVien.Click += (_, _) => DieuHuongManHinhCon(btnNhanVien, PermissionFeatures.NhanVien, "Bạn không có quyền truy cập chức năng Nhân viên.", () => new frmNhanVien(isEmbedded: true));
+            btnThongKe.Click += (_, _) => DieuHuongManHinhCon(btnThongKe, PermissionFeatures.ThongKe, "Bạn không có quyền truy cập chức năng Thống kê.", () => new frmThongKe(isEmbedded: true));
+            btnHoaDon.Click += (_, _) => DieuHuongManHinhCon(btnHoaDon, PermissionFeatures.HoaDon, "Bạn không có quyền truy cập chức năng Hóa đơn.", () => new frmHoaDon(isEmbedded: true));
             btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
@@ -66,8 +92,145 @@ namespace QuanLyQuanCaPhe.Forms
             BatDoubleBuffer(flowBan);
         }
 
+        private void KhoiTaoLuaChonHinhThucPhucVu()
+        {
+            _flowHinhThucPhucVu.AutoSize = true;
+            _flowHinhThucPhucVu.WrapContents = false;
+            _flowHinhThucPhucVu.FlowDirection = FlowDirection.LeftToRight;
+            _flowHinhThucPhucVu.BackColor = Color.Transparent;
+            _flowHinhThucPhucVu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _flowHinhThucPhucVu.Margin = new Padding(0);
+
+            _rdoTaiQuan.AutoSize = true;
+            _rdoTaiQuan.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _rdoTaiQuan.ForeColor = Color.FromArgb(79, 56, 43);
+            _rdoTaiQuan.Text = "Tại quán";
+            _rdoTaiQuan.Checked = true;
+            _rdoTaiQuan.Margin = new Padding(0, 0, 10, 0);
+
+            _rdoMangDi.AutoSize = true;
+            _rdoMangDi.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            _rdoMangDi.ForeColor = Color.FromArgb(79, 56, 43);
+            _rdoMangDi.Text = "Mang đi";
+            _rdoMangDi.Margin = new Padding(0);
+
+            _rdoTaiQuan.CheckedChanged += HinhThucPhucVu_CheckedChanged;
+            _rdoMangDi.CheckedChanged += HinhThucPhucVu_CheckedChanged;
+
+            _flowHinhThucPhucVu.Controls.Add(_rdoTaiQuan);
+            _flowHinhThucPhucVu.Controls.Add(_rdoMangDi);
+            panelTablesHeader.Controls.Add(_flowHinhThucPhucVu);
+            panelTablesHeader.Resize += (_, _) => DatViTriLuaChonHinhThucPhucVu();
+            DatViTriLuaChonHinhThucPhucVu();
+        }
+
+        private void DatViTriLuaChonHinhThucPhucVu()
+        {
+            var width = _flowHinhThucPhucVu.PreferredSize.Width;
+            var height = _flowHinhThucPhucVu.PreferredSize.Height;
+
+            _flowHinhThucPhucVu.Size = new Size(width, height);
+            _flowHinhThucPhucVu.Location = new Point(
+                Math.Max(0, panelTablesHeader.ClientSize.Width - width - 6),
+                7);
+        }
+
+        private void KhoiTaoMenuNguCanhBan()
+        {
+            _menuItemDonBan.Click += async (_, _) => await DonBanDangChonAsync();
+            _menuNguCanhBan.Items.Add(_menuItemDonBan);
+        }
+
+        private async Task DonBanDangChonAsync()
+        {
+            if (!_banNguCanhId.HasValue)
+            {
+                return;
+            }
+
+            var banId = _banNguCanhId.Value;
+            _banDangChonId = banId;
+
+            _ = await ThucThiTacVuBanHangAsync(
+                () => _banBUS.DonBan(banId),
+                hienThongBaoThanhCong: true);
+        }
+
+        private void HinhThucPhucVu_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (_dangDongBoCheDoPhucVu)
+            {
+                return;
+            }
+
+            ApDungCheDoPhucVu(_rdoMangDi.Checked);
+        }
+
+        private void ApDungCheDoPhucVu(bool laMangDi)
+        {
+            if (laMangDi)
+            {
+                if (!_banMangDiId.HasValue)
+                {
+                    _banMangDiId = _banBUS.LayHoacTaoBanMangDi();
+                }
+
+                if (!_banMangDiId.HasValue || _banMangDiId.Value <= 0)
+                {
+                    MessageBox.Show("Không thể khởi tạo bàn mang đi. Vui lòng thử lại.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                    _dangDongBoCheDoPhucVu = true;
+                    try
+                    {
+                        _rdoTaiQuan.Checked = true;
+                        _rdoMangDi.Checked = false;
+                    }
+                    finally
+                    {
+                        _dangDongBoCheDoPhucVu = false;
+                    }
+
+                    laMangDi = false;
+                }
+            }
+
+            _cheDoMangDi = laMangDi;
+
+            if (_cheDoMangDi)
+            {
+                if (_banDangChonId.HasValue && (!_banMangDiId.HasValue || _banDangChonId.Value != _banMangDiId.Value))
+                {
+                    _banTaiQuanDangChonId = _banDangChonId;
+                }
+
+                _banDangChonId = _banMangDiId;
+            }
+            else if (_banMangDiId.HasValue && _banDangChonId == _banMangDiId)
+            {
+                _banDangChonId = _banTaiQuanDangChonId;
+            }
+
+            flowBan.Visible = !_cheDoMangDi;
+            btnChuyenBan.Enabled = !_cheDoMangDi && btnChuyenBan.Visible;
+            btnGopBan.Enabled = !_cheDoMangDi && btnGopBan.Visible;
+
+            TaiSoDoBan();
+            CapNhatPhieuDangChon();
+            DatTrangThaiDangXuLyBanHang(_dangXuLyBanHang);
+        }
+
         private void frmBanHang_Load(object? sender, EventArgs e)
         {
+            if (ChildFormRuntimePolicy.TryBlockStandalone(this, _isEmbedded, "Ban hang"))
+            {
+                return;
+            }
+
+            if (!_isEmbedded)
+            {
+                WindowState = FormWindowState.Maximized;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.BanHang, PermissionActions.View, "Bạn không có quyền truy cập chức năng Bán hàng.");
@@ -79,8 +242,16 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            if (_isEmbedded)
+            {
+                panelSidebar.Visible = false;
+                panelTopbar.Visible = false;
+                panelMain.Dock = DockStyle.Fill;
+            }
+
             HienThiNguoiDungDangNhap();
             ApplyPermissionUI();
+            TaiDanhSachKhachHang();
 
             TaiBoLocLoaiMonTuDuLieu();
             if (_nutTatCaLoaiMon != null)
@@ -93,8 +264,18 @@ namespace QuanLyQuanCaPhe.Forms
                 TaiDanhSachMon();
             }
 
-            TaiSoDoBan();
-            CapNhatPhieuDangChon();
+            _dangDongBoCheDoPhucVu = true;
+            try
+            {
+                _rdoTaiQuan.Checked = true;
+                _rdoMangDi.Checked = false;
+            }
+            finally
+            {
+                _dangDongBoCheDoPhucVu = false;
+            }
+
+            ApDungCheDoPhucVu(laMangDi: false);
         }
 
         private void KhoiTaoKhungBoLocLoaiMon()
@@ -211,6 +392,7 @@ namespace QuanLyQuanCaPhe.Forms
             var coQuyenKhachHang = _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.View);
             btnQuanLyBan.Visible = coQuyenQuanLyMenu;
             btnQuanLyMon.Visible = coQuyenQuanLyMenu;
+            btnCongThuc.Visible = coQuyenQuanLyMenu;
             btnKhachHang.Visible = coQuyenKhachHang;
 
             btnNhanVien.Visible = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
@@ -223,6 +405,280 @@ namespace QuanLyQuanCaPhe.Forms
             btnThanhToan.Visible = coQuyenBanHang;
             btnChuyenBan.Visible = coQuyenBanHang && coQuyenCapNhatBanHang;
             btnGopBan.Visible = coQuyenBanHang && coQuyenCapNhatBanHang;
+            btnThemNhanhKhach.Visible = coQuyenBanHang && coQuyenCapNhatBanHang;
+        }
+
+        private void TaiDanhSachKhachHang()
+        {
+            var khachDangChon = LayKhachHangDangChonId();
+
+            var dsLuaChon = new List<KhachHangLuaChonItem>
+            {
+                new() { Id = 0, TenHienThi = "Khách lẻ" }
+            };
+
+            var dsKhach = _khachHangBUS
+                .LayDanhSachKhachChoBanHang(null)
+                .OrderBy(x => x.HoVaTen)
+                .ThenBy(x => x.ID)
+                .ToList();
+
+            dsLuaChon.AddRange(dsKhach.Select(x => new KhachHangLuaChonItem
+            {
+                Id = x.ID,
+                TenHienThi = TaoTenKhachHangHienThi(x)
+            }));
+
+            _dangDongBoKhachHangUI = true;
+            try
+            {
+                cboKhachHang.DataSource = null;
+                cboKhachHang.DisplayMember = nameof(KhachHangLuaChonItem.TenHienThi);
+                cboKhachHang.ValueMember = nameof(KhachHangLuaChonItem.Id);
+                cboKhachHang.DataSource = dsLuaChon;
+            }
+            finally
+            {
+                _dangDongBoKhachHangUI = false;
+            }
+
+            ChonKhachHangTheoId(khachDangChon);
+        }
+
+        private static string TaoTenKhachHangHienThi(KhachHangDTO khachHang)
+        {
+            var tenKhach = string.IsNullOrWhiteSpace(khachHang.HoVaTen)
+                ? $"Khách #{khachHang.ID}"
+                : khachHang.HoVaTen.Trim();
+
+            return string.IsNullOrWhiteSpace(khachHang.DienThoai)
+                ? tenKhach
+                : $"{tenKhach} • {khachHang.DienThoai}";
+        }
+
+        private void cboKhachHang_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (_dangDongBoKhachHangUI || !_banDangChonId.HasValue)
+            {
+                return;
+            }
+
+            _khachHangChonTheoBan[_banDangChonId.Value] = LayKhachHangDangChonId();
+        }
+
+        private int? LayKhachHangDangChonId()
+        {
+            if (cboKhachHang.SelectedValue is int khachId && khachId > 0)
+            {
+                return khachId;
+            }
+
+            if (cboKhachHang.SelectedItem is KhachHangLuaChonItem luaChon && luaChon.Id > 0)
+            {
+                return luaChon.Id;
+            }
+
+            return null;
+        }
+
+        private void ChonKhachHangTheoId(int? khachHangId)
+        {
+            if (cboKhachHang.DataSource == null)
+            {
+                return;
+            }
+
+            var giaTriKhach = khachHangId.HasValue && khachHangId.Value > 0
+                ? khachHangId.Value
+                : 0;
+
+            var coKhachTrongDanhSach = cboKhachHang.Items
+                .OfType<KhachHangLuaChonItem>()
+                .Any(x => x.Id == giaTriKhach);
+
+            _dangDongBoKhachHangUI = true;
+            try
+            {
+                cboKhachHang.SelectedValue = coKhachTrongDanhSach ? giaTriKhach : 0;
+            }
+            finally
+            {
+                _dangDongBoKhachHangUI = false;
+            }
+        }
+
+        private void DongBoKhachHangTheoTrangThaiBan(int banId, BanHangTrangThaiPhieuDTO trangThaiPhieu)
+        {
+            if (trangThaiPhieu.HoaDonID.HasValue)
+            {
+                _khachHangChonTheoBan[banId] = trangThaiPhieu.KhachHangID;
+                ChonKhachHangTheoId(trangThaiPhieu.KhachHangID);
+                return;
+            }
+
+            if (!_khachHangChonTheoBan.TryGetValue(banId, out var khachHangTam))
+            {
+                khachHangTam = null;
+                _khachHangChonTheoBan[banId] = null;
+            }
+
+            ChonKhachHangTheoId(khachHangTam);
+        }
+
+        private void DieuHuongManHinhCon(
+            Button nutMenu,
+            string feature,
+            string thongBaoTuChoi,
+            Func<Form> childFormFactory)
+        {
+            if (_isEmbedded)
+            {
+                return;
+            }
+
+            try
+            {
+                _permissionBUS.EnsurePermission(feature, PermissionActions.View, thongBaoTuChoi);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show(ex.Message, "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var childForm = childFormFactory();
+            OpenChildForm(childForm);
+            lblPageTitle.Text = _childFormDangMo?.Text ?? childForm.Text;
+            txtSearch.Visible = false;
+            btnLamMoi.Visible = false;
+            CapNhatNutMenuDangChon(nutMenu);
+        }
+
+        public void OpenChildForm(Form childForm)
+        {
+            if (_isEmbedded)
+            {
+                childForm.Dispose();
+                return;
+            }
+
+            if (_childFormDangMo != null && !_childFormDangMo.IsDisposed && _childFormDangMo.GetType() == childForm.GetType())
+            {
+                childForm.Dispose();
+                return;
+            }
+
+            DongChildFormDangMo();
+
+            panelContent.AutoScroll = false;
+            tableMain.Visible = false;
+
+            childForm.TopLevel = false;
+            childForm.FormBorderStyle = FormBorderStyle.None;
+            childForm.Dock = DockStyle.Fill;
+            childForm.FormClosed += ChildFormDangMo_FormClosed;
+
+            panelContent.Controls.Add(childForm);
+            panelContent.Tag = childForm;
+            _childFormDangMo = childForm;
+
+            childForm.BringToFront();
+            childForm.Visible = true;
+        }
+
+        public void HienThiManHinhBanHang()
+        {
+            HienThiManHinhBanHangInternal(dongFormConDangMo: true);
+        }
+
+        private void HienThiManHinhBanHangInternal(bool dongFormConDangMo)
+        {
+            if (dongFormConDangMo)
+            {
+                DongChildFormDangMo();
+            }
+
+            panelContent.AutoScroll = true;
+            tableMain.Visible = true;
+            tableMain.BringToFront();
+
+            txtSearch.Visible = true;
+            btnLamMoi.Visible = true;
+            lblPageTitle.Text = "Quầy bán hàng";
+            CapNhatNutMenuDangChon(btnBanHang);
+        }
+
+        private void CapNhatNutMenuDangChon(Button nutDangChon)
+        {
+            var dsNutMenu = new[]
+            {
+                btnBanHang,
+                btnQuanLyBan,
+                btnQuanLyMon,
+                btnCongThuc,
+                btnHoaDon,
+                btnKhachHang,
+                btnNhanVien,
+                btnThongKe
+            };
+
+            foreach (var nut in dsNutMenu)
+            {
+                var dangDuocChon = nut == nutDangChon;
+                nut.BackColor = dangDuocChon ? Color.FromArgb(94, 64, 47) : Color.Transparent;
+                nut.ForeColor = dangDuocChon ? Color.White : Color.Gainsboro;
+            }
+        }
+
+        private void DongChildFormDangMo()
+        {
+            if (_childFormDangMo == null)
+            {
+                return;
+            }
+
+            var childForm = _childFormDangMo;
+            _childFormDangMo = null;
+
+            childForm.FormClosed -= ChildFormDangMo_FormClosed;
+
+            if (panelContent.Controls.Contains(childForm))
+            {
+                panelContent.Controls.Remove(childForm);
+            }
+
+            if (!childForm.IsDisposed)
+            {
+                childForm.Close();
+                childForm.Dispose();
+            }
+
+            panelContent.Tag = null;
+        }
+
+        private void ChildFormDangMo_FormClosed(object? sender, FormClosedEventArgs e)
+        {
+            if (sender is not Form childForm)
+            {
+                return;
+            }
+
+            childForm.FormClosed -= ChildFormDangMo_FormClosed;
+
+            if (!ReferenceEquals(_childFormDangMo, childForm))
+            {
+                return;
+            }
+
+            _childFormDangMo = null;
+            panelContent.Tag = null;
+
+            if (panelContent.Controls.Contains(childForm))
+            {
+                panelContent.Controls.Remove(childForm);
+            }
+
+            HienThiManHinhBanHangInternal(dongFormConDangMo: false);
         }
 
         private void txtSearch_TextChanged(object? sender, EventArgs e)
@@ -252,6 +708,21 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void TaiSoDoBan()
         {
+            if (_cheDoMangDi)
+            {
+                flowBan.SuspendLayout();
+                flowBan.Controls.Clear();
+                flowBan.Controls.Add(TaoLabelRong("Đang ở chế độ mang đi. Không cần chọn bàn tại quán."));
+                flowBan.ResumeLayout();
+
+                if (_banMangDiId.HasValue)
+                {
+                    _banDangChonId = _banMangDiId;
+                }
+
+                return;
+            }
+
             var tuKhoa = txtSearch.Text.Trim();
             var dsBan = _banBUS.LayDanhSachBan(null, null, tuKhoa);
             if (!string.IsNullOrWhiteSpace(tuKhoa) && dsBan.Count == 0)
@@ -285,7 +756,9 @@ namespace QuanLyQuanCaPhe.Forms
         private Button TaoNutBan(BanDTO ban)
         {
             var dangChon = _banDangChonId == ban.ID;
-            var trangThai = BanHangBUS.ChuyenTrangThaiBan(ban.TrangThai);
+            var trangThaiHienThi = XacDinhTrangThaiHienThiBan(ban);
+            var trangThaiNgan = ChuyenTrangThaiBanNgan(trangThaiHienThi);
+            var bangMau = LayBangMauTrangThaiBan(trangThaiHienThi);
 
             var btn = new Button
             {
@@ -294,32 +767,114 @@ namespace QuanLyQuanCaPhe.Forms
                 Margin = new Padding(8),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", dangChon ? 10F : 9.5F, dangChon ? FontStyle.Bold : FontStyle.Regular),
-                ForeColor = Color.FromArgb(79, 56, 43),
-                BackColor = dangChon
-                    ? Color.FromArgb(255, 241, 230)
-                    : ban.TrangThai == 1
-                        ? Color.FromArgb(255, 248, 234)
-                        : Color.FromArgb(248, 245, 241),
-                Text = $"{ban.TenBan}\r\n{(dangChon ? "Đang chọn" : trangThai)}",
-                Tag = ban.ID,
+                ForeColor = bangMau.Chu,
+                BackColor = bangMau.Nen,
+                Text = $"{ban.TenBan}\r\n{trangThaiNgan}",
+                Tag = ban,
                 UseVisualStyleBackColor = false
             };
 
-            btn.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btn.FlatAppearance.BorderSize = dangChon ? 2 : 1;
+            btn.FlatAppearance.BorderColor = dangChon ? bangMau.VienDangChon : bangMau.Vien;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(
+                Math.Min(255, bangMau.Nen.R + 8),
+                Math.Min(255, bangMau.Nen.G + 8),
+                Math.Min(255, bangMau.Nen.B + 8));
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(
+                Math.Max(0, bangMau.Nen.R - 8),
+                Math.Max(0, bangMau.Nen.G - 8),
+                Math.Max(0, bangMau.Nen.B - 8));
+
             btn.Click += BtnBan_Click;
+            btn.MouseUp += BtnBan_MouseUp;
             return btn;
+        }
+
+        private static string ChuyenTrangThaiBanNgan(int trangThai)
+        {
+            return trangThai switch
+            {
+                1 => "Có khách",
+                2 => "Đã thanh toán",
+                _ => "Trống"
+            };
+        }
+
+        private static int XacDinhTrangThaiHienThiBan(BanDTO ban)
+        {
+            if (ban.TrangThai == 0 && !ban.CoHoaDonDangHoatDong)
+            {
+                return 0;
+            }
+
+            if (ban.TrangThaiHoaDonDangHoatDong == (int)HoaDonTrangThai.Paid)
+            {
+                return 2;
+            }
+
+            if (ban.TrangThaiHoaDonDangHoatDong == (int)HoaDonTrangThai.Draft)
+            {
+                return 1;
+            }
+
+            if (ban.TrangThai == 2)
+            {
+                return 2;
+            }
+
+            return ban.TrangThai == 0 ? 0 : 1;
+        }
+
+        private static (Color Nen, Color Chu, Color Vien, Color VienDangChon) LayBangMauTrangThaiBan(int trangThai)
+        {
+            return trangThai switch
+            {
+                1 => (
+                    Nen: Color.FromArgb(255, 230, 227),
+                    Chu: Color.FromArgb(169, 42, 29),
+                    Vien: Color.FromArgb(243, 168, 160),
+                    VienDangChon: Color.FromArgb(213, 65, 50)),
+                2 => (
+                    Nen: Color.FromArgb(255, 246, 215),
+                    Chu: Color.FromArgb(143, 106, 0),
+                    Vien: Color.FromArgb(232, 210, 137),
+                    VienDangChon: Color.FromArgb(195, 138, 0)),
+                _ => (
+                    Nen: Color.FromArgb(232, 247, 236),
+                    Chu: Color.FromArgb(31, 106, 58),
+                    Vien: Color.FromArgb(159, 215, 174),
+                    VienDangChon: Color.FromArgb(47, 141, 78))
+            };
         }
 
         private void BtnBan_Click(object? sender, EventArgs e)
         {
-            if (sender is not Button { Tag: int banId })
+            if (_cheDoMangDi || sender is not Button { Tag: BanDTO ban })
             {
                 return;
             }
 
-            _banDangChonId = banId;
+            _banDangChonId = ban.ID;
+            _banTaiQuanDangChonId = ban.ID;
             TaiSoDoBan();
             CapNhatPhieuDangChon();
+        }
+
+        private void BtnBan_MouseUp(object? sender, MouseEventArgs e)
+        {
+            if (_cheDoMangDi || e.Button != MouseButtons.Right)
+            {
+                return;
+            }
+
+            if (sender is not Button { Tag: BanDTO ban })
+            {
+                return;
+            }
+
+            _banNguCanhId = ban.ID;
+            _menuItemDonBan.Enabled = ban.TrangThai != 0 || ban.CoHoaDonDangHoatDong;
+            _menuNguCanhBan.Show((Control)sender, e.Location);
         }
 
         private void TaiDanhSachMon()
@@ -513,68 +1068,260 @@ namespace QuanLyQuanCaPhe.Forms
             CapNhatPhieuDangChon();
         }
 
+        private async void dgvOrder_CellContentClick(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex != colXoa.Index)
+            {
+                return;
+            }
+
+            if (!_banDangChonId.HasValue)
+            {
+                MessageBox.Show("Vui lòng chọn bàn trước khi xóa món.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (dgvOrder.Rows[e.RowIndex].DataBoundItem is not BanHangOrderItemDTO monDaChon
+                || monDaChon.MonID <= 0
+                || monDaChon.SoLuong <= 0)
+            {
+                return;
+            }
+
+            var xacNhan = MessageBox.Show(
+                $"Xóa món '{monDaChon.TenMon}' khỏi order hiện tại?",
+                "Xác nhận",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (xacNhan != DialogResult.Yes)
+            {
+                return;
+            }
+
+            _ = await ThucThiTacVuBanHangAsync(
+                () => _banHangBUS.XoaMonKhoiBan(_banDangChonId.Value, monDaChon.MonID, monDaChon.DonGia, monDaChon.SoLuong));
+        }
+
+        private void btnThemNhanhKhach_Click(object? sender, EventArgs e)
+        {
+            using var dialog = new Form
+            {
+                Text = "Thêm nhanh khách hàng",
+                StartPosition = FormStartPosition.CenterParent,
+                Width = 420,
+                Height = 255,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            var lblHoTen = new Label { Left = 18, Top = 22, Width = 95, Text = "Họ và tên" };
+            var txtHoTen = new TextBox { Left = 118, Top = 18, Width = 270 };
+
+            var lblDienThoai = new Label { Left = 18, Top = 62, Width = 95, Text = "Điện thoại" };
+            var txtDienThoai = new TextBox { Left = 118, Top = 58, Width = 270 };
+
+            var lblDiaChi = new Label { Left = 18, Top = 102, Width = 95, Text = "Địa chỉ" };
+            var txtDiaChi = new TextBox { Left = 118, Top = 98, Width = 270 };
+
+            var btnLuu = new Button
+            {
+                Left = 226,
+                Top = 152,
+                Width = 78,
+                Text = "Lưu",
+                DialogResult = DialogResult.OK
+            };
+
+            var btnHuy = new Button
+            {
+                Left = 310,
+                Top = 152,
+                Width = 78,
+                Text = "Hủy",
+                DialogResult = DialogResult.Cancel
+            };
+
+            dialog.Controls.AddRange(new Control[]
+            {
+                lblHoTen, txtHoTen,
+                lblDienThoai, txtDienThoai,
+                lblDiaChi, txtDiaChi,
+                btnLuu, btnHuy
+            });
+
+            dialog.AcceptButton = btnLuu;
+            dialog.CancelButton = btnHuy;
+
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            var khachMoi = new KhachHangDTO
+            {
+                HoVaTen = txtHoTen.Text,
+                DienThoai = txtDienThoai.Text,
+                DiaChi = txtDiaChi.Text
+            };
+
+            var ketQua = _khachHangBUS.ThemKhachNhanhChoBanHang(khachMoi);
+            if (!ketQua.ThanhCong)
+            {
+                MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            TaiDanhSachKhachHang();
+
+            if (ketQua.KhachMoi?.ID > 0)
+            {
+                ChonKhachHangTheoId(ketQua.KhachMoi.ID);
+                if (_banDangChonId.HasValue)
+                {
+                    _khachHangChonTheoBan[_banDangChonId.Value] = ketQua.KhachMoi.ID;
+                }
+            }
+
+            MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         private void CapNhatPhieuDangChon()
         {
             if (!_banDangChonId.HasValue)
             {
                 dgvOrder.DataSource = null;
-                lblOrderMeta.Text = "Chưa chọn bàn";
-                lblThongTinBan.Text = "Chọn bàn để xem món đang phục vụ";
+                lblOrderMeta.Text = _cheDoMangDi ? "Đơn mang đi" : "Chưa chọn bàn";
+                lblThongTinBan.Text = _cheDoMangDi
+                    ? "Chọn món để tạo đơn mang đi"
+                    : "Chọn bàn để xem món đang phục vụ";
                 lblTamTinhValue.Text = DinhDangTien(0);
                 lblGiamGiaValue.Text = DinhDangTien(0);
                 lblTongThanhToanValue.Text = DinhDangTien(0);
+                cboKhachHang.Enabled = false;
+                btnThemNhanhKhach.Enabled = false;
+                ChonKhachHangTheoId(null);
                 return;
             }
 
             var banId = _banDangChonId.Value;
             var trangThaiPhieu = _banHangBUS.LayTrangThaiPhieuTheoBan(banId);
+            DongBoKhachHangTheoTrangThaiBan(banId, trangThaiPhieu);
+            cboKhachHang.Enabled = true;
+            btnThemNhanhKhach.Enabled = true;
 
             dgvOrder.DataSource = null;
             dgvOrder.DataSource = trangThaiPhieu.ChiTietHienThi;
 
-            var tenBan = trangThaiPhieu.TenBan;
-            var trangThaiBan = BanHangBUS.ChuyenTrangThaiBan(trangThaiPhieu.TrangThaiBan);
+            var tenBan = _cheDoMangDi ? "Mang đi" : trangThaiPhieu.TenBan;
+            var trangThaiBan = BanHangBUS.ChuyenTrangThaiBan(trangThaiPhieu.TrangThaiBan, trangThaiPhieu.TrangThaiHoaDon);
+            var hoaDonDaThanhToan = trangThaiPhieu.TrangThaiHoaDon == (int)HoaDonTrangThai.Paid;
+            var tenKhachHang = string.IsNullOrWhiteSpace(trangThaiPhieu.TenKhachHang)
+                ? "Khách lẻ"
+                : trangThaiPhieu.TenKhachHang;
 
-            lblOrderMeta.Text = trangThaiPhieu.SoMonChoGoi > 0
-                ? $"{tenBan} • {trangThaiBan} • {trangThaiPhieu.SoMonChoGoi} món chờ gọi"
-                : $"{tenBan} • {trangThaiBan}";
+            if (_cheDoMangDi)
+            {
+                lblOrderMeta.Text = trangThaiPhieu.SoMonChoGoi > 0
+                    ? $"{tenBan} • {trangThaiPhieu.SoMonChoGoi} món chờ gọi • {tenKhachHang}"
+                    : $"{tenBan} • {tenKhachHang}";
 
-            lblThongTinBan.Text = trangThaiPhieu.TongMon > 0
-                ? $"{tenBan} đang có {trangThaiPhieu.TongMon} món phục vụ"
-                : "Chọn bàn để xem món đang phục vụ";
+                lblThongTinBan.Text = trangThaiPhieu.TongMon > 0
+                    ? $"Đơn mang đi đang có {trangThaiPhieu.TongMon} món"
+                    : "Chọn món để tạo đơn mang đi";
+            }
+            else
+            {
+                lblOrderMeta.Text = trangThaiPhieu.SoMonChoGoi > 0
+                    ? $"{tenBan} • {trangThaiBan} • {trangThaiPhieu.SoMonChoGoi} món chờ gọi • {tenKhachHang}"
+                    : $"{tenBan} • {trangThaiBan} • {tenKhachHang}";
+
+                lblThongTinBan.Text = hoaDonDaThanhToan
+                    ? $"{tenBan} đã thanh toán. Chuột phải vào bàn để dọn bàn."
+                    : trangThaiPhieu.TongMon > 0
+                        ? $"{tenBan} đang có {trangThaiPhieu.TongMon} món phục vụ"
+                        : "Chọn bàn để xem món đang phục vụ";
+            }
 
             lblTamTinhValue.Text = DinhDangTien(trangThaiPhieu.TongTien);
             lblGiamGiaValue.Text = DinhDangTien(0);
             lblTongThanhToanValue.Text = DinhDangTien(trangThaiPhieu.TongTien);
         }
 
-        private bool LuuMonChoGoiVaLamMoi(int banId, bool hienThongBaoThanhCong = false, string? thongBaoThanhCong = null)
+        private async Task<bool> ThucThiTacVuBanHangAsync(
+            Func<BanActionResultDTO> tacVu,
+            bool hienThongBaoThanhCong = false,
+            string? thongBaoThanhCong = null)
         {
-            var result = _banHangBUS.LuuMonChoGoi(banId);
-
-            if (!result.ThanhCong)
+            if (_dangXuLyBanHang)
             {
-                MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
-            TaiSoDoBan();
-            CapNhatPhieuDangChon();
+            _dangXuLyBanHang = true;
+            DatTrangThaiDangXuLyBanHang(true);
 
-            if (hienThongBaoThanhCong)
+            try
             {
-                MessageBox.Show(
-                    thongBaoThanhCong ?? result.ThongBao,
-                    "Thông báo",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-            }
+                var result = await Task.Run(tacVu);
+                if (!result.ThanhCong)
+                {
+                    MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
 
-            return true;
+                TaiSoDoBan();
+                CapNhatPhieuDangChon();
+
+                if (hienThongBaoThanhCong)
+                {
+                    MessageBox.Show(
+                        thongBaoThanhCong ?? result.ThongBao,
+                        "Thông báo",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+
+                return true;
+            }
+            finally
+            {
+                DatTrangThaiDangXuLyBanHang(false);
+                _dangXuLyBanHang = false;
+            }
         }
 
-        private void btnTamTinh_Click(object? sender, EventArgs e)
+        private void DatTrangThaiDangXuLyBanHang(bool dangXuLy)
         {
+            UseWaitCursor = dangXuLy;
+
+            var hoaDonDaThanhToan = false;
+            if (!dangXuLy && _banDangChonId.HasValue)
+            {
+                var trangThaiPhieu = _banHangBUS.LayTrangThaiPhieuTheoBan(_banDangChonId.Value);
+                hoaDonDaThanhToan = trangThaiPhieu.TrangThaiHoaDon == (int)HoaDonTrangThai.Paid;
+            }
+
+            btnTamTinh.Enabled = !dangXuLy && _banDangChonId.HasValue && !_cheDoMangDi && !hoaDonDaThanhToan;
+            btnThanhToan.Enabled = !dangXuLy && _banDangChonId.HasValue && !hoaDonDaThanhToan;
+            btnChuyenBan.Enabled = !dangXuLy && !_cheDoMangDi && btnChuyenBan.Visible;
+            btnGopBan.Enabled = !dangXuLy && !_cheDoMangDi && btnGopBan.Visible;
+
+            cboKhachHang.Enabled = !dangXuLy && _banDangChonId.HasValue;
+            btnTaiLaiKhach.Enabled = !dangXuLy;
+            btnThemNhanhKhach.Enabled = !dangXuLy && _banDangChonId.HasValue;
+            flowBan.Enabled = !dangXuLy && !_cheDoMangDi;
+        }
+
+        private async void btnTamTinh_Click(object? sender, EventArgs e)
+        {
+            if (_cheDoMangDi)
+            {
+                MessageBox.Show("Đơn mang đi không hỗ trợ lưu bàn. Vui lòng bấm Thanh toán liền.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             if (!_banDangChonId.HasValue)
             {
                 MessageBox.Show("Vui lòng chọn bàn trước khi lưu bàn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -582,13 +1329,16 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             var banId = _banDangChonId.Value;
-            _ = LuuMonChoGoiVaLamMoi(
-                banId,
+            var khachHangId = LayKhachHangDangChonId();
+            _khachHangChonTheoBan[banId] = khachHangId;
+
+            _ = await ThucThiTacVuBanHangAsync(
+                () => _banHangBUS.LuuMonChoGoiVoiKhachHang(banId, khachHangId),
                 hienThongBaoThanhCong: true,
                 thongBaoThanhCong: "Đã lưu bàn thành công. Bạn có thể mở lại để thêm món sau.");
         }
 
-        private void btnThanhToan_Click(object? sender, EventArgs e)
+        private async void btnThanhToan_Click(object? sender, EventArgs e)
         {
             if (!_banDangChonId.HasValue)
             {
@@ -608,20 +1358,15 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            var result = _banHangBUS.ThanhToanHoaDon(banId);
-            if (!result.ThanhCong)
-            {
-                MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            var khachHangId = LayKhachHangDangChonId();
+            _khachHangChonTheoBan[banId] = khachHangId;
 
-            TaiSoDoBan();
-            CapNhatPhieuDangChon();
-
-            MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _ = await ThucThiTacVuBanHangAsync(
+                () => _banHangBUS.ThanhToanHoaDonVoiKhachHang(banId, khachHangId),
+                hienThongBaoThanhCong: true);
         }
 
-        private void ThucHienChuyenHoacGopBan(bool laChuyenBan)
+        private async void ThucHienChuyenHoacGopBan(bool laChuyenBan)
         {
             if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
             {
@@ -630,6 +1375,12 @@ namespace QuanLyQuanCaPhe.Forms
                     "Thông báo",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_cheDoMangDi)
+            {
+                MessageBox.Show("Không áp dụng chuyển/gộp bàn khi đang ở chế độ mang đi.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -648,13 +1399,15 @@ namespace QuanLyQuanCaPhe.Forms
 
             var dsBanDich = _banBUS
                 .LayDanhSachBanDich(banNguonId)
-                .Where(x => laChuyenBan ? x.TrangThai == 0 : x.TrangThai is 0 or 1)
+                .Where(x => laChuyenBan
+                    ? (x.TrangThai == 0 && !x.CoHoaDonDangHoatDong)
+                    : x.TrangThaiHoaDonDangHoatDong == (int)HoaDonTrangThai.Draft)
                 .ToList();
 
             if (dsBanDich.Count == 0)
             {
                 MessageBox.Show(
-                    laChuyenBan ? "Không có bàn trống để chuyển." : "Không có bàn trống hoặc bàn đang phục vụ để gộp.",
+                    laChuyenBan ? "Không có bàn trống để chuyển." : "Không có bàn đang phục vụ để gộp.",
                     "Thông báo",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -711,12 +1464,29 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            var result = _banBUS.ChuyenHoacGopBan(new BanChuyenGopRequestDTO
+            if (_dangXuLyBanHang)
             {
-                BanNguonId = banNguonId,
-                BanDichId = banDichId,
-                LaChuyenBan = laChuyenBan
-            });
+                return;
+            }
+
+            _dangXuLyBanHang = true;
+            DatTrangThaiDangXuLyBanHang(true);
+
+            BanActionResultDTO result;
+            try
+            {
+                result = await Task.Run(() => _banBUS.ChuyenHoacGopBan(new BanChuyenGopRequestDTO
+                {
+                    BanNguonId = banNguonId,
+                    BanDichId = banDichId,
+                    LaChuyenBan = laChuyenBan
+                }));
+            }
+            finally
+            {
+                DatTrangThaiDangXuLyBanHang(false);
+                _dangXuLyBanHang = false;
+            }
 
             if (!result.ThanhCong)
             {
@@ -760,51 +1530,26 @@ namespace QuanLyQuanCaPhe.Forms
             return $"{soTien:N0}đ";
         }
 
-        private void OpenManagementForm(Form targetForm, string feature)
+        private sealed class KhachHangLuaChonItem
         {
-            OpenStandaloneForm(targetForm, feature);
-        }
-
-        private void OpenStandaloneForm(Form targetForm, string feature)
-        {
-            try
-            {
-                _permissionBUS.EnsurePermission(feature, PermissionActions.View, "Ban khong co quyen truy cap chuc nang nay.");
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                targetForm.Dispose();
-                MessageBox.Show(ex.Message, "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            Hide();
-            targetForm.FormClosed += (_, _) =>
-            {
-                if (!IsDisposed && !Disposing)
-                {
-                    Show();
-                    BringToFront();
-                    Activate();
-                }
-            };
-
-            targetForm.Show(this);
-        }
-
-        private void MoTinhNangThongKe()
-        {
-            OpenManagementForm(new frmThongKe(), PermissionFeatures.ThongKe);
-        }
-
-        private void MoTinhNangHoaDon()
-        {
-            OpenManagementForm(new frmHoaDon(), PermissionFeatures.HoaDon);
+            public int Id { get; init; }
+            public string TenHienThi { get; init; } = string.Empty;
         }
 
         private void panelTopbar_Paint(object sender, PaintEventArgs e)
         {
 
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            DongChildFormDangMo();
+            base.OnFormClosing(e);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            base.OnFormClosed(e);
         }
     }
 }

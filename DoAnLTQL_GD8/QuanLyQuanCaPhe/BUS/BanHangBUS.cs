@@ -9,6 +9,8 @@ namespace QuanLyQuanCaPhe.BUS;
 public class BanHangBUS
 {
     private readonly BanHangDAL _banHangDAL = new();
+    private readonly HoaDonDAL _hoaDonDAL = new();
+    private readonly OrderService _orderService = new();
     private readonly PermissionBUS _permissionBUS = new();
     private readonly Dictionary<int, List<BanHangOrderItemDTO>> _gioTamTheoBan = new();
 
@@ -51,6 +53,10 @@ public class BanHangBUS
             BanID = phieuDb.BanID > 0 ? phieuDb.BanID : banId,
             TenBan = string.IsNullOrWhiteSpace(phieuDb.TenBan) ? $"Bàn {banId:D2}" : phieuDb.TenBan,
             TrangThaiBan = phieuDb.TrangThaiBan,
+            HoaDonID = phieuDb.HoaDonID,
+            TrangThaiHoaDon = phieuDb.TrangThaiHoaDon,
+            KhachHangID = phieuDb.KhachHangID,
+            TenKhachHang = string.IsNullOrWhiteSpace(phieuDb.TenKhachHang) ? "Khách lẻ" : phieuDb.TenKhachHang,
             SoMonChoGoi = dsTam.Sum(x => x.SoLuong),
             TongMon = dsHienThi.Sum(x => x.SoLuong),
             TongTien = dsHienThi.Sum(x => x.ThanhTien),
@@ -75,6 +81,17 @@ public class BanHangBUS
             return BusMessageCatalog.CreateActionResult(false, "Món không hợp lệ.");
         }
 
+        var phieu = _banHangDAL.GetPhieuTheoBan(banId);
+        if (phieu.BanID <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Không tìm thấy bàn đã chọn.");
+        }
+
+        if (LaBanDangChoDon(phieu))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bàn đã thanh toán và đang chờ dọn. Vui lòng dọn bàn trước khi nhận khách mới.");
+        }
+
         var gioTam = LayGioTamTheoBan(banId);
         var dongMon = gioTam.FirstOrDefault(x => x.MonID == mon.ID && x.DonGia == mon.DonGia);
 
@@ -95,6 +112,63 @@ public class BanHangBUS
         return BusMessageCatalog.CreateActionResult(true, "Đã cập nhật số lượng món trong giỏ tạm.");
     }
 
+    public BanActionResultDTO XoaMonKhoiBan(int banId, int monId, decimal donGia, short soLuong)
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền xóa món khỏi order.");
+        }
+
+        if (banId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn hợp lệ.");
+        }
+
+        if (monId <= 0 || soLuong <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Món cần xóa không hợp lệ.");
+        }
+
+        var gioTam = LayGioTamTheoBan(banId);
+        var soLuongTrongGioTam = gioTam
+            .Where(x => x.MonID == monId && x.DonGia == donGia)
+            .Sum(x => (int)x.SoLuong);
+
+        var soLuongCanXoaKhoiHoaDon = Math.Max(0, soLuong - soLuongTrongGioTam);
+        var soLuongCanXoaKhoiGioTam = Math.Min(soLuong, soLuongTrongGioTam);
+
+        if (soLuongCanXoaKhoiHoaDon > 0)
+        {
+            var phieu = _banHangDAL.GetPhieuTheoBan(banId);
+            if (!phieu.HoaDonID.HasValue || phieu.HoaDonID.Value <= 0)
+            {
+                return BusMessageCatalog.CreateActionResult(false, "Không tìm thấy hóa đơn mở để xóa món.");
+            }
+
+            var ketQuaXoaMonKhoiHoaDon = _orderService.RemoveItemFromOrder(
+                phieu.HoaDonID.Value,
+                monId,
+                (short)Math.Clamp(soLuongCanXoaKhoiHoaDon, 1, short.MaxValue),
+                phieu.HoaDonRowVersion);
+
+            if (!ketQuaXoaMonKhoiHoaDon.ThanhCong)
+            {
+                return BusMessageCatalog.NormalizeActionResult(ketQuaXoaMonKhoiHoaDon);
+            }
+        }
+
+        if (soLuongCanXoaKhoiGioTam > 0)
+        {
+            XoaMonKhoiGioTam(gioTam, monId, donGia, soLuongCanXoaKhoiGioTam);
+            if (gioTam.Count == 0)
+            {
+                _gioTamTheoBan.Remove(banId);
+            }
+        }
+
+        return BusMessageCatalog.CreateActionResult(true, "Đã xóa món khỏi order.");
+    }
+
     public bool CoMonChoGoiTrongGioTam(int banId)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View))
@@ -113,6 +187,20 @@ public class BanHangBUS
         }
 
         return DongBoMonTamTheoBan(banId, yeuCauCoMonChoGoi: true);
+    }
+
+    public BanActionResultDTO LuuMonChoGoiVoiKhachHang(int banId, int? khachHangId)
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền lưu bàn.");
+        }
+
+        return DongBoMonTamTheoBan(
+            banId,
+            yeuCauCoMonChoGoi: true,
+            khachHangId: khachHangId,
+            dongBoKhachHang: true);
     }
 
     public BanActionResultDTO ThanhToanHoaDon(int banId)
@@ -136,6 +224,31 @@ public class BanHangBUS
         return ThanhToan(banId);
     }
 
+    public BanActionResultDTO ThanhToanHoaDonVoiKhachHang(int banId, int? khachHangId)
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền thanh toán.");
+        }
+
+        if (banId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi thanh toán.");
+        }
+
+        var resultDongBo = DongBoMonTamTheoBan(
+            banId,
+            yeuCauCoMonChoGoi: false,
+            khachHangId: khachHangId,
+            dongBoKhachHang: true);
+        if (!resultDongBo.ThanhCong)
+        {
+            return resultDongBo;
+        }
+
+        return ThanhToan(banId);
+    }
+
     public List<MonDTO> LocMonPhuHopBanHang(IEnumerable<MonDTO> dsMon, string? boLocLoaiMon)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View))
@@ -151,12 +264,22 @@ public class BanHangBUS
             .ToList();
     }
 
-    public static string ChuyenTrangThaiBan(int trangThai)
+    public static string ChuyenTrangThaiBan(int trangThai, int? trangThaiHoaDon = null)
     {
+        if (trangThaiHoaDon == (int)HoaDonTrangThai.Draft)
+        {
+            return "Có khách";
+        }
+
+        if (trangThaiHoaDon == (int)HoaDonTrangThai.Paid)
+        {
+            return "Đã thanh toán";
+        }
+
         return trangThai switch
         {
-            1 => "Đang phục vụ",
-            2 => "Đặt trước",
+            1 => "Có khách",
+            2 => "Chờ dọn / Đã thanh toán",
             _ => "Trống"
         };
     }
@@ -168,6 +291,20 @@ public class BanHangBUS
             return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền gọi món.");
         }
 
+        if (banId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi gọi món.");
+        }
+
+        return GoiMonNoPermission(banId, dsMonThem);
+    }
+
+    private BanActionResultDTO GoiMonNoPermission(
+        int banId,
+        IEnumerable<BanHangThemMonDTO> dsMonThem,
+        int? khachHangId = null,
+        bool dongBoKhachHang = false)
+    {
         if (banId <= 0)
         {
             return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi gọi món.");
@@ -188,7 +325,21 @@ public class BanHangBUS
             return BusMessageCatalog.CreateActionResult(false, "Chưa có món hợp lệ để gọi.");
         }
 
-        return BusMessageCatalog.NormalizeActionResult(_banHangDAL.GoiMon(banId, dsMonTongHop));
+        var ketQuaDamBaoHoaDon = DamBaoHoaDonMoTheoBan(
+            banId,
+            khachHangId: khachHangId,
+            dongBoKhachHang: dongBoKhachHang);
+        if (!ketQuaDamBaoHoaDon.Result.ThanhCong)
+        {
+            return ketQuaDamBaoHoaDon.Result;
+        }
+
+        return BusMessageCatalog.NormalizeActionResult(
+            _orderService.AddItemsToOrder(
+                ketQuaDamBaoHoaDon.HoaDonId,
+                dsMonTongHop,
+                successMessage: "Gọi món thành công.",
+                expectedRowVersion: ketQuaDamBaoHoaDon.RowVersion));
     }
 
     public BanActionResultDTO ThanhToan(int banId)
@@ -203,31 +354,130 @@ public class BanHangBUS
             return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi thanh toán.");
         }
 
-        return BusMessageCatalog.NormalizeActionResult(_banHangDAL.ThanhToan(banId));
+        var phieu = _banHangDAL.GetPhieuTheoBan(banId);
+
+        if (LaBanDangChoDon(phieu))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bàn đang chờ dọn, không thể nhận thêm thao tác thanh toán.");
+        }
+
+        if (phieu.TrangThaiHoaDon == (int)HoaDonTrangThai.Paid)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Hóa đơn của bàn này đã thanh toán. Vui lòng dọn bàn trước khi nhận khách mới.");
+        }
+
+        if (!phieu.HoaDonID.HasValue)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bàn này chưa có hóa đơn mở.");
+        }
+
+        return BusMessageCatalog.NormalizeActionResult(_orderService.Checkout(phieu.HoaDonID.Value, phieu.HoaDonRowVersion));
     }
 
-    private BanActionResultDTO DongBoMonTamTheoBan(int banId, bool yeuCauCoMonChoGoi)
+    private (BanActionResultDTO Result, int HoaDonId, byte[]? RowVersion) DamBaoHoaDonMoTheoBan(
+        int banId,
+        int? khachHangId = null,
+        bool dongBoKhachHang = false)
+    {
+        var phieu = _banHangDAL.GetPhieuTheoBan(banId);
+
+        if (phieu.BanID <= 0)
+        {
+            return (BusMessageCatalog.CreateActionResult(false, "Không tìm thấy bàn đã chọn."), 0, null);
+        }
+
+        if (LaBanDangChoDon(phieu))
+        {
+            return (BusMessageCatalog.CreateActionResult(false, "Bàn đã thanh toán và đang chờ dọn. Vui lòng dọn bàn trước khi mở hóa đơn mới."), 0, null);
+        }
+
+        if (phieu.HoaDonID.HasValue && phieu.HoaDonID.Value > 0)
+        {
+            if (phieu.TrangThaiHoaDon != (int)HoaDonTrangThai.Draft)
+            {
+                return (BusMessageCatalog.CreateActionResult(false, "Bàn đã thanh toán và đang chờ dọn. Vui lòng dọn bàn trước khi mở hóa đơn mới."), 0, null);
+            }
+
+            if (dongBoKhachHang)
+            {
+                var ketQuaCapNhatKhach = _hoaDonDAL.CapNhatKhachHangChoHoaDonMo(phieu.HoaDonID.Value, khachHangId);
+                if (!ketQuaCapNhatKhach.ThanhCong)
+                {
+                    return (BusMessageCatalog.CreateActionResult(false, ketQuaCapNhatKhach.ThongBao), 0, null);
+                }
+
+                var phieuSauCapNhat = _banHangDAL.GetPhieuTheoBan(banId);
+                if (!phieuSauCapNhat.HoaDonID.HasValue)
+                {
+                    return (BusMessageCatalog.CreateActionResult(false, "Không tìm thấy hóa đơn mở sau khi cập nhật khách hàng."), 0, null);
+                }
+
+                return (BusMessageCatalog.CreateActionResult(true, string.Empty), phieuSauCapNhat.HoaDonID.Value, phieuSauCapNhat.HoaDonRowVersion);
+            }
+
+            return (BusMessageCatalog.CreateActionResult(true, string.Empty), phieu.HoaDonID.Value, phieu.HoaDonRowVersion);
+        }
+
+        var ketQuaTaoHoaDon = _hoaDonDAL.ThemHoaDon(new HoaDonSaveRequestDTO
+        {
+            BanID = banId,
+            NgayLap = DateTime.Now,
+            TrangThai = 0,
+            KhachHangID = dongBoKhachHang ? khachHangId : null
+        });
+
+        if (!ketQuaTaoHoaDon.ThanhCong)
+        {
+            return (BusMessageCatalog.CreateActionResult(false, ketQuaTaoHoaDon.ThongBao), 0, null);
+        }
+
+        return (BusMessageCatalog.CreateActionResult(true, string.Empty), ketQuaTaoHoaDon.HoaDonId, null);
+    }
+
+    private BanActionResultDTO DongBoMonTamTheoBan(
+        int banId,
+        bool yeuCauCoMonChoGoi,
+        int? khachHangId = null,
+        bool dongBoKhachHang = false)
     {
         if (banId <= 0)
         {
             return BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn hợp lệ.");
         }
 
+        var phieu = _banHangDAL.GetPhieuTheoBan(banId);
+        if (phieu.BanID <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Không tìm thấy bàn đã chọn.");
+        }
+
+        if (LaBanDangChoDon(phieu))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bàn đang chờ dọn, vui lòng dọn bàn trước khi nhận khách mới.");
+        }
+
         var gioTam = LayGioTamTheoBan(banId);
         if (gioTam.Count == 0)
         {
-            return yeuCauCoMonChoGoi
-                ? BusMessageCatalog.CreateActionResult(false, "Không có món mới để lưu bàn.")
+            if (yeuCauCoMonChoGoi)
+            {
+                return BusMessageCatalog.CreateActionResult(false, "Không có món mới để lưu bàn.");
+            }
+
+            return dongBoKhachHang
+                ? DongBoKhachHangHoaDonMoTheoBan(banId, khachHangId)
                 : BusMessageCatalog.CreateActionResult(true, string.Empty);
         }
 
-        var result = GoiMon(
+        var result = GoiMonNoPermission(
             banId,
             gioTam.Select(x => new BanHangThemMonDTO
             {
                 MonID = x.MonID,
                 SoLuong = x.SoLuong
-            }));
+            }),
+            khachHangId: khachHangId,
+            dongBoKhachHang: dongBoKhachHang);
 
         if (result.ThanhCong)
         {
@@ -235,6 +485,20 @@ public class BanHangBUS
         }
 
         return result;
+    }
+
+    private BanActionResultDTO DongBoKhachHangHoaDonMoTheoBan(int banId, int? khachHangId)
+    {
+        var phieu = _banHangDAL.GetPhieuTheoBan(banId);
+        if (!phieu.HoaDonID.HasValue || phieu.HoaDonID.Value <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(true, string.Empty);
+        }
+
+        var ketQuaCapNhatKhach = _hoaDonDAL.CapNhatKhachHangChoHoaDonMo(phieu.HoaDonID.Value, khachHangId);
+        return ketQuaCapNhatKhach.ThanhCong
+            ? BusMessageCatalog.CreateActionResult(true, string.Empty)
+            : BusMessageCatalog.CreateActionResult(false, ketQuaCapNhatKhach.ThongBao);
     }
 
     private List<BanHangOrderItemDTO> LayGioTamTheoBan(int banId)
@@ -276,6 +540,37 @@ public class BanHangBUS
         return boLoc.Length == 0 || tenLoai == boLoc;
     }
 
+    private static void XoaMonKhoiGioTam(List<BanHangOrderItemDTO> gioTam, int monId, decimal donGia, int soLuongCanXoa)
+    {
+        if (soLuongCanXoa <= 0)
+        {
+            return;
+        }
+
+        var dsDongMon = gioTam
+            .Where(x => x.MonID == monId && x.DonGia == donGia)
+            .OrderByDescending(x => x.SoLuong)
+            .ToList();
+
+        foreach (var dongMon in dsDongMon)
+        {
+            if (soLuongCanXoa <= 0)
+            {
+                break;
+            }
+
+            if (dongMon.SoLuong <= soLuongCanXoa)
+            {
+                soLuongCanXoa -= dongMon.SoLuong;
+                gioTam.Remove(dongMon);
+                continue;
+            }
+
+            dongMon.SoLuong = (short)Math.Clamp(dongMon.SoLuong - soLuongCanXoa, 1, short.MaxValue);
+            soLuongCanXoa = 0;
+        }
+    }
+
     private static string ChuanHoaKhongDau(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -297,5 +592,13 @@ public class BanHangBUS
             .ToString()
             .Normalize(NormalizationForm.FormC)
             .ToLowerInvariant();
+    }
+
+    private static bool LaBanDangChoDon(BanHangPhieuDTO phieu)
+    {
+        return phieu.BanID > 0
+            && ((phieu.HoaDonID.HasValue
+                    && phieu.TrangThaiHoaDon == (int)HoaDonTrangThai.Paid)
+                || (phieu.TrangThaiBan == 2 && !phieu.HoaDonID.HasValue));
     }
 }

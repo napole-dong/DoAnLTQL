@@ -19,7 +19,7 @@ public class MonBUS
         return _monDAL.GetLoaiMon();
     }
 
-    public List<MonDTO> LayDanhSachMon(string? textSearch, string? textTimMon)
+    public List<MonDTO> LayDanhSachMon(string? textSearch, string? textTimMon, bool includeDeleted = false)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View))
         {
@@ -27,7 +27,7 @@ public class MonBUS
         }
 
         var tuKhoa = BusInputHelper.MergeKeywords(textSearch, textTimMon);
-        return _monDAL.GetDanhSachMon(tuKhoa);
+        return _monDAL.GetDanhSachMon(tuKhoa, includeDeleted: includeDeleted);
     }
 
     public int LayMaMonTiepTheo()
@@ -96,30 +96,25 @@ public class MonBUS
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Delete))
         {
-            return (false, "Bạn không có quyền xóa món.");
+            return (false, "Bạn không có quyền ngừng bán món.");
         }
 
         if (monId <= 0)
         {
-            return (false, "Vui lòng chọn món cần xóa.");
-        }
-
-        if (_monDAL.MonDaPhatSinhHoaDon(monId))
-        {
-            return (false, "Món đã phát sinh hóa đơn, không thể xóa.");
+            return (false, "Vui lòng chọn món cần ngừng bán.");
         }
 
         var daXoa = _monDAL.XoaMon(monId);
         return daXoa
-            ? (true, "Xóa món thành công.")
-            : (false, "Không tìm thấy món để xóa.");
+            ? (true, "Đã ngừng bán món thành công.")
+            : (false, "Món không tồn tại hoặc đã ngừng bán trước đó.");
     }
 
     public (bool ThanhCong, string ThongBao) DeleteMenu(int monId)
     {
         if (!_permissionBUS.IsAdmin() && !_permissionBUS.IsManager())
         {
-            return (false, "Bạn không có quyền xóa món.");
+            return (false, "Bạn không có quyền ngừng bán món.");
         }
 
         if (monId <= 0)
@@ -127,14 +122,52 @@ public class MonBUS
             return (false, "Mã món không hợp lệ.");
         }
 
-        if (_monDAL.MonDaPhatSinhHoaDon(monId))
+        return _monDAL.XoaMon(monId)
+            ? (true, "Đã ngừng bán món thành công.")
+            : (false, "Món không tồn tại hoặc đã ngừng bán trước đó.");
+    }
+
+    public (bool ThanhCong, string ThongBao) KhoiPhucMon(int monId)
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update))
         {
-            return (false, "Món đã phát sinh hóa đơn, không thể xóa.");
+            return (false, "Bạn không có quyền khôi phục món.");
         }
 
-        return _monDAL.XoaMon(monId)
-            ? (true, "Xóa món thành công.")
-            : (false, "Không tìm thấy món để xóa.");
+        if (monId <= 0)
+        {
+            return (false, "Mã món không hợp lệ.");
+        }
+
+        var daKhoiPhuc = _monDAL.RestoreMon(monId);
+        return daKhoiPhuc
+            ? (true, "Khôi phục món thành công.")
+            : (false, "Món chưa bị ngừng bán hoặc không tồn tại.");
+    }
+
+    public (bool ThanhCong, string ThongBao) HardDeleteMon(int monId)
+    {
+        if (!_permissionBUS.IsAdmin())
+        {
+            return (false, "Chỉ Admin mới được hard delete món.");
+        }
+
+        if (monId <= 0)
+        {
+            return (false, "Mã món không hợp lệ.");
+        }
+
+        try
+        {
+            var daXoa = _monDAL.HardDeleteMon(monId);
+            return daXoa
+                ? (true, "Hard delete món thành công.")
+                : (false, "Không tìm thấy món để hard delete.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (false, ex.Message);
+        }
     }
 
     public MonImportResultDTO NhapMonTuCsv(string[] lines)

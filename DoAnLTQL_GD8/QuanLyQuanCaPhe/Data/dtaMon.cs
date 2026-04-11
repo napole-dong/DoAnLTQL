@@ -1,6 +1,6 @@
 ﻿namespace QuanLyQuanCaPhe.Data;
 
-public class dtaMon
+public class dtaMon : ISoftDelete
 {
     public int ID { get; set; }
     public int LoaiMonID { get; set; }
@@ -10,6 +10,9 @@ public class dtaMon
     public string? MoTa { get; set; }
     public string TrangThaiTextLegacy { get; set; } = "Đang kinh doanh";
     public int TrangThai { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
 
     public dtaLoaiMon LoaiMon { get; set; } = null!;
     public ICollection<dtHoaDon_ChiTiet> HoaDon_ChiTiet { get; set; } = new List<dtHoaDon_ChiTiet>();

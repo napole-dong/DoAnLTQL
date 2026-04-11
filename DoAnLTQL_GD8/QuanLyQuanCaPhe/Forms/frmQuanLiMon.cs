@@ -9,20 +9,25 @@ using System.Windows.Forms;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Export;
+using QuanLyQuanCaPhe.Services.Navigation;
 using QuanLyQuanCaPhe.Services.Mon;
 
 namespace QuanLyQuanCaPhe.Forms
 {
     public partial class frmQuanLiMon : Form
     {
+        private readonly bool _isEmbedded;
         private readonly MonBUS _monBUS = new();
         private readonly LoaiMonBUS _loaiMonBUS = new();
         private readonly PermissionBUS _permissionBUS = new();
+        private readonly DataExportService _dataExportService = new();
         private readonly MonInputValidator _monInputValidator = new();
-        private readonly MonCsvService _monCsvService = new();
+        private CheckBox? _chkHienThiDaXoa;
 
-        public frmQuanLiMon()
+        public frmQuanLiMon(bool isEmbedded = false)
         {
+            _isEmbedded = isEmbedded;
             InitializeComponent();
 
             dgvDanhSachMon.AutoGenerateColumns = false;
@@ -58,19 +63,28 @@ namespace QuanLyQuanCaPhe.Forms
             btnXoaLoaiMon.Click += btnXoaLoaiMon_Click;
             btnNhap.Click += btnNhap_Click;
             btnXuat.Click += btnXuat_Click;
+            KhoiTaoBoLocDuLieuDaXoa();
 
-            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
-            btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
-            btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
-            btnQuanLyKho.Click += (_, _) => OpenStandaloneForm(new frmQuanLiKho(), PermissionFeatures.NguyenLieu);
-            btnNhanVien.Click += (_, _) => OpenStandaloneForm(new frmNhanVien(), PermissionFeatures.NhanVien);
-            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
-            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
+            btnXoaMon.Text = "Ngừng bán";
+
+            btnBanHang.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.BanHang, () => new frmBanHang(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnQuanLyBan.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.Menu, () => new frmQuanLiBan(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnQuanLyMon.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.Menu, () => new frmQuanLiMon(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnCongThuc.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.Menu, () => new frmCongThuc(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnQuanLyKho.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.NguyenLieu, () => new frmQuanLiKho(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnNhanVien.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.NhanVien, () => new frmNhanVien(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnHoaDon.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.HoaDon, () => new frmHoaDon(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
+            btnThongKe.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.ThongKe, () => new frmThongKe(isEmbedded: true), onCurrentFormReactivated: RefreshAllData, skipNavigation: _isEmbedded);
             btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
         private void FrmQuanLiMon_Load(object? sender, EventArgs e)
         {
+            if (ChildFormRuntimePolicy.TryBlockStandalone(this, _isEmbedded, "Quan ly mon"))
+            {
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.Menu, PermissionActions.View, "Bạn không có quyền truy cập chức năng Quản lý món.");
@@ -80,6 +94,13 @@ namespace QuanLyQuanCaPhe.Forms
                 MessageBox.Show(ex.Message, "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Close();
                 return;
+            }
+
+            if (_isEmbedded)
+            {
+                panelSidebar.Visible = false;
+                panelTopbar.Visible = false;
+                panelMain.Dock = DockStyle.Fill;
             }
 
             HienThiNguoiDungDangNhap();
@@ -103,6 +124,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnBanHang.Visible = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
             btnQuanLyBan.Visible = coQuyenXemMenu;
             btnQuanLyMon.Visible = coQuyenXemMenu;
+            btnCongThuc.Visible = coQuyenXemMenu;
             btnQuanLyKho.Visible = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.View);
             btnHoaDon.Visible = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
             btnNhanVien.Visible = _permissionBUS.CanManageEmployees();
@@ -168,6 +190,30 @@ namespace QuanLyQuanCaPhe.Forms
             }
         }
 
+        private void KhoiTaoBoLocDuLieuDaXoa()
+        {
+            _chkHienThiDaXoa = new CheckBox
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(65, 48, 39),
+                Location = new Point(Math.Max(0, btnNhap.Left - 262), btnNhap.Top + 6),
+                Name = "chkHienThiMonDaXoa",
+                TabStop = false,
+                Text = "Hiển thị dữ liệu đã xóa"
+            };
+
+            _chkHienThiDaXoa.CheckedChanged += (_, _) =>
+            {
+                RefreshAllData();
+                ResetFormMon();
+            };
+
+            panelDanhSachHeader.Controls.Add(_chkHienThiDaXoa);
+            _chkHienThiDaXoa.BringToFront();
+        }
+
         private void RefreshAllData()
         {
             var maMonDangChon = dgvDanhSachMon.CurrentRow?.DataBoundItem is MonDTO monDangChon
@@ -178,7 +224,8 @@ namespace QuanLyQuanCaPhe.Forms
                 : (int?)null;
 
             var tuKhoa = txtTimKiem.Text.Trim();
-            var dsMon = _monBUS.LayDanhSachMon(tuKhoa, null);
+            var includeDeleted = _chkHienThiDaXoa?.Checked == true;
+            var dsMon = _monBUS.LayDanhSachMon(tuKhoa, null, includeDeleted);
             var dsLoai = _loaiMonBUS.LayDanhSachLoai(tuKhoa, null);
 
             dgvDanhSachMon.DataSource = dsMon;
@@ -265,17 +312,23 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (!int.TryParse(txtMaMon.Text, out var maMon))
             {
-                MessageBox.Show("Vui lòng chọn món cần xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng chọn món cần ngừng bán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (dgvDanhSachMon.CurrentRow?.DataBoundItem is not MonDTO mon)
             {
-                MessageBox.Show("Không tìm thấy món để xóa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Không tìm thấy món để ngừng bán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (MessageBox.Show($"Xóa món '{mon.TenMon}'?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (mon.IsDeleted)
+            {
+                MessageBox.Show("Món đã ngừng bán trước đó.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (MessageBox.Show($"Ngừng bán món '{mon.TenMon}'?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             {
                 return;
             }
@@ -525,20 +578,47 @@ namespace QuanLyQuanCaPhe.Forms
                     return;
                 }
 
-                using var dialogMon = new SaveFileDialog
+                var tieuDeCotMon = new[]
                 {
-                    Filter = "CSV (*.csv)|*.csv",
-                    FileName = $"DanhSachMon_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
-                    Title = "Xuất danh sách món"
+                    "ID",
+                    "Ten mon",
+                    "Loai mon",
+                    "Don gia",
+                    "Trang thai",
+                    "Mo ta",
+                    "Trang thai du lieu"
                 };
 
-                if (dialogMon.ShowDialog(this) != DialogResult.OK)
+                var duLieuMon = dsMon
+                    .Select(x => (IReadOnlyList<string>)new[]
+                    {
+                        x.ID.ToString(),
+                        x.TenMon,
+                        x.TenLoaiMon,
+                        x.DonGia.ToString("N0"),
+                        x.TrangThaiHienThi,
+                        x.MoTa,
+                        x.IsDeleted ? "Ngung ban" : "Hoat dong"
+                    })
+                    .ToList();
+
+                var ketQuaMon = _dataExportService.XuatBangDuLieu(
+                    this,
+                    "Xuat danh sach mon",
+                    $"DanhSachMon_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                    "Danh sach mon",
+                    tieuDeCotMon,
+                    duLieuMon);
+
+                if (!ketQuaMon.DaHuy)
                 {
-                    return;
+                    MessageBox.Show(
+                        ketQuaMon.ThongBao,
+                        "Thong bao",
+                        MessageBoxButtons.OK,
+                        ketQuaMon.ThanhCong ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
                 }
 
-                _monCsvService.XuatCsv(dialogMon.FileName, dsMon);
-                MessageBox.Show("Xuất danh sách món thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -548,31 +628,42 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            using var dialogLoai = new SaveFileDialog
+            var tieuDeCotLoai = new[]
             {
-                Filter = "CSV (*.csv)|*.csv",
-                FileName = $"DanhSachLoaiMon_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
-                Title = "Xuất danh sách loại món"
+                "ID",
+                "Ten loai",
+                "So mon",
+                "Mo ta"
             };
 
-            if (dialogLoai.ShowDialog(this) != DialogResult.OK)
+            var duLieuLoai = dsLoai
+                .Select(x => (IReadOnlyList<string>)new[]
+                {
+                    x.ID.ToString(),
+                    x.TenLoai,
+                    x.SoMon.ToString(),
+                    x.MoTa
+                })
+                .ToList();
+
+            var ketQuaLoai = _dataExportService.XuatBangDuLieu(
+                this,
+                "Xuat danh sach loai mon",
+                $"DanhSachLoaiMon_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx",
+                "Danh sach loai mon",
+                tieuDeCotLoai,
+                duLieuLoai);
+
+            if (ketQuaLoai.DaHuy)
             {
                 return;
             }
 
-            var lines = new List<string>
-            {
-                "ID,TenLoai,SoMon,MoTa"
-            };
-
-            lines.AddRange(dsLoai.Select(x => string.Join(",",
-                x.ID,
-                EscapeCsv(x.TenLoai),
-                x.SoMon,
-                EscapeCsv(x.MoTa))));
-
-            File.WriteAllLines(dialogLoai.FileName, lines, Encoding.UTF8);
-            MessageBox.Show("Xuất danh sách loại món thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(
+                ketQuaLoai.ThongBao,
+                "Thong bao",
+                MessageBoxButtons.OK,
+                ketQuaLoai.ThanhCong ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
 
         private bool TryGetValidatedMon(out MonDTO monDTO)
@@ -762,16 +853,6 @@ namespace QuanLyQuanCaPhe.Forms
             txtMoTaLoai.Clear();
         }
 
-        private static string EscapeCsv(string value)
-        {
-            if (!value.Contains(',') && !value.Contains('"') && !value.Contains('\n') && !value.Contains('\r'))
-            {
-                return value;
-            }
-
-            return $"\"{value.Replace("\"", "\"\"")}\"";
-        }
-
         private static void ApplyRoundRegion(Control? control, int radius)
         {
             if (control == null || control.Width <= 0 || control.Height <= 0)
@@ -790,35 +871,6 @@ namespace QuanLyQuanCaPhe.Forms
             path.CloseFigure();
 
             control.Region = new Region(path);
-        }
-
-        private void OpenStandaloneForm(Form targetForm, string feature)
-        {
-            if (!_permissionBUS.CheckPermission(feature, PermissionActions.View))
-            {
-                targetForm.Dispose();
-                MessageBox.Show("Ban khong co quyen truy cap chuc nang nay.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            Hide();
-            targetForm.FormClosed += (_, _) =>
-            {
-                if (!IsDisposed && !Disposing)
-                {
-                    Show();
-                    BringToFront();
-                    Activate();
-                    RefreshAllData();
-                }
-            };
-
-            targetForm.Show(this);
-        }
-
-        private void MoTinhNangThongKe()
-        {
-            OpenStandaloneForm(new frmThongKe(), PermissionFeatures.ThongKe);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

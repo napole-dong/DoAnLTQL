@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
@@ -8,6 +9,10 @@ namespace QuanLyQuanCaPhe.DAL;
 
 public class HoaDonDAL
 {
+    private const string InvoiceConcurrencyMessage = "Dữ liệu đã bị thay đổi bởi nhân viên khác. Vui lòng tải lại!";
+    private const string WalkInCustomerName = "Khách lẻ";
+    private readonly OrderService _orderService = new();
+
     public List<HoaDonDTO> GetDanhSachHoaDon(HoaDonFilterDTO boLoc)
     {
         using var context = new CaPheDbContext();
@@ -49,7 +54,15 @@ public class HoaDonDAL
             {
                 BanID = x.ID,
                 TenBan = x.TenBan,
-                TrangThaiBan = x.TrangThai
+                TrangThaiBan = x.TrangThai,
+                TrangThaiHoaDonDangHoatDong = context.HoaDon
+                    .Where(i => i.BanID == x.ID
+                        && i.TrangThai != (int)HoaDonTrangThai.Closed
+                        && i.TrangThai != (int)HoaDonTrangThai.Cancelled)
+                    .OrderByDescending(i => i.NgayLap)
+                    .ThenByDescending(i => i.ID)
+                    .Select(i => (int?)i.TrangThai)
+                    .FirstOrDefault()
             })
             .ToList();
     }
@@ -74,51 +87,109 @@ public class HoaDonDAL
     public (bool ThanhCong, string ThongBao, int HoaDonId) ThemHoaDon(HoaDonSaveRequestDTO request)
     {
         using var correlationScope = CorrelationContext.BeginScope();
-        using var context = new CaPheDbContext();
-        using var transaction = context.Database.BeginTransaction(System.Data.IsolationLevel.Serializable);
+        using var strategyContext = new CaPheDbContext();
+        var strategy = strategyContext.Database.CreateExecutionStrategy();
 
         AppLogger.Info($"Start ThemHoaDon. BanID={request.BanID}.", nameof(HoaDonDAL));
 
         try
         {
-            var ban = context.Ban.FirstOrDefault(x => x.ID == request.BanID);
-            if (ban == null)
+            return strategy.ExecuteAsync(async () =>
             {
-                return (false, "Không tìm thấy bàn đã chọn.", 0);
-            }
+                await using var context = new CaPheDbContext();
+                await using var transaction = await context.Database
+                    .BeginTransactionAsync(System.Data.IsolationLevel.Serializable)
+                    .ConfigureAwait(false);
 
-            var coHoaDonMo = context.HoaDon.Any(x => x.BanID == request.BanID && x.TrangThai == 0);
-            if (coHoaDonMo)
-            {
-                return (false, "Bàn đang có hóa đơn chưa thanh toán.", 0);
-            }
+                var ban = await context.Ban
+                    .FirstOrDefaultAsync(x => x.ID == request.BanID)
+                    .ConfigureAwait(false);
+                if (ban == null)
+                {
+                    await transaction.RollbackAsync().ConfigureAwait(false);
+                    return (false, "Không tìm thấy bàn đã chọn.", 0);
+                }
 
-            if (!TryLayNhanVienDangNhapHopLe(context, out var nhanVienId, out var thongBaoNhanVien))
-            {
-                transaction.Rollback();
-                return (false, thongBaoNhanVien, 0);
-            }
+                if (ban.TrangThai != 0)
+                {
+                    await transaction.RollbackAsync().ConfigureAwait(false);
+                    return (false, "Bàn chưa được dọn. Vui lòng dọn bàn trước khi tạo hóa đơn mới.", 0);
+                }
 
-            var hoaDon = new dtaHoadon
-            {
-                BanID = request.BanID,
-                NhanVienID = nhanVienId,
-                KhachHangID = null,
-                NgayLap = request.NgayLap,
-                TrangThai = 0,
-                GhiChuHoaDon = string.Empty
-            };
+                var coHoaDonDangHoatDong = await context.HoaDon
+                    .AnyAsync(x => x.BanID == request.BanID
+                        && x.TrangThai != (int)HoaDonTrangThai.Closed
+                        && x.TrangThai != (int)HoaDonTrangThai.Cancelled)
+                    .ConfigureAwait(false);
+                if (coHoaDonDangHoatDong)
+                {
+                    await transaction.RollbackAsync().ConfigureAwait(false);
+                    return (false, "Bàn chưa được dọn. Vui lòng dọn bàn trước khi tạo hóa đơn mới.", 0);
+                }
 
-            context.HoaDon.Add(hoaDon);
-            ban.TrangThai = 1;
-            context.SaveChanges();
-            transaction.Commit();
+                if (!TryLayNhanVienDangNhapHopLe(context, out var nhanVienId, out var thongBaoNhanVien))
+                {
+                    await transaction.RollbackAsync().ConfigureAwait(false);
+                    return (false, thongBaoNhanVien, 0);
+                }
 
-            return (true, "Tạo hóa đơn mới thành công.", hoaDon.ID);
+                var khachHangId = request.KhachHangID;
+                var customerName = WalkInCustomerName;
+
+                if (khachHangId.HasValue)
+                {
+                    if (khachHangId.Value <= 0)
+                    {
+                        khachHangId = null;
+                    }
+                    else
+                    {
+                        var khachHang = await context.KhachHang
+                            .AsNoTracking()
+                            .Where(x => x.ID == khachHangId.Value)
+                            .Select(x => new
+                            {
+                                x.ID,
+                                x.HoVaTen
+                            })
+                            .FirstOrDefaultAsync()
+                            .ConfigureAwait(false);
+
+                        if (khachHang == null)
+                        {
+                            await transaction.RollbackAsync().ConfigureAwait(false);
+                            return (false, "Khách hàng đã chọn không tồn tại hoặc đã bị xóa.", 0);
+                        }
+
+                        khachHangId = khachHang.ID;
+                        customerName = string.IsNullOrWhiteSpace(khachHang.HoVaTen)
+                            ? WalkInCustomerName
+                            : khachHang.HoVaTen;
+                    }
+                }
+
+                var hoaDon = new dtaHoadon
+                {
+                    BanID = request.BanID,
+                    NhanVienID = nhanVienId,
+                    KhachHangID = khachHangId,
+                    CustomerName = customerName,
+                    NgayLap = request.NgayLap,
+                    TrangThai = (int)HoaDonTrangThai.Draft,
+                    TongTien = 0m,
+                    GhiChuHoaDon = string.Empty
+                };
+
+                context.HoaDon.Add(hoaDon);
+                ban.TrangThai = 1;
+                await context.SaveChangesAsync().ConfigureAwait(false);
+                await transaction.CommitAsync().ConfigureAwait(false);
+
+                return (true, "Tạo hóa đơn mới thành công.", hoaDon.ID);
+            }).ConfigureAwait(false).GetAwaiter().GetResult();
         }
         catch (DbUpdateException ex) when (LaLoiTrungHoaDonMo(ex))
         {
-            transaction.Rollback();
             AppLogger.Warning(
                 $"Open invoice conflict while ThemHoaDon. BanID={request.BanID}. {ex.Message}",
                 nameof(HoaDonDAL),
@@ -132,8 +203,6 @@ public class HoaDonDAL
         }
         catch (Exception ex)
         {
-            transaction.Rollback();
-
             var mappedError = AppExceptionMapper.Map(ex);
             AppLogger.Error(
                 ex,
@@ -157,7 +226,16 @@ public class HoaDonDAL
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Không tìm thấy hóa đơn để cập nhật." };
         }
 
-        if (hoaDon.TrangThai != 0)
+        if (request.RowVersion == null || request.RowVersion.Length == 0)
+        {
+            return new BanActionResultDTO { ThanhCong = false, ThongBao = InvoiceConcurrencyMessage };
+        }
+
+        context.Entry(hoaDon)
+            .Property(x => x.RowVersion)
+            .OriginalValue = request.RowVersion;
+
+        if (hoaDon.TrangThai != (int)HoaDonTrangThai.Draft)
         {
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Chỉ được sửa hóa đơn chưa thanh toán." };
         }
@@ -168,12 +246,18 @@ public class HoaDonDAL
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Không tìm thấy bàn đã chọn." };
         }
 
-        var coHoaDonMoKhac = context.HoaDon.Any(x =>
+        if (banMoi.TrangThai != 0 && banMoi.ID != hoaDon.BanID)
+        {
+            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bàn đích chưa được dọn, chưa thể chuyển hóa đơn sang bàn này." };
+        }
+
+        var coHoaDonDangHoatDongKhac = context.HoaDon.Any(x =>
             x.BanID == request.BanID
-            && x.TrangThai == 0
+            && x.TrangThai != (int)HoaDonTrangThai.Closed
+            && x.TrangThai != (int)HoaDonTrangThai.Cancelled
             && x.ID != request.ID);
 
-        if (coHoaDonMoKhac)
+        if (coHoaDonDangHoatDongKhac)
         {
             return new BanActionResultDTO { ThanhCong = false, ThongBao = "Bàn đã có hóa đơn mở khác." };
         }
@@ -188,197 +272,136 @@ public class HoaDonDAL
         }
 
         banMoi.TrangThai = 1;
-        context.SaveChanges();
+
+        try
+        {
+            context.SaveChanges();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            using var reloadContext = new CaPheDbContext();
+            _ = reloadContext.HoaDon
+                .AsNoTracking()
+                .FirstOrDefault(x => x.ID == request.ID);
+
+            return new BanActionResultDTO { ThanhCong = false, ThongBao = InvoiceConcurrencyMessage };
+        }
 
         return new BanActionResultDTO { ThanhCong = true, ThongBao = "Cập nhật hóa đơn thành công." };
     }
 
-    public BanActionResultDTO ThemMonVaoHoaDon(int hoaDonId, int monId, short soLuong)
+    public BanActionResultDTO ThemMonVaoHoaDon(int hoaDonId, int monId, short soLuong, byte[]? rowVersion = null)
     {
-        using var context = new CaPheDbContext();
-
-        var hoaDon = context.HoaDon
-            .Include(x => x.HoaDon_ChiTiet)
-            .FirstOrDefault(x => x.ID == hoaDonId);
-
-        if (hoaDon == null)
-        {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Không tìm thấy hóa đơn để thêm món." };
-        }
-
-        if (hoaDon.TrangThai != 0)
-        {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Chỉ thêm món cho hóa đơn chưa thanh toán." };
-        }
-
-        var mon = context.Mon.FirstOrDefault(x => x.ID == monId);
-        if (mon == null)
-        {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Không tìm thấy món đã chọn." };
-        }
-
-        if (mon.TrangThai != 1)
-        {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Món đang ngừng bán, vui lòng chọn món khác." };
-        }
-
-        var chiTiet = hoaDon.HoaDon_ChiTiet
-            .FirstOrDefault(x => x.MonID == monId && x.DonGiaBan == mon.DonGia && x.GhiChu == null);
-
-        if (chiTiet == null)
-        {
-            context.HoaDon_ChiTiet.Add(new dtHoaDon_ChiTiet
-            {
-                HoaDonID = hoaDon.ID,
-                MonID = monId,
-                SoLuongBan = soLuong,
-                DonGiaBan = mon.DonGia,
-                GhiChu = null
-            });
-        }
-        else
-        {
-            chiTiet.SoLuongBan = (short)Math.Clamp(chiTiet.SoLuongBan + soLuong, 1, short.MaxValue);
-        }
-
-        var ban = context.Ban.FirstOrDefault(x => x.ID == hoaDon.BanID);
-        if (ban != null)
-        {
-            ban.TrangThai = 1;
-        }
-
-        context.SaveChanges();
-
-        return new BanActionResultDTO { ThanhCong = true, ThongBao = "Thêm món vào hóa đơn thành công." };
+        return _orderService.AddItemToOrder(hoaDonId, monId, soLuong, rowVersion);
     }
 
-    public BanActionResultDTO HuyHoaDon(int hoaDonId)
+    public BanActionResultDTO CapNhatSoLuongMonTrongHoaDon(int hoaDonId, int monId, short soLuong, byte[]? rowVersion = null)
     {
+        return _orderService.UpdateItemQuantity(hoaDonId, monId, soLuong, rowVersion);
+    }
+
+    public BanActionResultDTO HuyHoaDon(int hoaDonId, byte[]? rowVersion = null)
+    {
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap()?.TenDangNhap ?? "system";
+        return _orderService.CancelInvoice(hoaDonId, "Hủy hóa đơn", nguoiDung, rowVersion);
+    }
+
+    public BanActionResultDTO HuyHoaDon(int hoaDonId, string reason, string user, byte[]? rowVersion = null)
+    {
+        return _orderService.CancelInvoice(hoaDonId, reason, user, rowVersion);
+    }
+
+    public BanActionResultDTO XacNhanThuTien(int hoaDonId, byte[]? rowVersion = null)
+    {
+        return _orderService.Checkout(hoaDonId, rowVersion);
+    }
+
+    public BanActionResultDTO CapNhatKhachHangChoHoaDonMo(int hoaDonId, int? khachHangId)
+    {
+        if (hoaDonId <= 0)
+        {
+            return new BanActionResultDTO
+            {
+                ThanhCong = false,
+                ThongBao = "Vui lòng chọn hóa đơn hợp lệ."
+            };
+        }
+
         using var context = new CaPheDbContext();
 
         var hoaDon = context.HoaDon.FirstOrDefault(x => x.ID == hoaDonId);
         if (hoaDon == null)
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Không tìm thấy hóa đơn cần hủy." };
-        }
-
-        if (hoaDon.TrangThai == 1)
-        {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Hóa đơn đã thanh toán, không thể hủy." };
-        }
-
-        if (hoaDon.TrangThai == 2)
-        {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Hóa đơn đã ở trạng thái hủy." };
-        }
-
-        var banId = hoaDon.BanID;
-        hoaDon.TrangThai = 2;
-        hoaDon.GhiChuHoaDon = $"[Hủy {DateTime.Now:dd/MM/yyyy HH:mm}] {hoaDon.GhiChuHoaDon}".Trim();
-        context.SaveChanges();
-
-        DongBoTrangThaiBanTheoHoaDonMo(context, banId);
-        context.SaveChanges();
-
-        return new BanActionResultDTO { ThanhCong = true, ThongBao = "Hủy hóa đơn thành công." };
-    }
-
-    public BanActionResultDTO XacNhanThuTien(int hoaDonId)
-    {
-        using var correlationScope = CorrelationContext.BeginScope();
-        using var context = new CaPheDbContext();
-
-        AppLogger.Audit(
-            "Payment.Confirm.Start",
-            "Bat dau xac nhan thu tien theo hoa don.",
-            new { HoaDonId = hoaDonId },
-            nameof(HoaDonDAL));
-
-        BanActionResultDTO TuChoi(string thongBao)
-        {
-            AppLogger.Audit(
-                "Payment.Confirm.Rejected",
-                thongBao,
-                new { HoaDonId = hoaDonId },
-                nameof(HoaDonDAL));
-
             return new BanActionResultDTO
             {
                 ThanhCong = false,
-                ThongBao = thongBao
+                ThongBao = "Không tìm thấy hóa đơn cần cập nhật khách hàng."
             };
         }
+
+        if (hoaDon.TrangThai != (int)HoaDonTrangThai.Draft)
+        {
+            return new BanActionResultDTO
+            {
+                ThanhCong = false,
+                ThongBao = "Chỉ cập nhật khách hàng cho hóa đơn chưa thanh toán."
+            };
+        }
+
+        var khachHangIdHopLe = khachHangId.HasValue && khachHangId.Value > 0
+            ? khachHangId.Value
+            : (int?)null;
+
+        var tenKhachHang = WalkInCustomerName;
+
+        if (khachHangIdHopLe.HasValue)
+        {
+            var khachHang = context.KhachHang
+                .AsNoTracking()
+                .Where(x => x.ID == khachHangIdHopLe.Value)
+                .Select(x => new
+                {
+                    x.ID,
+                    x.HoVaTen
+                })
+                .FirstOrDefault();
+
+            if (khachHang == null)
+            {
+                return new BanActionResultDTO
+                {
+                    ThanhCong = false,
+                    ThongBao = "Khách hàng đã chọn không tồn tại hoặc đã bị xóa."
+                };
+            }
+
+            khachHangIdHopLe = khachHang.ID;
+            tenKhachHang = string.IsNullOrWhiteSpace(khachHang.HoVaTen)
+                ? WalkInCustomerName
+                : khachHang.HoVaTen;
+        }
+
+        hoaDon.KhachHangID = khachHangIdHopLe;
+        hoaDon.CustomerName = tenKhachHang;
 
         try
         {
-            var hoaDon = context.HoaDon
-                .Include(x => x.HoaDon_ChiTiet)
-                .FirstOrDefault(x => x.ID == hoaDonId);
-
-            if (hoaDon == null)
-            {
-                return TuChoi("Không tìm thấy hóa đơn cần thu tiền.");
-            }
-
-            if (hoaDon.TrangThai != 0)
-            {
-                return TuChoi("Hóa đơn không ở trạng thái chờ thanh toán.");
-            }
-
-            if (!hoaDon.HoaDon_ChiTiet.Any())
-            {
-                return TuChoi("Hóa đơn chưa có món, không thể thu tiền.");
-            }
-
-            var tongTien = hoaDon.HoaDon_ChiTiet.Sum(x => x.SoLuongBan * x.DonGiaBan);
-
-            var banId = hoaDon.BanID;
-            hoaDon.TrangThai = 1;
             context.SaveChanges();
-
-            DongBoTrangThaiBanTheoHoaDonMo(context, banId);
-            context.SaveChanges();
-
-            AppLogger.Audit(
-                "Payment.Confirm.Success",
-                "Xac nhan thu tien thanh cong.",
-                new
-                {
-                    HoaDonId = hoaDon.ID,
-                    BanId = banId,
-                    TongTien = tongTien
-                },
-                nameof(HoaDonDAL));
-
-            return new BanActionResultDTO
-            {
-                ThanhCong = true,
-                ThongBao = $"Đã xác nhận thu tiền cho hóa đơn HD{hoaDon.ID:D5}."
-            };
         }
-        catch (Exception ex)
+        catch (DbUpdateConcurrencyException)
         {
-            var mappedError = AppExceptionMapper.Map(ex);
-            AppLogger.Error(
-                ex,
-                $"Unexpected failure in XacNhanThuTien. HoaDonID={hoaDonId}.",
-                nameof(HoaDonDAL),
-                mappedError.Code);
-            AppLogger.Audit(
-                "Payment.Confirm.Failed",
-                "Xac nhan thu tien that bai do loi he thong.",
-                new { HoaDonId = hoaDonId },
-                nameof(HoaDonDAL));
-
-            var thongBao = AppExceptionHandler.CreateUserMessage(
-                "Không thể xác nhận thu tiền do lỗi hệ thống.",
-                ex);
             return new BanActionResultDTO
             {
                 ThanhCong = false,
-                ThongBao = thongBao
+                ThongBao = InvoiceConcurrencyMessage
             };
         }
+
+        return new BanActionResultDTO
+        {
+            ThanhCong = true,
+            ThongBao = "Cập nhật khách hàng cho hóa đơn thành công."
+        };
     }
 
     private static List<HoaDonListReadModel> QueryDanhSachHoaDonRows(CaPheDbContext context, HoaDonFilterDTO boLoc)
@@ -395,11 +418,12 @@ public class HoaDonDAL
                 BanID = x.BanID,
                 TenBan = x.Ban.TenBan,
                 KhachHangID = x.KhachHangID ?? 0,
-                TenKhachHang = x.KhachHang != null ? x.KhachHang.HoVaTen : "Khách lẻ",
+                TenKhachHang = x.CustomerName ?? WalkInCustomerName,
                 NhanVienID = x.NhanVienID,
                 TenNhanVien = x.NhanVien.HoVaTen,
                 TrangThai = x.TrangThai,
-                TongTien = x.HoaDon_ChiTiet.Sum(ct => ct.SoLuongBan * ct.DonGiaBan)
+                RowVersion = x.RowVersion,
+                TongTien = x.TongTien
             })
             .ToList();
     }
@@ -410,6 +434,7 @@ public class HoaDonDAL
         var denNgay = boLoc.DenNgay.Date.AddDays(1).AddTicks(-1);
 
         var query = context.HoaDon
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(x => x.NgayLap >= tuNgay && x.NgayLap <= denNgay);
 
@@ -427,7 +452,7 @@ public class HoaDonDAL
             query = query.Where(x =>
                 (hasKeywordId && x.ID == keywordId)
                 || EF.Functions.Like(x.Ban.TenBan, keywordPattern)
-                || (x.KhachHang != null && EF.Functions.Like(x.KhachHang.HoVaTen, keywordPattern))
+                || EF.Functions.Like(x.CustomerName, keywordPattern)
                 || EF.Functions.Like(x.NhanVien.HoVaTen, keywordPattern));
         }
 
@@ -448,6 +473,7 @@ public class HoaDonDAL
                 NhanVienID = x.NhanVienID,
                 TenNhanVien = x.TenNhanVien,
                 TrangThai = x.TrangThai,
+                RowVersion = x.RowVersion,
                 TongTien = x.TongTien
             })
             .ToList();
@@ -456,6 +482,7 @@ public class HoaDonDAL
     private static HoaDonHeaderReadModel? QueryHoaDonHeaderRow(CaPheDbContext context, int hoaDonId)
     {
         return context.HoaDon
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(x => x.ID == hoaDonId)
             .Select(x => new HoaDonHeaderReadModel
@@ -465,10 +492,12 @@ public class HoaDonDAL
                 BanID = x.BanID,
                 TenBan = x.Ban.TenBan,
                 KhachHangID = x.KhachHangID ?? 0,
-                TenKhachHang = x.KhachHang != null ? x.KhachHang.HoVaTen : "Khách lẻ",
+                TenKhachHang = x.CustomerName ?? WalkInCustomerName,
                 NhanVienID = x.NhanVienID,
                 TenNhanVien = x.NhanVien.HoVaTen,
-                TrangThai = x.TrangThai
+                TrangThai = x.TrangThai,
+                TongTien = x.TongTien,
+                RowVersion = x.RowVersion
             })
             .FirstOrDefault();
     }
@@ -476,6 +505,7 @@ public class HoaDonDAL
     private static List<HoaDonChiTietReadModel> QueryHoaDonChiTietRows(CaPheDbContext context, int hoaDonId)
     {
         return context.HoaDon_ChiTiet
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(x => x.HoaDonID == hoaDonId)
             .OrderBy(x => x.Mon.TenMon)
@@ -512,7 +542,8 @@ public class HoaDonDAL
             NhanVienID = hoaDonHeader.NhanVienID,
             TenNhanVien = hoaDonHeader.TenNhanVien,
             TrangThai = hoaDonHeader.TrangThai,
-            TongTien = chiTietDtos.Sum(x => x.ThanhTien),
+            RowVersion = hoaDonHeader.RowVersion,
+            TongTien = hoaDonHeader.TongTien,
             ChiTiet = chiTietDtos
         };
     }
@@ -528,6 +559,7 @@ public class HoaDonDAL
         public int NhanVienID { get; init; }
         public string TenNhanVien { get; init; } = string.Empty;
         public int TrangThai { get; init; }
+        public byte[] RowVersion { get; init; } = Array.Empty<byte>();
         public decimal TongTien { get; init; }
     }
 
@@ -542,6 +574,8 @@ public class HoaDonDAL
         public int NhanVienID { get; init; }
         public string TenNhanVien { get; init; } = string.Empty;
         public int TrangThai { get; init; }
+        public decimal TongTien { get; init; }
+        public byte[] RowVersion { get; init; } = Array.Empty<byte>();
     }
 
     private sealed class HoaDonChiTietReadModel
@@ -560,7 +594,11 @@ public class HoaDonDAL
             return;
         }
 
-        ban.TrangThai = context.HoaDon.Any(x => x.BanID == banId && x.TrangThai == 0) ? 1 : 0;
+        ban.TrangThai = context.HoaDon.Any(x => x.BanID == banId
+            && x.TrangThai != (int)HoaDonTrangThai.Closed
+            && x.TrangThai != (int)HoaDonTrangThai.Cancelled)
+            ? 1
+            : 0;
     }
 
     private static bool TryLayNhanVienDangNhapHopLe(

@@ -9,14 +9,14 @@ public class NhanVienBUS
     private readonly NhanVienDAL _nhanVienDAL = new();
     private readonly PermissionBUS _permissionBUS = new();
 
-    public List<NhanVienDTO> LayDanhSachNhanVien(string? tuKhoa)
+    public async Task<List<NhanVienDTO>> LayDanhSachNhanVienAsync(string? tuKhoa, bool includeDeleted = false)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View))
         {
             return new List<NhanVienDTO>();
         }
 
-        return _nhanVienDAL.GetDanhSachNhanVien(BusInputHelper.NormalizeNullableText(tuKhoa));
+        return await _nhanVienDAL.GetDanhSachNhanVienAsync(BusInputHelper.NormalizeNullableText(tuKhoa), includeDeleted);
     }
 
     public int LayMaNhanVienTiepTheo()
@@ -39,7 +39,7 @@ public class NhanVienBUS
         return _permissionBUS.LayDanhSachVaiTroCoTheGan();
     }
 
-    public (bool ThanhCong, string ThongBao, NhanVienDTO? NhanVienMoi) ThemNhanVien(NhanVienDTO nhanVienDTO)
+    public async Task<(bool ThanhCong, string ThongBao, NhanVienDTO? NhanVienMoi)> ThemNhanVienAsync(NhanVienDTO nhanVienDTO)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create))
         {
@@ -64,16 +64,16 @@ public class NhanVienBUS
             return (false, "Bạn không có quyền gán vai trò này.", null);
         }
 
-        if (_nhanVienDAL.TenDangNhapDaTonTai(nhanVienDTO.TenDangNhap))
+        if (await _nhanVienDAL.TenDangNhapDaTonTaiAsync(nhanVienDTO.TenDangNhap))
         {
             return (false, "Tên đăng nhập đã tồn tại.", null);
         }
 
-        var nhanVienMoi = _nhanVienDAL.ThemNhanVien(nhanVienDTO);
+        var nhanVienMoi = await _nhanVienDAL.ThemNhanVienAsync(nhanVienDTO);
         return (true, "Thêm nhân viên thành công.", nhanVienMoi);
     }
 
-    public (bool ThanhCong, string ThongBao) CapNhatNhanVien(NhanVienDTO nhanVienDTO)
+    public async Task<(bool ThanhCong, string ThongBao)> CapNhatNhanVienAsync(NhanVienDTO nhanVienDTO)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update))
         {
@@ -103,41 +103,79 @@ public class NhanVienBUS
             return (false, "Bạn không có quyền gán vai trò này.");
         }
 
-        if (_nhanVienDAL.TenDangNhapDaTonTai(nhanVienDTO.TenDangNhap, nhanVienDTO.ID))
+        if (await _nhanVienDAL.TenDangNhapDaTonTaiAsync(nhanVienDTO.TenDangNhap, nhanVienDTO.ID))
         {
             return (false, "Tên đăng nhập đã tồn tại.");
         }
 
-        var daCapNhat = _nhanVienDAL.CapNhatNhanVien(nhanVienDTO);
+        var daCapNhat = await _nhanVienDAL.CapNhatNhanVienAsync(nhanVienDTO);
         return daCapNhat
             ? (true, "Cập nhật nhân viên thành công.")
             : (false, "Không tìm thấy nhân viên để cập nhật.");
     }
 
-    public (bool ThanhCong, string ThongBao) XoaNhanVien(int nhanVienId)
+    public (bool ThanhCong, string ThongBao) XoaNhanVien(int nhanVienId, bool softDelete = true)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Delete))
         {
-            return (false, "Bạn không có quyền xóa nhân viên.");
+            return softDelete
+                ? (false, "Bạn không có quyền ngừng hoạt động nhân viên.")
+                : (false, "Bạn không có quyền xóa nhân viên.");
         }
 
         if (nhanVienId <= 0)
         {
-            return (false, "Vui lòng chọn nhân viên cần xóa.");
+            return softDelete
+                ? (false, "Vui lòng chọn nhân viên cần ngừng hoạt động.")
+                : (false, "Vui lòng chọn nhân viên cần xóa.");
         }
 
-        if (_nhanVienDAL.NhanVienDaPhatSinhHoaDon(nhanVienId))
-        {
-            return (false, "Nhân viên đã phát sinh hóa đơn, không thể xóa.");
-        }
-
-        var daXoa = _nhanVienDAL.XoaNhanVien(nhanVienId);
-        return daXoa
-            ? (true, "Xóa nhân viên thành công.")
-            : (false, "Không tìm thấy nhân viên để xóa.");
+        var result = _nhanVienDAL.DeleteNhanVien(nhanVienId, softDelete);
+        return MapDeleteResult(result);
     }
 
-    public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapNhanVienTuCsv(string[] lines)
+    public (bool ThanhCong, string ThongBao) KhoiPhucNhanVien(int nhanVienId)
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update))
+        {
+            return (false, "Bạn không có quyền khôi phục nhân viên.");
+        }
+
+        if (nhanVienId <= 0)
+        {
+            return (false, "Mã nhân viên không hợp lệ.");
+        }
+
+        var daKhoiPhuc = _nhanVienDAL.RestoreNhanVien(nhanVienId);
+        return daKhoiPhuc
+            ? (true, "Khôi phục nhân viên thành công.")
+            : (false, "Nhân viên chưa bị ngừng hoạt động hoặc không tồn tại.");
+    }
+
+    public (bool ThanhCong, string ThongBao) HardDeleteNhanVien(int nhanVienId)
+    {
+        if (!_permissionBUS.IsAdmin())
+        {
+            return (false, "Chỉ Admin mới được hard delete nhân viên.");
+        }
+
+        if (nhanVienId <= 0)
+        {
+            return (false, "Mã nhân viên không hợp lệ.");
+        }
+
+        try
+        {
+            var result = _nhanVienDAL.DeleteNhanVien(nhanVienId, softDelete: false);
+            return MapDeleteResult(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    public async Task<(int SoThemMoi, int SoCapNhat, int SoBoQua)> NhapNhanVienTuCsvAsync(string[] lines)
     {
         var coQuyenThemMoi = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create);
         var coQuyenCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update);
@@ -242,8 +280,33 @@ public class NhanVienBUS
             dsNhap.Add(nhanVien);
         }
 
-        var result = _nhanVienDAL.NhapDanhSachNhanVien(dsNhap, coQuyenThemMoi, coQuyenCapNhat);
+        var result = await _nhanVienDAL.NhapDanhSachNhanVienAsync(dsNhap, coQuyenThemMoi, coQuyenCapNhat);
         return (result.SoThemMoi, result.SoCapNhat, result.SoBoQua + soBoQua);
+    }
+
+    private static (bool ThanhCong, string ThongBao) MapDeleteResult(
+        NhanVienDAL.DeleteNhanVienResult result)
+    {
+        return result.Outcome switch
+        {
+            NhanVienDAL.DeleteNhanVienOutcome.SuccessHardDelete
+                => (true, "Xóa nhân viên thành công. Tài khoản liên kết đã được xóa tự động."),
+            NhanVienDAL.DeleteNhanVienOutcome.SuccessSoftDelete
+                => (true, "Đã ngừng hoạt động nhân viên và khóa tài khoản liên kết."),
+            NhanVienDAL.DeleteNhanVienOutcome.ForbiddenSelfDelete
+                => (false, "Không thể xóa chính tài khoản đang đăng nhập."),
+            NhanVienDAL.DeleteNhanVienOutcome.ForbiddenAdminAccount
+                => (false, "Không được phép xóa hoặc khóa tài khoản Admin."),
+            NhanVienDAL.DeleteNhanVienOutcome.NotFound
+                => (false, "Nhân viên không tồn tại."),
+            NhanVienDAL.DeleteNhanVienOutcome.AlreadyDeleted
+                => (false, "Nhân viên đã ngừng hoạt động trước đó."),
+            NhanVienDAL.DeleteNhanVienOutcome.HasInvoices
+                => (false, "Không thể xóa cứng nhân viên đã phát sinh hóa đơn. Hãy chọn ngừng hoạt động (soft delete)."),
+            NhanVienDAL.DeleteNhanVienOutcome.InvalidInput
+                => (false, "Mã nhân viên không hợp lệ."),
+            _ => (false, "Không thể xử lý yêu cầu xóa nhân viên.")
+        };
     }
 
     private static (bool HopLe, string ThongBaoLoi) KiemTraThongTin(NhanVienDTO nhanVienDTO, bool batBuocMatKhau)

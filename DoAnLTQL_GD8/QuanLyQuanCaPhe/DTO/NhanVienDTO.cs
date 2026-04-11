@@ -9,4 +9,7 @@ public class NhanVienDTO
     public string TenDangNhap { get; set; } = string.Empty;
     public string? MatKhau { get; set; }
     public string QuyenHan { get; set; } = string.Empty;
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
 }

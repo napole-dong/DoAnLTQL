@@ -1,15 +1,69 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.Configuration;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading;
 
 namespace QuanLyQuanCaPhe.Data;
 
 public class CaPheDbContext : DbContext
 {
+    private static readonly AsyncLocal<DbContextOptions<CaPheDbContext>?> AmbientOptions = new();
+    private readonly Func<string?> _currentUserProvider;
+
     public CaPheDbContext()
+        : this(AmbientOptions.Value ?? new DbContextOptions<CaPheDbContext>(), currentUserProvider: null)
     {
     }
 
-    public CaPheDbContext(DbContextOptions<CaPheDbContext> options) : base(options)
+    public CaPheDbContext(Func<string?>? currentUserProvider)
+        : this(AmbientOptions.Value ?? new DbContextOptions<CaPheDbContext>(), currentUserProvider)
+    {
+    }
+
+    public static IDisposable PushAmbientOptions(DbContextOptions<CaPheDbContext> options)
+    {
+        if (options == null)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
+
+        var previousOptions = AmbientOptions.Value;
+        AmbientOptions.Value = options;
+        return new AmbientOptionsScope(previousOptions);
+    }
+
+    private sealed class AmbientOptionsScope : IDisposable
+    {
+        private readonly DbContextOptions<CaPheDbContext>? _previousOptions;
+        private bool _disposed;
+
+        public AmbientOptionsScope(DbContextOptions<CaPheDbContext>? previousOptions)
+        {
+            _previousOptions = previousOptions;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            AmbientOptions.Value = _previousOptions;
+            _disposed = true;
+        }
+    }
+
+    public CaPheDbContext(DbContextOptions<CaPheDbContext> options, Func<string?>? currentUserProvider)
+        : base(options)
+    {
+        _currentUserProvider = currentUserProvider ?? DefaultCurrentUserProvider;
+    }
+
+    public CaPheDbContext(DbContextOptions<CaPheDbContext> options)
+        : this(options, currentUserProvider: null)
     {
     }
 
@@ -23,6 +77,7 @@ public class CaPheDbContext : DbContext
     public DbSet<dtaKhachHang> KhachHang { get; set; } = null!;
     public DbSet<dtaHoadon> HoaDon { get; set; } = null!;
     public DbSet<dtHoaDon_ChiTiet> HoaDon_ChiTiet { get; set; } = null!;
+    public DbSet<dtaAuditLog> AuditLog { get; set; } = null!;
     public DbSet<dtaNguyenLieu> NguyenLieu { get; set; } = null!;
     public DbSet<dtaPhieuNhapKho> PhieuNhapKho { get; set; } = null!;
     public DbSet<dtaCongThucMon> CongThucMon { get; set; } = null!;
@@ -147,9 +202,22 @@ public class CaPheDbContext : DbContext
         {
             entity.ToTable("HoaDon", table =>
             {
-                table.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2)");
+                table.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2, 3)");
             });
             entity.HasKey(x => x.ID);
+
+            entity.Property(x => x.CustomerName)
+                .HasMaxLength(150)
+                .IsRequired()
+                .HasDefaultValue("Khách lẻ");
+
+            entity.Property(x => x.TongTien)
+                .HasColumnType("decimal(18,2)")
+                .IsRequired()
+                .HasDefaultValue(0m);
+
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion();
 
             entity.Property(x => x.GhiChuHoaDon)
                 .HasMaxLength(1000)
@@ -191,10 +259,17 @@ public class CaPheDbContext : DbContext
 
         modelBuilder.Entity<dtHoaDon_ChiTiet>(entity =>
         {
-            entity.ToTable("HoaDon_ChiTiet");
+            entity.ToTable("HoaDon_ChiTiet", table =>
+            {
+                table.HasCheckConstraint("CK_HoaDonChiTiet_SoLuongBan", "[SoLuongBan] > 0");
+            });
             entity.HasKey(x => x.ID);
 
             entity.Property(x => x.DonGiaBan)
+                .HasColumnType("decimal(18,2)")
+                .IsRequired();
+
+            entity.Property(x => x.ThanhTien)
                 .HasColumnType("decimal(18,2)")
                 .IsRequired();
 
@@ -216,6 +291,43 @@ public class CaPheDbContext : DbContext
                 .WithMany(x => x.HoaDon_ChiTiet)
                 .HasForeignKey(x => x.MonID)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<dtaAuditLog>(entity =>
+        {
+            entity.ToTable("AuditLog");
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Action)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.EntityName)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(x => x.EntityId)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.OldValue)
+                .HasColumnType("nvarchar(max)")
+                .IsRequired(false);
+
+            entity.Property(x => x.NewValue)
+                .HasColumnType("nvarchar(max)")
+                .IsRequired(false);
+
+            entity.Property(x => x.PerformedBy)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entity.Property(x => x.CreatedAt)
+                .HasDefaultValueSql("SYSDATETIME()")
+                .IsRequired();
+
+            entity.HasIndex(x => x.CreatedAt);
+            entity.HasIndex(x => new { x.EntityName, x.EntityId, x.CreatedAt });
         });
 
         modelBuilder.Entity<dtaNguyenLieu>(entity =>
@@ -359,7 +471,7 @@ public class CaPheDbContext : DbContext
             entity.HasOne(x => x.NhanVien)
                 .WithOne(x => x.User)
                 .HasForeignKey<dtaUser>(x => x.NhanVienID)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(x => x.VaiTro)
                 .WithMany(x => x.Users)
@@ -408,7 +520,22 @@ public class CaPheDbContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
+        ApplySoftDeleteColumnConfiguration(modelBuilder);
+        ApplySoftDeleteQueryFilters(modelBuilder);
+
         base.OnModelCreating(modelBuilder);
+    }
+
+    public override int SaveChanges()
+    {
+        ApplySoftDeleteRules();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplySoftDeleteRules();
+        return base.SaveChangesAsync(cancellationToken);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -425,5 +552,102 @@ public class CaPheDbContext : DbContext
                 maxRetryCount: 5,
                 maxRetryDelay: TimeSpan.FromSeconds(10),
                 errorNumbersToAdd: null));
+    }
+
+    private static void ApplySoftDeleteColumnConfiguration(ModelBuilder modelBuilder)
+    {
+        foreach (var clrType in GetSoftDeleteEntityTypes(modelBuilder))
+        {
+            var method = typeof(CaPheDbContext)
+                .GetMethod(nameof(ConfigureSoftDeleteEntity), BindingFlags.NonPublic | BindingFlags.Static)?
+                .MakeGenericMethod(clrType);
+
+            method?.Invoke(null, new object[] { modelBuilder });
+        }
+    }
+
+    private static void ConfigureSoftDeleteEntity<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, ISoftDelete
+    {
+        var entity = modelBuilder.Entity<TEntity>();
+        entity.Property(x => x.IsDeleted)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        entity.Property(x => x.DeletedAt)
+            .IsRequired(false);
+
+        entity.Property(x => x.DeletedBy)
+            .HasMaxLength(150)
+            .IsRequired(false);
+
+        entity.HasIndex(x => x.IsDeleted);
+    }
+
+    private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var clrType in GetSoftDeleteEntityTypes(modelBuilder))
+        {
+            var method = typeof(CaPheDbContext)
+                .GetMethod(nameof(ApplySoftDeleteQueryFilter), BindingFlags.NonPublic | BindingFlags.Static)?
+                .MakeGenericMethod(clrType);
+
+            method?.Invoke(null, new object[] { modelBuilder });
+        }
+    }
+
+    private static void ApplySoftDeleteQueryFilter<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, ISoftDelete
+    {
+        Expression<Func<TEntity, bool>> filter = entity => !entity.IsDeleted;
+        modelBuilder.Entity<TEntity>().HasQueryFilter(filter);
+    }
+
+    private static IEnumerable<Type> GetSoftDeleteEntityTypes(ModelBuilder modelBuilder)
+    {
+        return modelBuilder.Model
+            .GetEntityTypes()
+            .Where(x => typeof(ISoftDelete).IsAssignableFrom(x.ClrType))
+            .Select(x => x.ClrType);
+    }
+
+    private void ApplySoftDeleteRules()
+    {
+        var deletedEntries = ChangeTracker
+            .Entries<ISoftDelete>()
+            .Where(x => x.State == EntityState.Deleted)
+            .ToList();
+
+        if (deletedEntries.Count == 0)
+        {
+            return;
+        }
+
+        var deletedAt = DateTime.Now;
+        var deletedBy = GetCurrentUser();
+
+        foreach (var entry in deletedEntries)
+        {
+            if (entry.Entity.IsDeleted)
+            {
+                continue;
+            }
+
+            entry.State = EntityState.Modified;
+            entry.Entity.IsDeleted = true;
+            entry.Entity.DeletedAt = deletedAt;
+            entry.Entity.DeletedBy = deletedBy;
+        }
+    }
+
+    private string GetCurrentUser()
+    {
+        var currentUser = _currentUserProvider?.Invoke();
+        return string.IsNullOrWhiteSpace(currentUser) ? "SYSTEM" : currentUser.Trim();
+    }
+
+    private static string? DefaultCurrentUserProvider()
+    {
+        return NguoiDungHienTaiService.LaySession()?.Username;
     }
 }

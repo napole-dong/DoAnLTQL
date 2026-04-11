@@ -9,14 +9,27 @@ public class KhachHangBUS
     private readonly KhachHangDAL _khachHangDAL = new();
     private readonly PermissionBUS _permissionBUS = new();
 
-    public List<KhachHangDTO> LayDanhSachKhach(string? textTimKhach)
+    public List<KhachHangDTO> LayDanhSachKhach(string? textTimKhach, bool includeDeleted = false)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.View))
         {
             return new List<KhachHangDTO>();
         }
 
-        return _khachHangDAL.GetDanhSachKhach(BusInputHelper.NormalizeNullableText(textTimKhach));
+        return _khachHangDAL.GetDanhSachKhach(BusInputHelper.NormalizeNullableText(textTimKhach), includeDeleted);
+    }
+
+    public List<KhachHangDTO> LayDanhSachKhachChoBanHang(string? textTimKhach)
+    {
+        var coQuyenXemKhachHang = _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.View);
+        var coQuyenBanHang = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
+
+        if (!coQuyenXemKhachHang && !coQuyenBanHang)
+        {
+            return new List<KhachHangDTO>();
+        }
+
+        return _khachHangDAL.GetDanhSachKhach(BusInputHelper.NormalizeNullableText(textTimKhach), includeDeleted: false);
     }
 
     public int LayMaKhachTiepTheo()
@@ -52,6 +65,34 @@ public class KhachHangBUS
 
         var khachMoi = _khachHangDAL.ThemKhach(khachDTO);
         return (true, "Thêm khách hàng thành công.", khachMoi);
+    }
+
+    public (bool ThanhCong, string ThongBao, KhachHangDTO? KhachMoi) ThemKhachNhanhChoBanHang(KhachHangDTO khachDTO)
+    {
+        var coQuyenThemKhach = _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.Create)
+            || _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
+
+        if (!coQuyenThemKhach)
+        {
+            return (false, "Bạn không có quyền thêm khách hàng mới khi bán hàng.", null);
+        }
+
+        ChuanHoaKhachHang(khachDTO);
+
+        var validation = KiemTraThongTin(khachDTO);
+        if (!validation.HopLe)
+        {
+            return (false, validation.ThongBaoLoi, null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(khachDTO.DienThoai)
+            && _khachHangDAL.DienThoaiDaTonTai(khachDTO.DienThoai))
+        {
+            return (false, "Số điện thoại đã tồn tại.", null);
+        }
+
+        var khachMoi = _khachHangDAL.ThemKhach(khachDTO);
+        return (true, "Đã thêm khách hàng mới.", khachMoi);
     }
 
     public (bool ThanhCong, string ThongBao) CapNhatKhach(KhachHangDTO khachDTO)
@@ -90,23 +131,61 @@ public class KhachHangBUS
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.Delete))
         {
-            return (false, "Bạn không có quyền xóa khách hàng.");
+            return (false, "Bạn không có quyền ngừng hoạt động khách hàng.");
         }
 
         if (khachId <= 0)
         {
-            return (false, "Vui lòng chọn khách hàng cần xóa.");
-        }
-
-        if (_khachHangDAL.KhachDaPhatSinhHoaDon(khachId))
-        {
-            return (false, "Khách hàng đã phát sinh hóa đơn, không thể xóa.");
+            return (false, "Vui lòng chọn khách hàng cần ngừng hoạt động.");
         }
 
         var daXoa = _khachHangDAL.XoaKhach(khachId);
         return daXoa
-            ? (true, "Xóa khách hàng thành công.")
-            : (false, "Không tìm thấy khách hàng để xóa.");
+            ? (true, "Đã ngừng hoạt động khách hàng thành công.")
+            : (false, "Khách hàng không tồn tại hoặc đã ngừng hoạt động trước đó.");
+    }
+
+    public (bool ThanhCong, string ThongBao) KhoiPhucKhach(int khachId)
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.Update))
+        {
+            return (false, "Bạn không có quyền khôi phục khách hàng.");
+        }
+
+        if (khachId <= 0)
+        {
+            return (false, "Mã khách hàng không hợp lệ.");
+        }
+
+        var daKhoiPhuc = _khachHangDAL.RestoreKhach(khachId);
+        return daKhoiPhuc
+            ? (true, "Khôi phục khách hàng thành công.")
+            : (false, "Khách hàng chưa bị ngừng hoạt động hoặc không tồn tại.");
+    }
+
+    public (bool ThanhCong, string ThongBao) HardDeleteKhach(int khachId)
+    {
+        if (!_permissionBUS.IsAdmin())
+        {
+            return (false, "Chỉ Admin mới được hard delete khách hàng.");
+        }
+
+        if (khachId <= 0)
+        {
+            return (false, "Mã khách hàng không hợp lệ.");
+        }
+
+        try
+        {
+            var daXoa = _khachHangDAL.HardDeleteKhach(khachId);
+            return daXoa
+                ? (true, "Hard delete khách hàng thành công.")
+                : (false, "Không tìm thấy khách hàng để hard delete.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (false, ex.Message);
+        }
     }
 
     public (int SoThemMoi, int SoCapNhat, int SoBoQua) NhapKhachTuCsv(string[] lines)

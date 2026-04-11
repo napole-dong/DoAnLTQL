@@ -36,6 +36,7 @@
             btnBanHang = new Button();
             btnQuanLyBan = new Button();
             btnQuanLyMon = new Button();
+            btnCongThuc = new Button();
             btnHoaDon = new Button();
             btnKhachHang = new Button();
             btnNhanVien = new Button();
@@ -102,9 +103,8 @@
             lblTopMonHint = new Label();
             lblTopMonTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            lblUserName = new Label();
-            picAvatar = new PictureBox();
+            btnXuat = new Button();
+            btnNhap = new Button();
             txtSearch = new TextBox();
             lblPageTitle = new Label();
             panelSidebar.SuspendLayout();
@@ -127,7 +127,6 @@
             ((System.ComponentModel.ISupportInitialize)dgvTopMon).BeginInit();
             panelTopMonHeader.SuspendLayout();
             panelTopbar.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).BeginInit();
             SuspendLayout();
             // 
             // panelSidebar
@@ -164,6 +163,7 @@
             flowSidebarMenu.Controls.Add(btnBanHang);
             flowSidebarMenu.Controls.Add(btnQuanLyBan);
             flowSidebarMenu.Controls.Add(btnQuanLyMon);
+            flowSidebarMenu.Controls.Add(btnCongThuc);
             flowSidebarMenu.Controls.Add(btnHoaDon);
             flowSidebarMenu.Controls.Add(btnKhachHang);
             flowSidebarMenu.Controls.Add(btnNhanVien);
@@ -189,7 +189,7 @@
             btnBanHang.Padding = new Padding(20, 0, 0, 0);
             btnBanHang.Size = new Size(230, 48);
             btnBanHang.TabIndex = 0;
-            btnBanHang.Text = "🧾  Bán hàng";
+            btnBanHang.Text = "\U0001f9fe  Bán hàng";
             btnBanHang.TextAlign = ContentAlignment.MiddleLeft;
             btnBanHang.UseVisualStyleBackColor = true;
             // 
@@ -205,7 +205,7 @@
             btnQuanLyBan.Padding = new Padding(20, 0, 0, 0);
             btnQuanLyBan.Size = new Size(230, 48);
             btnQuanLyBan.TabIndex = 1;
-            btnQuanLyBan.Text = "🪑  Quản lý bàn";
+            btnQuanLyBan.Text = "\U0001fa91  Quản lý bàn";
             btnQuanLyBan.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyBan.UseVisualStyleBackColor = true;
             // 
@@ -225,19 +225,35 @@
             btnQuanLyMon.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyMon.UseVisualStyleBackColor = true;
             // 
+            // btnCongThuc
+            // 
+            btnCongThuc.FlatAppearance.BorderSize = 0;
+            btnCongThuc.FlatStyle = FlatStyle.Flat;
+            btnCongThuc.Font = new Font("Segoe UI", 10F);
+            btnCongThuc.ForeColor = Color.Gainsboro;
+            btnCongThuc.Location = new Point(0, 158);
+            btnCongThuc.Margin = new Padding(0);
+            btnCongThuc.Name = "btnCongThuc";
+            btnCongThuc.Padding = new Padding(20, 0, 0, 0);
+            btnCongThuc.Size = new Size(230, 48);
+            btnCongThuc.TabIndex = 3;
+            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
+            btnCongThuc.UseVisualStyleBackColor = true;
+            // 
             // btnHoaDon
             // 
             btnHoaDon.FlatAppearance.BorderSize = 0;
             btnHoaDon.FlatStyle = FlatStyle.Flat;
             btnHoaDon.Font = new Font("Segoe UI", 10F);
             btnHoaDon.ForeColor = Color.Gainsboro;
-            btnHoaDon.Location = new Point(0, 158);
+            btnHoaDon.Location = new Point(0, 206);
             btnHoaDon.Margin = new Padding(0);
             btnHoaDon.Name = "btnHoaDon";
             btnHoaDon.Padding = new Padding(20, 0, 0, 0);
             btnHoaDon.Size = new Size(230, 48);
-            btnHoaDon.TabIndex = 3;
-            btnHoaDon.Text = "🧾  Hóa đơn";
+            btnHoaDon.TabIndex = 4;
+            btnHoaDon.Text = "\U0001f9fe  Hóa đơn";
             btnHoaDon.TextAlign = ContentAlignment.MiddleLeft;
             btnHoaDon.UseVisualStyleBackColor = true;
             // 
@@ -247,12 +263,12 @@
             btnKhachHang.FlatStyle = FlatStyle.Flat;
             btnKhachHang.Font = new Font("Segoe UI", 10F);
             btnKhachHang.ForeColor = Color.Gainsboro;
-            btnKhachHang.Location = new Point(0, 206);
+            btnKhachHang.Location = new Point(0, 254);
             btnKhachHang.Margin = new Padding(0);
             btnKhachHang.Name = "btnKhachHang";
             btnKhachHang.Padding = new Padding(20, 0, 0, 0);
             btnKhachHang.Size = new Size(230, 48);
-            btnKhachHang.TabIndex = 4;
+            btnKhachHang.TabIndex = 5;
             btnKhachHang.Text = "👤  Khách hàng";
             btnKhachHang.TextAlign = ContentAlignment.MiddleLeft;
             btnKhachHang.UseVisualStyleBackColor = true;
@@ -263,13 +279,13 @@
             btnNhanVien.FlatStyle = FlatStyle.Flat;
             btnNhanVien.Font = new Font("Segoe UI", 10F);
             btnNhanVien.ForeColor = Color.Gainsboro;
-            btnNhanVien.Location = new Point(0, 254);
+            btnNhanVien.Location = new Point(0, 302);
             btnNhanVien.Margin = new Padding(0);
             btnNhanVien.Name = "btnNhanVien";
             btnNhanVien.Padding = new Padding(20, 0, 0, 0);
             btnNhanVien.Size = new Size(230, 48);
-            btnNhanVien.TabIndex = 5;
-            btnNhanVien.Text = "🧑‍💼  Nhân viên";
+            btnNhanVien.TabIndex = 6;
+            btnNhanVien.Text = "\U0001f9d1‍💼  Nhân viên";
             btnNhanVien.TextAlign = ContentAlignment.MiddleLeft;
             btnNhanVien.UseVisualStyleBackColor = true;
             // 
@@ -280,12 +296,12 @@
             btnThongKe.FlatStyle = FlatStyle.Flat;
             btnThongKe.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnThongKe.ForeColor = Color.White;
-            btnThongKe.Location = new Point(0, 302);
+            btnThongKe.Location = new Point(0, 350);
             btnThongKe.Margin = new Padding(0);
             btnThongKe.Name = "btnThongKe";
             btnThongKe.Padding = new Padding(20, 0, 0, 0);
             btnThongKe.Size = new Size(230, 48);
-            btnThongKe.TabIndex = 6;
+            btnThongKe.TabIndex = 7;
             btnThongKe.Text = "📈  Thống kê";
             btnThongKe.TextAlign = ContentAlignment.MiddleLeft;
             btnThongKe.UseVisualStyleBackColor = false;
@@ -398,9 +414,9 @@
             lblDoanhThuNgayValue.ForeColor = Color.FromArgb(34, 111, 92);
             lblDoanhThuNgayValue.Location = new Point(18, 61);
             lblDoanhThuNgayValue.Name = "lblDoanhThuNgayValue";
-            lblDoanhThuNgayValue.Size = new Size(150, 37);
+            lblDoanhThuNgayValue.Size = new Size(148, 37);
             lblDoanhThuNgayValue.TabIndex = 2;
-            lblDoanhThuNgayValue.Text = "12.450.000";
+            lblDoanhThuNgayValue.Text = "0 VND";
             // 
             // lblDoanhThuNgayTitle
             // 
@@ -409,7 +425,7 @@
             lblDoanhThuNgayTitle.ForeColor = Color.FromArgb(90, 106, 101);
             lblDoanhThuNgayTitle.Location = new Point(18, 36);
             lblDoanhThuNgayTitle.Name = "lblDoanhThuNgayTitle";
-            lblDoanhThuNgayTitle.Size = new Size(128, 23);
+            lblDoanhThuNgayTitle.Size = new Size(134, 23);
             lblDoanhThuNgayTitle.TabIndex = 1;
             lblDoanhThuNgayTitle.Text = "Doanh thu ngày";
             // 
@@ -444,9 +460,9 @@
             lblHoaDonValue.ForeColor = Color.FromArgb(161, 101, 27);
             lblHoaDonValue.Location = new Point(18, 61);
             lblHoaDonValue.Name = "lblHoaDonValue";
-            lblHoaDonValue.Size = new Size(42, 37);
+            lblHoaDonValue.Size = new Size(47, 37);
             lblHoaDonValue.TabIndex = 5;
-            lblHoaDonValue.Text = "58";
+            lblHoaDonValue.Text = "0";
             // 
             // lblHoaDonTitle
             // 
@@ -455,7 +471,7 @@
             lblHoaDonTitle.ForeColor = Color.FromArgb(119, 98, 72);
             lblHoaDonTitle.Location = new Point(18, 36);
             lblHoaDonTitle.Name = "lblHoaDonTitle";
-            lblHoaDonTitle.Size = new Size(122, 23);
+            lblHoaDonTitle.Size = new Size(130, 23);
             lblHoaDonTitle.TabIndex = 4;
             lblHoaDonTitle.Text = "Hóa đơn / ngày";
             // 
@@ -467,7 +483,7 @@
             lblHoaDonIcon.Name = "lblHoaDonIcon";
             lblHoaDonIcon.Size = new Size(39, 27);
             lblHoaDonIcon.TabIndex = 3;
-            lblHoaDonIcon.Text = "🧾";
+            lblHoaDonIcon.Text = "\U0001f9fe";
             // 
             // cardKhachHang
             // 
@@ -490,9 +506,9 @@
             lblKhachHangValue.ForeColor = Color.FromArgb(105, 72, 168);
             lblKhachHangValue.Location = new Point(18, 61);
             lblKhachHangValue.Name = "lblKhachHangValue";
-            lblKhachHangValue.Size = new Size(42, 37);
+            lblKhachHangValue.Size = new Size(49, 37);
             lblKhachHangValue.TabIndex = 5;
-            lblKhachHangValue.Text = "44";
+            lblKhachHangValue.Text = "0";
             // 
             // lblKhachHangTitle
             // 
@@ -501,7 +517,7 @@
             lblKhachHangTitle.ForeColor = Color.FromArgb(113, 96, 150);
             lblKhachHangTitle.Location = new Point(18, 36);
             lblKhachHangTitle.Name = "lblKhachHangTitle";
-            lblKhachHangTitle.Size = new Size(161, 23);
+            lblKhachHangTitle.Size = new Size(167, 23);
             lblKhachHangTitle.TabIndex = 4;
             lblKhachHangTitle.Text = "Khách hàng phục vụ";
             // 
@@ -536,9 +552,9 @@
             lblTrungBinhValue.ForeColor = Color.FromArgb(162, 52, 64);
             lblTrungBinhValue.Location = new Point(18, 61);
             lblTrungBinhValue.Name = "lblTrungBinhValue";
-            lblTrungBinhValue.Size = new Size(130, 37);
+            lblTrungBinhValue.Size = new Size(127, 37);
             lblTrungBinhValue.TabIndex = 5;
-            lblTrungBinhValue.Text = "214.655đ";
+            lblTrungBinhValue.Text = "0 VND";
             // 
             // lblTrungBinhTitle
             // 
@@ -547,7 +563,7 @@
             lblTrungBinhTitle.ForeColor = Color.FromArgb(130, 90, 95);
             lblTrungBinhTitle.Location = new Point(18, 36);
             lblTrungBinhTitle.Name = "lblTrungBinhTitle";
-            lblTrungBinhTitle.Size = new Size(175, 23);
+            lblTrungBinhTitle.Size = new Size(182, 23);
             lblTrungBinhTitle.TabIndex = 4;
             lblTrungBinhTitle.Text = "Giá trị hóa đơn TB / kỳ";
             // 
@@ -622,7 +638,7 @@
             lblThu7.ForeColor = Color.DimGray;
             lblThu7.Location = new Point(618, 390);
             lblThu7.Name = "lblThu7";
-            lblThu7.Size = new Size(43, 20);
+            lblThu7.Size = new Size(29, 20);
             lblThu7.TabIndex = 13;
             lblThu7.Text = "CN";
             // 
@@ -634,7 +650,7 @@
             lblThu6.ForeColor = Color.DimGray;
             lblThu6.Location = new Point(523, 390);
             lblThu6.Name = "lblThu6";
-            lblThu6.Size = new Size(53, 20);
+            lblThu6.Size = new Size(25, 20);
             lblThu6.TabIndex = 12;
             lblThu6.Text = "T7";
             // 
@@ -646,7 +662,7 @@
             lblThu5.ForeColor = Color.DimGray;
             lblThu5.Location = new Point(425, 390);
             lblThu5.Name = "lblThu5";
-            lblThu5.Size = new Size(53, 20);
+            lblThu5.Size = new Size(25, 20);
             lblThu5.TabIndex = 11;
             lblThu5.Text = "T6";
             // 
@@ -658,7 +674,7 @@
             lblThu4.ForeColor = Color.DimGray;
             lblThu4.Location = new Point(327, 390);
             lblThu4.Name = "lblThu4";
-            lblThu4.Size = new Size(53, 20);
+            lblThu4.Size = new Size(25, 20);
             lblThu4.TabIndex = 10;
             lblThu4.Text = "T5";
             // 
@@ -670,7 +686,7 @@
             lblThu3.ForeColor = Color.DimGray;
             lblThu3.Location = new Point(229, 390);
             lblThu3.Name = "lblThu3";
-            lblThu3.Size = new Size(53, 20);
+            lblThu3.Size = new Size(25, 20);
             lblThu3.TabIndex = 9;
             lblThu3.Text = "T4";
             // 
@@ -682,7 +698,7 @@
             lblThu2.ForeColor = Color.DimGray;
             lblThu2.Location = new Point(131, 390);
             lblThu2.Name = "lblThu2";
-            lblThu2.Size = new Size(53, 20);
+            lblThu2.Size = new Size(25, 20);
             lblThu2.TabIndex = 8;
             lblThu2.Text = "T3";
             // 
@@ -694,7 +710,7 @@
             lblChuNhat.ForeColor = Color.DimGray;
             lblChuNhat.Location = new Point(33, 390);
             lblChuNhat.Name = "lblChuNhat";
-            lblChuNhat.Size = new Size(53, 20);
+            lblChuNhat.Size = new Size(25, 20);
             lblChuNhat.TabIndex = 7;
             lblChuNhat.Text = "T2";
             // 
@@ -707,7 +723,7 @@
             lblGiaTriThu7.Name = "lblGiaTriThu7";
             lblGiaTriThu7.Size = new Size(60, 260);
             lblGiaTriThu7.TabIndex = 6;
-            lblGiaTriThu7.Text = "9,8tr";
+            lblGiaTriThu7.Text = "0";
             lblGiaTriThu7.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblGiaTriThu6
@@ -719,7 +735,7 @@
             lblGiaTriThu6.Name = "lblGiaTriThu6";
             lblGiaTriThu6.Size = new Size(60, 296);
             lblGiaTriThu6.TabIndex = 5;
-            lblGiaTriThu6.Text = "11,2tr";
+            lblGiaTriThu6.Text = "0";
             lblGiaTriThu6.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblGiaTriThu5
@@ -731,7 +747,7 @@
             lblGiaTriThu5.Name = "lblGiaTriThu5";
             lblGiaTriThu5.Size = new Size(60, 235);
             lblGiaTriThu5.TabIndex = 4;
-            lblGiaTriThu5.Text = "8,6tr";
+            lblGiaTriThu5.Text = "0";
             lblGiaTriThu5.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblGiaTriThu4
@@ -743,7 +759,7 @@
             lblGiaTriThu4.Name = "lblGiaTriThu4";
             lblGiaTriThu4.Size = new Size(60, 279);
             lblGiaTriThu4.TabIndex = 3;
-            lblGiaTriThu4.Text = "10,4tr";
+            lblGiaTriThu4.Text = "0";
             lblGiaTriThu4.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblGiaTriThu3
@@ -755,7 +771,7 @@
             lblGiaTriThu3.Name = "lblGiaTriThu3";
             lblGiaTriThu3.Size = new Size(60, 214);
             lblGiaTriThu3.TabIndex = 2;
-            lblGiaTriThu3.Text = "7,9tr";
+            lblGiaTriThu3.Text = "0";
             lblGiaTriThu3.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblGiaTriThu2
@@ -767,7 +783,7 @@
             lblGiaTriThu2.Name = "lblGiaTriThu2";
             lblGiaTriThu2.Size = new Size(60, 249);
             lblGiaTriThu2.TabIndex = 1;
-            lblGiaTriThu2.Text = "9,1tr";
+            lblGiaTriThu2.Text = "0";
             lblGiaTriThu2.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblGiaTriChuNhat
@@ -779,7 +795,7 @@
             lblGiaTriChuNhat.Name = "lblGiaTriChuNhat";
             lblGiaTriChuNhat.Size = new Size(60, 183);
             lblGiaTriChuNhat.TabIndex = 0;
-            lblGiaTriChuNhat.Text = "6,7tr";
+            lblGiaTriChuNhat.Text = "0";
             lblGiaTriChuNhat.TextAlign = ContentAlignment.BottomCenter;
             // 
             // lblBieuDoHint
@@ -789,7 +805,7 @@
             lblBieuDoHint.ForeColor = Color.DimGray;
             lblBieuDoHint.Location = new Point(19, 49);
             lblBieuDoHint.Name = "lblBieuDoHint";
-            lblBieuDoHint.Size = new Size(220, 20);
+            lblBieuDoHint.Size = new Size(233, 20);
             lblBieuDoHint.TabIndex = 1;
             lblBieuDoHint.Text = "Doanh thu 7 ngày gần nhất (VNĐ)";
             // 
@@ -799,7 +815,7 @@
             lblBieuDoTitle.Font = new Font("Segoe UI Semibold", 10.8F, FontStyle.Bold);
             lblBieuDoTitle.Location = new Point(16, 16);
             lblBieuDoTitle.Name = "lblBieuDoTitle";
-            lblBieuDoTitle.Size = new Size(168, 25);
+            lblBieuDoTitle.Size = new Size(166, 25);
             lblBieuDoTitle.TabIndex = 0;
             lblBieuDoTitle.Text = "Biểu đồ doanh thu";
             // 
@@ -909,7 +925,7 @@
             lblDenNgay.ForeColor = Color.DimGray;
             lblDenNgay.Location = new Point(231, 23);
             lblDenNgay.Name = "lblDenNgay";
-            lblDenNgay.Size = new Size(67, 20);
+            lblDenNgay.Size = new Size(72, 20);
             lblDenNgay.TabIndex = 3;
             lblDenNgay.Text = "Đến ngày";
             // 
@@ -928,7 +944,7 @@
             lblTuNgay.ForeColor = Color.DimGray;
             lblTuNgay.Location = new Point(14, 23);
             lblTuNgay.Name = "lblTuNgay";
-            lblTuNgay.Size = new Size(56, 20);
+            lblTuNgay.Size = new Size(62, 20);
             lblTuNgay.TabIndex = 1;
             lblTuNgay.Text = "Từ ngày";
             // 
@@ -938,7 +954,7 @@
             lblBoLocTitle.Font = new Font("Segoe UI Semibold", 10.2F, FontStyle.Bold);
             lblBoLocTitle.Location = new Point(14, 0);
             lblBoLocTitle.Name = "lblBoLocTitle";
-            lblBoLocTitle.Size = new Size(161, 23);
+            lblBoLocTitle.Size = new Size(169, 23);
             lblBoLocTitle.TabIndex = 0;
             lblBoLocTitle.Text = "Bộ lọc dữ liệu nhanh";
             // 
@@ -1033,7 +1049,7 @@
             lblTopMonHint.ForeColor = Color.DimGray;
             lblTopMonHint.Location = new Point(0, 30);
             lblTopMonHint.Name = "lblTopMonHint";
-            lblTopMonHint.Size = new Size(225, 20);
+            lblTopMonHint.Size = new Size(255, 20);
             lblTopMonHint.TabIndex = 1;
             lblTopMonHint.Text = "Xếp hạng theo số lượng bán trong kỳ";
             // 
@@ -1043,16 +1059,15 @@
             lblTopMonTitle.Font = new Font("Segoe UI Semibold", 10.2F, FontStyle.Bold);
             lblTopMonTitle.Location = new Point(0, 5);
             lblTopMonTitle.Name = "lblTopMonTitle";
-            lblTopMonTitle.Size = new Size(166, 23);
+            lblTopMonTitle.Size = new Size(152, 23);
             lblTopMonTitle.TabIndex = 0;
             lblTopMonTitle.Text = "Top món bán chạy";
             // 
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
-            panelTopbar.Controls.Add(lblUserName);
-            panelTopbar.Controls.Add(picAvatar);
+            panelTopbar.Controls.Add(btnXuat);
+            panelTopbar.Controls.Add(btnNhap);
             panelTopbar.Controls.Add(txtSearch);
             panelTopbar.Controls.Add(lblPageTitle);
             panelTopbar.Dock = DockStyle.Top;
@@ -1062,40 +1077,32 @@
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
             // 
-            // btnUserMenu
+            // btnXuat
             // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.DimGray;
-            btnUserMenu.Location = new Point(1088, 24);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 28);
-            btnUserMenu.TabIndex = 4;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
+            btnXuat.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnXuat.BackColor = Color.FromArgb(255, 193, 7);
+            btnXuat.FlatAppearance.BorderSize = 0;
+            btnXuat.FlatStyle = FlatStyle.Flat;
+            btnXuat.Location = new Point(1018, 24);
+            btnXuat.Name = "btnXuat";
+            btnXuat.Size = new Size(94, 30);
+            btnXuat.TabIndex = 3;
+            btnXuat.Text = "Xuat";
+            btnXuat.UseVisualStyleBackColor = false;
             // 
-            // lblUserName
+            // btnNhap
             // 
-            lblUserName.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblUserName.AutoSize = true;
-            lblUserName.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            lblUserName.Location = new Point(936, 27);
-            lblUserName.Name = "lblUserName";
-            lblUserName.Size = new Size(135, 23);
-            lblUserName.TabIndex = 3;
-            lblUserName.Text = "Manager Coffee";
-            // 
-            // picAvatar
-            // 
-            picAvatar.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            picAvatar.BackColor = Color.FromArgb(221, 206, 189);
-            picAvatar.Location = new Point(892, 20);
-            picAvatar.Name = "picAvatar";
-            picAvatar.Size = new Size(36, 36);
-            picAvatar.TabIndex = 2;
-            picAvatar.TabStop = false;
+            btnNhap.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnNhap.BackColor = Color.FromArgb(13, 110, 253);
+            btnNhap.FlatAppearance.BorderSize = 0;
+            btnNhap.FlatStyle = FlatStyle.Flat;
+            btnNhap.ForeColor = Color.White;
+            btnNhap.Location = new Point(916, 24);
+            btnNhap.Name = "btnNhap";
+            btnNhap.Size = new Size(94, 30);
+            btnNhap.TabIndex = 2;
+            btnNhap.Text = "Nhap";
+            btnNhap.UseVisualStyleBackColor = false;
             // 
             // txtSearch
             // 
@@ -1163,7 +1170,6 @@
             panelTopMonHeader.PerformLayout();
             panelTopbar.ResumeLayout(false);
             panelTopbar.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)picAvatar).EndInit();
             ResumeLayout(false);
         }
 
@@ -1175,6 +1181,7 @@
         private Button btnBanHang;
         private Button btnQuanLyBan;
         private Button btnQuanLyMon;
+        private Button btnCongThuc;
         private Button btnHoaDon;
         private Button btnKhachHang;
         private Button btnNhanVien;
@@ -1241,9 +1248,8 @@
         private Label lblTopMonHint;
         private Label lblTopMonTitle;
         private Panel panelTopbar;
-        private Button btnUserMenu;
-        private Label lblUserName;
-        private PictureBox picAvatar;
+        private Button btnXuat;
+        private Button btnNhap;
         private TextBox txtSearch;
         private Label lblPageTitle;
     }

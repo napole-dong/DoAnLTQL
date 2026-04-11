@@ -1,4 +1,5 @@
 using QuanLyQuanCaPhe.BUS;
+using QuanLyQuanCaPhe.DAL;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.Diagnostics;
 
@@ -76,6 +77,13 @@ namespace QuanLyQuanCaPhe
 
         private static void KhoiTaoDuLieuQuyenMacDinh()
         {
+            var taiKhoanMacDinhDAL = new TaiKhoanMacDinhDAL();
+            var ketQuaKhoiTaoTaiKhoan = taiKhoanMacDinhDAL.DamBaoTaiKhoanMacDinh("123");
+
+            AppLogger.Info(
+                $"Default accounts ensured. RolesCreated={ketQuaKhoiTaoTaiKhoan.SoVaiTroTaoMoi}, AccountsCreated={ketQuaKhoiTaoTaiKhoan.SoTaiKhoanTaoMoi}, AccountsUpdated={ketQuaKhoiTaoTaiKhoan.SoTaiKhoanCapNhat}.",
+                nameof(Program));
+
             var permissionBUS = new PermissionBUS();
             var daDongBo = permissionBUS.DongBoDuLieuQuyenMacDinh();
 

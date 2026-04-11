@@ -1,11 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.SoftDelete;
 
 namespace QuanLyQuanCaPhe.DAL;
 
 public class MonDAL
 {
+    private readonly ISoftDeleteService _softDeleteService = new SoftDeleteService();
+
     public List<LoaiMonDTO> GetLoaiMon()
     {
         using var context = new CaPheDbContext();
@@ -21,18 +24,20 @@ public class MonDAL
             .ToList();
     }
 
-    public List<MonDTO> GetDanhSachMon(string? tuKhoa, int? loaiMonId = null)
+    public List<MonDTO> GetDanhSachMon(string? tuKhoa, int? loaiMonId = null, bool includeDeleted = false)
     {
         using var context = new CaPheDbContext();
 
-        var monRows = QueryDanhSachMonRows(context, tuKhoa, loaiMonId);
+        var monRows = QueryDanhSachMonRows(context, tuKhoa, loaiMonId, includeDeleted);
         return MapMonDtos(monRows);
     }
 
     public int GetNextMonId()
     {
         using var context = new CaPheDbContext();
-        return (context.Mon.Max(x => (int?)x.ID) ?? 0) + 1;
+        return (context.Mon
+            .IgnoreQueryFilters()
+            .Max(x => (int?)x.ID) ?? 0) + 1;
     }
 
     public MonDTO? GetMonById(int id)
@@ -94,14 +99,44 @@ public class MonDAL
     public bool XoaMon(int monId)
     {
         using var context = new CaPheDbContext();
-        var mon = context.Mon.FirstOrDefault(x => x.ID == monId);
+        var mon = context.Mon
+            .IgnoreQueryFilters()
+            .FirstOrDefault(x => x.ID == monId);
         if (mon == null)
         {
             return false;
         }
 
-        context.Mon.Remove(mon);
-        context.SaveChanges();
+        return _softDeleteService.SoftDelete(context, mon);
+    }
+
+    public bool RestoreMon(int monId)
+    {
+        using var context = new CaPheDbContext();
+        var mon = context.Mon
+            .IgnoreQueryFilters()
+            .FirstOrDefault(x => x.ID == monId);
+        if (mon == null || !mon.IsDeleted)
+        {
+            return false;
+        }
+
+        _softDeleteService.Restore(context, mon);
+        return true;
+    }
+
+    public bool HardDeleteMon(int monId)
+    {
+        using var context = new CaPheDbContext();
+        var mon = context.Mon
+            .IgnoreQueryFilters()
+            .FirstOrDefault(x => x.ID == monId);
+        if (mon == null)
+        {
+            return false;
+        }
+
+        _softDeleteService.HardDelete(context, mon);
         return true;
     }
 
@@ -161,9 +196,13 @@ public class MonDAL
         return result;
     }
 
-    private static List<MonReadModel> QueryDanhSachMonRows(CaPheDbContext context, string? tuKhoa, int? loaiMonId)
+    private static List<MonReadModel> QueryDanhSachMonRows(CaPheDbContext context, string? tuKhoa, int? loaiMonId, bool includeDeleted)
     {
-        var query = context.Mon
+        var queryBase = includeDeleted
+            ? context.Mon.IgnoreQueryFilters()
+            : context.Mon;
+
+        var query = queryBase
             .AsNoTracking()
             .AsQueryable();
 
@@ -205,7 +244,10 @@ public class MonDAL
                 DonGia = x.DonGia,
                 TrangThai = x.TrangThai,
                 MoTa = x.MoTa ?? string.Empty,
-                HinhAnh = x.HinhAnh
+                HinhAnh = x.HinhAnh,
+                IsDeleted = x.IsDeleted,
+                DeletedAt = x.DeletedAt,
+                DeletedBy = x.DeletedBy
             })
             .ToList();
     }
@@ -224,7 +266,10 @@ public class MonDAL
                 DonGia = x.DonGia,
                 TrangThai = x.TrangThai,
                 MoTa = x.MoTa ?? string.Empty,
-                HinhAnh = x.HinhAnh
+                HinhAnh = x.HinhAnh,
+                IsDeleted = x.IsDeleted,
+                DeletedAt = x.DeletedAt,
+                DeletedBy = x.DeletedBy
             })
             .FirstOrDefault();
     }
@@ -247,7 +292,10 @@ public class MonDAL
             DonGia = monRow.DonGia,
             TrangThai = monRow.TrangThai,
             MoTa = monRow.MoTa,
-            HinhAnh = monRow.HinhAnh
+            HinhAnh = monRow.HinhAnh,
+            IsDeleted = monRow.IsDeleted,
+            DeletedAt = monRow.DeletedAt,
+            DeletedBy = monRow.DeletedBy
         };
     }
 
@@ -261,5 +309,8 @@ public class MonDAL
         public int TrangThai { get; init; }
         public string MoTa { get; init; } = string.Empty;
         public string? HinhAnh { get; init; }
+        public bool IsDeleted { get; init; }
+        public DateTime? DeletedAt { get; init; }
+        public string? DeletedBy { get; init; }
     }
 }

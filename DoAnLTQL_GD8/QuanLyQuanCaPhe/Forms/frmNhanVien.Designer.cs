@@ -36,6 +36,7 @@
             btnBanHang = new Button();
             btnQuanLyBan = new Button();
             btnQuanLyMon = new Button();
+            btnCongThuc = new Button();
             btnHoaDon = new Button();
             btnKhachHang = new Button();
             btnNhanVien = new Button();
@@ -148,6 +149,7 @@
             flowSidebarMenu.Controls.Add(btnBanHang);
             flowSidebarMenu.Controls.Add(btnQuanLyBan);
             flowSidebarMenu.Controls.Add(btnQuanLyMon);
+            flowSidebarMenu.Controls.Add(btnCongThuc);
             flowSidebarMenu.Controls.Add(btnHoaDon);
             flowSidebarMenu.Controls.Add(btnKhachHang);
             flowSidebarMenu.Controls.Add(btnNhanVien);
@@ -209,13 +211,29 @@
             btnQuanLyMon.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyMon.UseVisualStyleBackColor = true;
             // 
+            // btnCongThuc
+            // 
+            btnCongThuc.FlatAppearance.BorderSize = 0;
+            btnCongThuc.FlatStyle = FlatStyle.Flat;
+            btnCongThuc.Font = new Font("Segoe UI", 10F);
+            btnCongThuc.ForeColor = Color.Gainsboro;
+            btnCongThuc.Location = new Point(0, 158);
+            btnCongThuc.Margin = new Padding(0);
+            btnCongThuc.Name = "btnCongThuc";
+            btnCongThuc.Padding = new Padding(20, 0, 0, 0);
+            btnCongThuc.Size = new Size(230, 48);
+            btnCongThuc.TabIndex = 3;
+            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
+            btnCongThuc.UseVisualStyleBackColor = true;
+            // 
             // btnHoaDon
             // 
             btnHoaDon.FlatAppearance.BorderSize = 0;
             btnHoaDon.FlatStyle = FlatStyle.Flat;
             btnHoaDon.Font = new Font("Segoe UI", 10F);
             btnHoaDon.ForeColor = Color.Gainsboro;
-            btnHoaDon.Location = new Point(0, 158);
+            btnHoaDon.Location = new Point(0, 206);
             btnHoaDon.Margin = new Padding(0);
             btnHoaDon.Name = "btnHoaDon";
             btnHoaDon.Padding = new Padding(20, 0, 0, 0);
@@ -231,7 +249,7 @@
             btnKhachHang.FlatStyle = FlatStyle.Flat;
             btnKhachHang.Font = new Font("Segoe UI", 10F);
             btnKhachHang.ForeColor = Color.Gainsboro;
-            btnKhachHang.Location = new Point(0, 206);
+            btnKhachHang.Location = new Point(0, 254);
             btnKhachHang.Margin = new Padding(0);
             btnKhachHang.Name = "btnKhachHang";
             btnKhachHang.Padding = new Padding(20, 0, 0, 0);
@@ -248,7 +266,7 @@
             btnNhanVien.FlatStyle = FlatStyle.Flat;
             btnNhanVien.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnNhanVien.ForeColor = Color.White;
-            btnNhanVien.Location = new Point(0, 254);
+            btnNhanVien.Location = new Point(0, 302);
             btnNhanVien.Margin = new Padding(0);
             btnNhanVien.Name = "btnNhanVien";
             btnNhanVien.Padding = new Padding(20, 0, 0, 0);
@@ -264,7 +282,7 @@
             btnThongKe.FlatStyle = FlatStyle.Flat;
             btnThongKe.Font = new Font("Segoe UI", 10F);
             btnThongKe.ForeColor = Color.Gainsboro;
-            btnThongKe.Location = new Point(0, 302);
+            btnThongKe.Location = new Point(0, 350);
             btnThongKe.Margin = new Padding(0);
             btnThongKe.Name = "btnThongKe";
             btnThongKe.Padding = new Padding(20, 0, 0, 0);
@@ -996,6 +1014,7 @@
         private Button btnBanHang;
         private Button btnQuanLyBan;
         private Button btnQuanLyMon;
+        private Button btnCongThuc;
         private Button btnHoaDon;
         private Button btnKhachHang;
         private Button btnNhanVien;

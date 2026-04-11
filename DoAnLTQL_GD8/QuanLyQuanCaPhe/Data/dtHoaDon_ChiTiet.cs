@@ -7,6 +7,7 @@ public class dtHoaDon_ChiTiet
     public int MonID { get; set; }
     public short SoLuongBan { get; set; }
     public decimal DonGiaBan { get; set; }
+    public decimal ThanhTien { get; set; }
     public string? GhiChu { get; set; }
 
     public dtaHoadon HoaDon { get; set; } = null!;

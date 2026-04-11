@@ -46,6 +46,9 @@ namespace QuanLyQuanCaPhe.Migrations
                     b.Property<short>("SoLuongBan")
                         .HasColumnType("smallint");
 
+                    b.Property<decimal>("ThanhTien")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("ID");
 
                     b.HasIndex("HoaDonID");
@@ -55,7 +58,58 @@ namespace QuanLyQuanCaPhe.Migrations
                     b.HasIndex("HoaDonID", "MonID")
                         .HasDatabaseName("IX_HoaDonChiTiet_HoaDonID_MonID");
 
-                    b.ToTable("HoaDon_ChiTiet", (string)null);
+                    b.ToTable("HoaDon_ChiTiet", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_HoaDonChiTiet_SoLuongBan", "[SoLuongBan] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaAuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSDATETIME()");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PerformedBy")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("EntityName", "EntityId", "CreatedAt");
+
+                    b.ToTable("AuditLog", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaBan", b =>
@@ -117,6 +171,13 @@ namespace QuanLyQuanCaPhe.Migrations
                     b.Property<int>("BanID")
                         .HasColumnType("int");
 
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasDefaultValue("Khách lẻ");
+
                     b.Property<string>("GhiChuHoaDon")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -129,6 +190,17 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.Property<int>("NhanVienID")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("TongTien")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<int>("TrangThai")
                         .ValueGeneratedOnAdd()
@@ -154,7 +226,7 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.ToTable("HoaDon", null, t =>
                         {
-                            t.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2)");
+                            t.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2, 3)");
                         });
                 });
 
@@ -165,6 +237,13 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("DiaChi")
                         .HasMaxLength(255)
@@ -179,7 +258,14 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.HasKey("ID");
+
+                    b.HasIndex("IsDeleted");
 
                     b.ToTable("KhachHang", (string)null);
                 });
@@ -216,12 +302,24 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<decimal>("DonGia")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("HinhAnh")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("LoaiMonID")
                         .HasColumnType("int");
@@ -249,6 +347,8 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasColumnName("TrangThaiText_Legacy");
 
                     b.HasKey("ID");
+
+                    b.HasIndex("IsDeleted");
 
                     b.HasIndex("LoaiMonID");
 
@@ -311,6 +411,13 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("DiaChi")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -324,7 +431,14 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.HasKey("ID");
+
+                    b.HasIndex("IsDeleted");
 
                     b.ToTable("NhanVien", (string)null);
                 });
@@ -613,7 +727,7 @@ namespace QuanLyQuanCaPhe.Migrations
                     b.HasOne("QuanLyQuanCaPhe.Data.dtaNhanVien", "NhanVien")
                         .WithOne("User")
                         .HasForeignKey("QuanLyQuanCaPhe.Data.dtaUser", "NhanVienID")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("QuanLyQuanCaPhe.Data.dtaVaiTro", "VaiTro")

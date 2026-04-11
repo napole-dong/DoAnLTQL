@@ -39,6 +39,16 @@ public class BanBUS
         return _banDAL.GetSoDoBan();
     }
 
+    public int LayHoacTaoBanMangDi()
+    {
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View))
+        {
+            return 0;
+        }
+
+        return _banDAL.LayHoacTaoBanMangDi();
+    }
+
     public BanActionResultDTO ThemBan(string tenBan)
     {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create))
@@ -98,6 +108,21 @@ public class BanBUS
         return daXoa
             ? BusMessageCatalog.CreateActionResult(true, "Xóa bàn thành công.")
             : BusMessageCatalog.CreateActionResult(false, "Không thể xóa bàn.");
+    }
+
+    public BanActionResultDTO DonBan(int banId)
+    {
+        if (banId <= 0)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bàn cần dọn không hợp lệ.");
+        }
+
+        if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền dọn bàn.");
+        }
+
+        return BusMessageCatalog.NormalizeActionResult(_banDAL.DonBan(banId));
     }
 
     public List<BanDTO> LayDanhSachBanDich(int banNguonId)

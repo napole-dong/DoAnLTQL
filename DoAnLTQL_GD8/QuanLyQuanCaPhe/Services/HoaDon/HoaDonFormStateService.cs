@@ -31,23 +31,28 @@ namespace QuanLyQuanCaPhe.Services.HoaDon
         public HoaDonFormControlState TaoTrangThai(HoaDonManHinhState manHinhState, HoaDonDTO? hoaDon)
         {
             var dangSua = manHinhState != HoaDonManHinhState.Xem;
-            var laHoaDonMo = hoaDon?.TrangThai == 0;
+            var dangThemMoi = manHinhState == HoaDonManHinhState.ThemMoi;
+            var dangChinhSua = manHinhState == HoaDonManHinhState.ChinhSua;
+            var laHoaDonMo = hoaDon?.TrangThai == (int)HoaDonTrangThai.ChuaThanhToan;
             var coTongTien = hoaDon?.TongTien > 0;
             var coHoaDon = hoaDon != null;
+            var choPhepSuaTrongCheDoSua = dangChinhSua && laHoaDonMo;
+            var choPhepSuaThongTinChung = dangThemMoi || choPhepSuaTrongCheDoSua;
+            var choPhepLuu = dangThemMoi || choPhepSuaTrongCheDoSua;
 
             return new HoaDonFormControlState
             {
-                ChoPhepSuaThongTinChung = dangSua,
+                ChoPhepSuaThongTinChung = choPhepSuaThongTinChung,
                 ChoPhepLocMaster = !dangSua,
                 ChoPhepGridMaster = !dangSua,
 
                 ChoPhepThemMoi = !dangSua,
                 ChoPhepSua = !dangSua && laHoaDonMo,
                 ChoPhepHuy = !dangSua && laHoaDonMo,
-                ChoPhepLuu = dangSua,
+                ChoPhepLuu = choPhepLuu,
                 ChoPhepBoQua = dangSua,
 
-                ChoPhepThemMon = !dangSua && laHoaDonMo,
+                ChoPhepThemMon = laHoaDonMo,
                 ChoPhepThuTien = !dangSua && laHoaDonMo && coTongTien,
                 ChoPhepIn = !dangSua && coHoaDon
             };

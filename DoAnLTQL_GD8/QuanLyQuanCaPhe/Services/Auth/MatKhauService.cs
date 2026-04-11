@@ -3,7 +3,7 @@ namespace QuanLyQuanCaPhe.Services.Auth;
 public static class MatKhauService
 {
     private const int WorkFactor = 12;
-    private const int MinPasswordLength = 10;
+    private const int MinPasswordLength = 3;
 
     public static string BamMatKhau(string matKhau)
     {
@@ -45,45 +45,6 @@ public static class MatKhauService
             thongBaoLoi = "Mat khau khong duoc de trong.";
             return false;
         }
-
-        var matKhauChuan = matKhau.Trim();
-        if (matKhauChuan.Length < MinPasswordLength)
-        {
-            thongBaoLoi = $"Mat khau phai co it nhat {MinPasswordLength} ky tu.";
-            return false;
-        }
-
-        var coChuHoa = false;
-        var coChuThuong = false;
-        var coChuSo = false;
-        var coKyTuDacBiet = false;
-
-        foreach (var kyTu in matKhauChuan)
-        {
-            if (char.IsUpper(kyTu))
-            {
-                coChuHoa = true;
-            }
-            else if (char.IsLower(kyTu))
-            {
-                coChuThuong = true;
-            }
-            else if (char.IsDigit(kyTu))
-            {
-                coChuSo = true;
-            }
-            else
-            {
-                coKyTuDacBiet = true;
-            }
-        }
-
-        if (!coChuHoa || !coChuThuong || !coChuSo || !coKyTuDacBiet)
-        {
-            thongBaoLoi = "Mat khau phai bao gom chu hoa, chu thuong, chu so va ky tu dac biet.";
-            return false;
-        }
-
         return true;
     }
 

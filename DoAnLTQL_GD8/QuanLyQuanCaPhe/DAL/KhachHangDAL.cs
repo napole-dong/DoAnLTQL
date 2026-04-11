@@ -1,23 +1,28 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.SoftDelete;
 
 namespace QuanLyQuanCaPhe.DAL;
 
 public class KhachHangDAL
 {
-    public List<KhachHangDTO> GetDanhSachKhach(string? tuKhoa)
+    private readonly ISoftDeleteService _softDeleteService = new SoftDeleteService();
+
+    public List<KhachHangDTO> GetDanhSachKhach(string? tuKhoa, bool includeDeleted = false)
     {
         using var context = new CaPheDbContext();
 
-        var khachRows = QueryDanhSachKhachRows(context, tuKhoa);
+        var khachRows = QueryDanhSachKhachRows(context, tuKhoa, includeDeleted);
         return MapKhachHangDtos(khachRows);
     }
 
     public int GetNextKhachHangId()
     {
         using var context = new CaPheDbContext();
-        return (context.KhachHang.Max(x => (int?)x.ID) ?? 0) + 1;
+        return (context.KhachHang
+            .IgnoreQueryFilters()
+            .Max(x => (int?)x.ID) ?? 0) + 1;
     }
 
     public bool DienThoaiDaTonTai(string dienThoai, int? boQuaId = null)
@@ -67,23 +72,47 @@ public class KhachHangDAL
         return true;
     }
 
-    public bool KhachDaPhatSinhHoaDon(int khachId)
-    {
-        using var context = new CaPheDbContext();
-        return context.HoaDon.Any(x => x.KhachHangID == khachId);
-    }
-
     public bool XoaKhach(int khachId)
     {
         using var context = new CaPheDbContext();
-        var khach = context.KhachHang.FirstOrDefault(x => x.ID == khachId);
+        var khach = context.KhachHang
+            .IgnoreQueryFilters()
+            .FirstOrDefault(x => x.ID == khachId);
         if (khach == null)
         {
             return false;
         }
 
-        context.KhachHang.Remove(khach);
-        context.SaveChanges();
+        return _softDeleteService.SoftDelete(context, khach);
+    }
+
+    public bool RestoreKhach(int khachId)
+    {
+        using var context = new CaPheDbContext();
+        var khach = context.KhachHang
+            .IgnoreQueryFilters()
+            .FirstOrDefault(x => x.ID == khachId);
+        if (khach == null || !khach.IsDeleted)
+        {
+            return false;
+        }
+
+        _softDeleteService.Restore(context, khach);
+        return true;
+    }
+
+    public bool HardDeleteKhach(int khachId)
+    {
+        using var context = new CaPheDbContext();
+        var khach = context.KhachHang
+            .IgnoreQueryFilters()
+            .FirstOrDefault(x => x.ID == khachId);
+        if (khach == null)
+        {
+            return false;
+        }
+
+        _softDeleteService.HardDelete(context, khach);
         return true;
     }
 
@@ -145,9 +174,13 @@ public class KhachHangDAL
         return (soThemMoi, soCapNhat, soBoQua);
     }
 
-    private static List<KhachHangReadModel> QueryDanhSachKhachRows(CaPheDbContext context, string? tuKhoa)
+    private static List<KhachHangReadModel> QueryDanhSachKhachRows(CaPheDbContext context, string? tuKhoa, bool includeDeleted)
     {
-        var query = context.KhachHang
+        var queryBase = includeDeleted
+            ? context.KhachHang.IgnoreQueryFilters()
+            : context.KhachHang;
+
+        var query = queryBase
             .AsNoTracking()
             .AsQueryable();
 
@@ -171,7 +204,10 @@ public class KhachHangDAL
                 ID = x.ID,
                 HoVaTen = x.HoVaTen,
                 DienThoai = x.DienThoai,
-                DiaChi = x.DiaChi
+                DiaChi = x.DiaChi,
+                IsDeleted = x.IsDeleted,
+                DeletedAt = x.DeletedAt,
+                DeletedBy = x.DeletedBy
             })
             .ToList();
     }
@@ -190,7 +226,10 @@ public class KhachHangDAL
             ID = khachRow.ID,
             HoVaTen = khachRow.HoVaTen,
             DienThoai = khachRow.DienThoai,
-            DiaChi = khachRow.DiaChi
+            DiaChi = khachRow.DiaChi,
+            IsDeleted = khachRow.IsDeleted,
+            DeletedAt = khachRow.DeletedAt,
+            DeletedBy = khachRow.DeletedBy
         };
     }
 
@@ -200,5 +239,8 @@ public class KhachHangDAL
         public string HoVaTen { get; init; } = string.Empty;
         public string? DienThoai { get; init; }
         public string? DiaChi { get; init; }
+        public bool IsDeleted { get; init; }
+        public DateTime? DeletedAt { get; init; }
+        public string? DeletedBy { get; init; }
     }
 }

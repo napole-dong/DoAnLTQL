@@ -36,6 +36,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnBanHang = new Button();
             btnQuanLyBan = new Button();
             btnQuanLyMon = new Button();
+            btnCongThuc = new Button();
             btnHoaDon = new Button();
             btnKhachHang = new Button();
             btnNhanVien = new Button();
@@ -48,6 +49,11 @@ namespace QuanLyQuanCaPhe.Forms
             tableMain = new TableLayoutPanel();
             panelOrder = new Panel();
             dgvOrder = new DataGridView();
+            colTenMon = new DataGridViewTextBoxColumn();
+            colSoLuong = new DataGridViewTextBoxColumn();
+            colDonGia = new DataGridViewTextBoxColumn();
+            colThanhTien = new DataGridViewTextBoxColumn();
+            colXoa = new DataGridViewButtonColumn();
             panelOrderFooter = new Panel();
             btnThanhToan = new Button();
             btnTamTinh = new Button();
@@ -58,6 +64,10 @@ namespace QuanLyQuanCaPhe.Forms
             lblTamTinhValue = new Label();
             lblTamTinh = new Label();
             panelOrderHeader = new Panel();
+            btnThemNhanhKhach = new Button();
+            btnTaiLaiKhach = new Button();
+            cboKhachHang = new ComboBox();
+            lblKhachHang = new Label();
             btnGopBan = new Button();
             btnChuyenBan = new Button();
             lblOrderMeta = new Label();
@@ -77,15 +87,9 @@ namespace QuanLyQuanCaPhe.Forms
             btnCafe = new Button();
             lblMenuTitle = new Label();
             panelTopbar = new Panel();
-            btnUserMenu = new Button();
-            txtSearch = new TextBox();
             btnLamMoi = new Button();
+            txtSearch = new TextBox();
             lblPageTitle = new Label();
-            colTenMon = new DataGridViewTextBoxColumn();
-            colSoLuong = new DataGridViewTextBoxColumn();
-            colDonGia = new DataGridViewTextBoxColumn();
-            colThanhTien = new DataGridViewTextBoxColumn();
-            colXoa = new DataGridViewButtonColumn();
             panelSidebar.SuspendLayout();
             flowSidebarMenu.SuspendLayout();
             panelLogo.SuspendLayout();
@@ -138,6 +142,7 @@ namespace QuanLyQuanCaPhe.Forms
             flowSidebarMenu.Controls.Add(btnBanHang);
             flowSidebarMenu.Controls.Add(btnQuanLyBan);
             flowSidebarMenu.Controls.Add(btnQuanLyMon);
+            flowSidebarMenu.Controls.Add(btnCongThuc);
             flowSidebarMenu.Controls.Add(btnHoaDon);
             flowSidebarMenu.Controls.Add(btnKhachHang);
             flowSidebarMenu.Controls.Add(btnNhanVien);
@@ -200,13 +205,29 @@ namespace QuanLyQuanCaPhe.Forms
             btnQuanLyMon.TextAlign = ContentAlignment.MiddleLeft;
             btnQuanLyMon.UseVisualStyleBackColor = true;
             // 
+            // btnCongThuc
+            // 
+            btnCongThuc.FlatAppearance.BorderSize = 0;
+            btnCongThuc.FlatStyle = FlatStyle.Flat;
+            btnCongThuc.Font = new Font("Segoe UI", 10F);
+            btnCongThuc.ForeColor = Color.Gainsboro;
+            btnCongThuc.Location = new Point(0, 158);
+            btnCongThuc.Margin = new Padding(0);
+            btnCongThuc.Name = "btnCongThuc";
+            btnCongThuc.Padding = new Padding(20, 0, 0, 0);
+            btnCongThuc.Size = new Size(230, 48);
+            btnCongThuc.TabIndex = 3;
+            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
+            btnCongThuc.UseVisualStyleBackColor = true;
+            // 
             // btnHoaDon
             // 
             btnHoaDon.FlatAppearance.BorderSize = 0;
             btnHoaDon.FlatStyle = FlatStyle.Flat;
             btnHoaDon.Font = new Font("Segoe UI", 10F);
             btnHoaDon.ForeColor = Color.Gainsboro;
-            btnHoaDon.Location = new Point(0, 158);
+            btnHoaDon.Location = new Point(0, 206);
             btnHoaDon.Margin = new Padding(0);
             btnHoaDon.Name = "btnHoaDon";
             btnHoaDon.Padding = new Padding(20, 0, 0, 0);
@@ -222,7 +243,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnKhachHang.FlatStyle = FlatStyle.Flat;
             btnKhachHang.Font = new Font("Segoe UI", 10F);
             btnKhachHang.ForeColor = Color.Gainsboro;
-            btnKhachHang.Location = new Point(0, 206);
+            btnKhachHang.Location = new Point(0, 254);
             btnKhachHang.Margin = new Padding(0);
             btnKhachHang.Name = "btnKhachHang";
             btnKhachHang.Padding = new Padding(20, 0, 0, 0);
@@ -238,7 +259,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnNhanVien.FlatStyle = FlatStyle.Flat;
             btnNhanVien.Font = new Font("Segoe UI", 10F);
             btnNhanVien.ForeColor = Color.Gainsboro;
-            btnNhanVien.Location = new Point(0, 254);
+            btnNhanVien.Location = new Point(0, 302);
             btnNhanVien.Margin = new Padding(0);
             btnNhanVien.Name = "btnNhanVien";
             btnNhanVien.Padding = new Padding(20, 0, 0, 0);
@@ -254,7 +275,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnThongKe.FlatStyle = FlatStyle.Flat;
             btnThongKe.Font = new Font("Segoe UI", 10F);
             btnThongKe.ForeColor = Color.Gainsboro;
-            btnThongKe.Location = new Point(0, 302);
+            btnThongKe.Location = new Point(0, 350);
             btnThongKe.Margin = new Padding(0);
             btnThongKe.Name = "btnThongKe";
             btnThongKe.Padding = new Padding(20, 0, 0, 0);
@@ -386,6 +407,50 @@ namespace QuanLyQuanCaPhe.Forms
             dgvOrder.Size = new Size(576, 178);
             dgvOrder.TabIndex = 1;
             // 
+            // colTenMon
+            // 
+            colTenMon.FillWeight = 135F;
+            colTenMon.HeaderText = "Tên món";
+            colTenMon.MinimumWidth = 6;
+            colTenMon.Name = "colTenMon";
+            colTenMon.ReadOnly = true;
+            // 
+            // colSoLuong
+            // 
+            colSoLuong.FillWeight = 78F;
+            colSoLuong.HeaderText = "Số lượng";
+            colSoLuong.MinimumWidth = 6;
+            colSoLuong.Name = "colSoLuong";
+            colSoLuong.ReadOnly = true;
+            // 
+            // colDonGia
+            // 
+            colDonGia.FillWeight = 86F;
+            colDonGia.HeaderText = "Đơn giá";
+            colDonGia.MinimumWidth = 6;
+            colDonGia.Name = "colDonGia";
+            colDonGia.ReadOnly = true;
+            // 
+            // colThanhTien
+            // 
+            colThanhTien.FillWeight = 94F;
+            colThanhTien.HeaderText = "Thành tiền";
+            colThanhTien.MinimumWidth = 6;
+            colThanhTien.Name = "colThanhTien";
+            colThanhTien.ReadOnly = true;
+            // 
+            // colXoa
+            // 
+            colXoa.FillWeight = 58F;
+            colXoa.HeaderText = "Xóa";
+            colXoa.MinimumWidth = 6;
+            colXoa.Name = "colXoa";
+            colXoa.ReadOnly = true;
+            colXoa.Resizable = DataGridViewTriState.True;
+            colXoa.SortMode = DataGridViewColumnSortMode.Automatic;
+            colXoa.Text = "Xóa";
+            colXoa.UseColumnTextForButtonValue = true;
+            // 
             // panelOrderFooter
             // 
             panelOrderFooter.Controls.Add(btnThanhToan);
@@ -504,6 +569,10 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // panelOrderHeader
             // 
+            panelOrderHeader.Controls.Add(btnThemNhanhKhach);
+            panelOrderHeader.Controls.Add(btnTaiLaiKhach);
+            panelOrderHeader.Controls.Add(cboKhachHang);
+            panelOrderHeader.Controls.Add(lblKhachHang);
             panelOrderHeader.Controls.Add(btnGopBan);
             panelOrderHeader.Controls.Add(btnChuyenBan);
             panelOrderHeader.Controls.Add(lblOrderMeta);
@@ -512,8 +581,58 @@ namespace QuanLyQuanCaPhe.Forms
             panelOrderHeader.Location = new Point(12, 180);
             panelOrderHeader.Name = "panelOrderHeader";
             panelOrderHeader.Padding = new Padding(0, 4, 0, 6);
-            panelOrderHeader.Size = new Size(576, 64);
+            panelOrderHeader.Size = new Size(576, 98);
             panelOrderHeader.TabIndex = 0;
+            // 
+            // btnThemNhanhKhach
+            // 
+            btnThemNhanhKhach.BackColor = Color.FromArgb(248, 245, 241);
+            btnThemNhanhKhach.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnThemNhanhKhach.FlatStyle = FlatStyle.Flat;
+            btnThemNhanhKhach.Font = new Font("Segoe UI", 8.5F);
+            btnThemNhanhKhach.ForeColor = Color.FromArgb(79, 56, 43);
+            btnThemNhanhKhach.Location = new Point(469, 62);
+            btnThemNhanhKhach.Name = "btnThemNhanhKhach";
+            btnThemNhanhKhach.Size = new Size(101, 28);
+            btnThemNhanhKhach.TabIndex = 7;
+            btnThemNhanhKhach.Text = "Thêm nhanh";
+            btnThemNhanhKhach.UseVisualStyleBackColor = false;
+            // 
+            // btnTaiLaiKhach
+            // 
+            btnTaiLaiKhach.BackColor = Color.FromArgb(248, 245, 241);
+            btnTaiLaiKhach.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
+            btnTaiLaiKhach.FlatStyle = FlatStyle.Flat;
+            btnTaiLaiKhach.Font = new Font("Segoe UI", 8.5F);
+            btnTaiLaiKhach.ForeColor = Color.FromArgb(79, 56, 43);
+            btnTaiLaiKhach.Location = new Point(388, 62);
+            btnTaiLaiKhach.Name = "btnTaiLaiKhach";
+            btnTaiLaiKhach.Size = new Size(75, 28);
+            btnTaiLaiKhach.TabIndex = 6;
+            btnTaiLaiKhach.Text = "Tải lại";
+            btnTaiLaiKhach.UseVisualStyleBackColor = false;
+            // 
+            // cboKhachHang
+            // 
+            cboKhachHang.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboKhachHang.FlatStyle = FlatStyle.Flat;
+            cboKhachHang.Font = new Font("Segoe UI", 9F);
+            cboKhachHang.FormattingEnabled = true;
+            cboKhachHang.Location = new Point(94, 62);
+            cboKhachHang.Name = "cboKhachHang";
+            cboKhachHang.Size = new Size(286, 28);
+            cboKhachHang.TabIndex = 5;
+            // 
+            // lblKhachHang
+            // 
+            lblKhachHang.AutoSize = true;
+            lblKhachHang.Font = new Font("Segoe UI", 9F);
+            lblKhachHang.ForeColor = Color.FromArgb(130, 112, 96);
+            lblKhachHang.Location = new Point(4, 66);
+            lblKhachHang.Name = "lblKhachHang";
+            lblKhachHang.Size = new Size(84, 20);
+            lblKhachHang.TabIndex = 4;
+            lblKhachHang.Text = "Khách hàng";
             // 
             // btnGopBan
             // 
@@ -746,7 +865,6 @@ namespace QuanLyQuanCaPhe.Forms
             // panelTopbar
             // 
             panelTopbar.BackColor = Color.White;
-            panelTopbar.Controls.Add(btnUserMenu);
             panelTopbar.Controls.Add(btnLamMoi);
             panelTopbar.Controls.Add(txtSearch);
             panelTopbar.Controls.Add(lblPageTitle);
@@ -757,33 +875,6 @@ namespace QuanLyQuanCaPhe.Forms
             panelTopbar.Size = new Size(1134, 80);
             panelTopbar.TabIndex = 0;
             panelTopbar.Paint += panelTopbar_Paint;
-            // 
-            // btnUserMenu
-            // 
-            btnUserMenu.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnUserMenu.FlatAppearance.BorderSize = 0;
-            btnUserMenu.FlatStyle = FlatStyle.Flat;
-            btnUserMenu.Font = new Font("Segoe UI", 10F);
-            btnUserMenu.ForeColor = Color.DimGray;
-            btnUserMenu.Location = new Point(1087, 24);
-            btnUserMenu.Name = "btnUserMenu";
-            btnUserMenu.Size = new Size(24, 28);
-            btnUserMenu.TabIndex = 4;
-            btnUserMenu.Text = "▾";
-            btnUserMenu.UseVisualStyleBackColor = true;
-            // 
-            // txtSearch
-            // 
-            txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtSearch.BackColor = Color.FromArgb(248, 245, 241);
-            txtSearch.BorderStyle = BorderStyle.FixedSingle;
-            txtSearch.Font = new Font("Segoe UI", 10F);
-            txtSearch.ForeColor = Color.DimGray;
-            txtSearch.Location = new Point(245, 23);
-            txtSearch.Name = "txtSearch";
-            txtSearch.PlaceholderText = "🔍  Tìm bàn hoặc món";
-            txtSearch.Size = new Size(280, 30);
-            txtSearch.TabIndex = 1;
             // 
             // btnLamMoi
             // 
@@ -799,6 +890,19 @@ namespace QuanLyQuanCaPhe.Forms
             btnLamMoi.Text = "Làm mới";
             btnLamMoi.UseVisualStyleBackColor = false;
             // 
+            // txtSearch
+            // 
+            txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtSearch.BackColor = Color.FromArgb(248, 245, 241);
+            txtSearch.BorderStyle = BorderStyle.FixedSingle;
+            txtSearch.Font = new Font("Segoe UI", 10F);
+            txtSearch.ForeColor = Color.DimGray;
+            txtSearch.Location = new Point(245, 23);
+            txtSearch.Name = "txtSearch";
+            txtSearch.PlaceholderText = "🔍  Tìm bàn hoặc món";
+            txtSearch.Size = new Size(280, 30);
+            txtSearch.TabIndex = 1;
+            // 
             // lblPageTitle
             // 
             lblPageTitle.AutoSize = true;
@@ -809,50 +913,6 @@ namespace QuanLyQuanCaPhe.Forms
             lblPageTitle.Size = new Size(181, 32);
             lblPageTitle.TabIndex = 0;
             lblPageTitle.Text = "Quầy bán hàng";
-            // 
-            // colTenMon
-            // 
-            colTenMon.FillWeight = 135F;
-            colTenMon.HeaderText = "Tên món";
-            colTenMon.MinimumWidth = 6;
-            colTenMon.Name = "colTenMon";
-            colTenMon.ReadOnly = true;
-            // 
-            // colSoLuong
-            // 
-            colSoLuong.FillWeight = 78F;
-            colSoLuong.HeaderText = "Số lượng";
-            colSoLuong.MinimumWidth = 6;
-            colSoLuong.Name = "colSoLuong";
-            colSoLuong.ReadOnly = true;
-            // 
-            // colDonGia
-            // 
-            colDonGia.FillWeight = 86F;
-            colDonGia.HeaderText = "Đơn giá";
-            colDonGia.MinimumWidth = 6;
-            colDonGia.Name = "colDonGia";
-            colDonGia.ReadOnly = true;
-            // 
-            // colThanhTien
-            // 
-            colThanhTien.FillWeight = 94F;
-            colThanhTien.HeaderText = "Thành tiền";
-            colThanhTien.MinimumWidth = 6;
-            colThanhTien.Name = "colThanhTien";
-            colThanhTien.ReadOnly = true;
-            // 
-            // colXoa
-            // 
-            colXoa.FillWeight = 58F;
-            colXoa.HeaderText = "Xóa";
-            colXoa.MinimumWidth = 6;
-            colXoa.Name = "colXoa";
-            colXoa.ReadOnly = true;
-            colXoa.Resizable = DataGridViewTriState.True;
-            colXoa.SortMode = DataGridViewColumnSortMode.Automatic;
-            colXoa.Text = "Xóa";
-            colXoa.UseColumnTextForButtonValue = true;
             // 
             // frmBanHang
             // 
@@ -901,6 +961,7 @@ namespace QuanLyQuanCaPhe.Forms
         private System.Windows.Forms.Button btnBanHang;
         private System.Windows.Forms.Button btnQuanLyBan;
         private System.Windows.Forms.Button btnQuanLyMon;
+        private System.Windows.Forms.Button btnCongThuc;
         private System.Windows.Forms.Button btnHoaDon;
         private System.Windows.Forms.Button btnKhachHang;
         private System.Windows.Forms.Button btnNhanVien;
@@ -923,6 +984,10 @@ namespace QuanLyQuanCaPhe.Forms
         private System.Windows.Forms.Label lblTamTinh;
         private System.Windows.Forms.DataGridView dgvOrder;
         private System.Windows.Forms.Panel panelOrderHeader;
+        private System.Windows.Forms.Button btnThemNhanhKhach;
+        private System.Windows.Forms.Button btnTaiLaiKhach;
+        private System.Windows.Forms.ComboBox cboKhachHang;
+        private System.Windows.Forms.Label lblKhachHang;
         private System.Windows.Forms.Button btnGopBan;
         private System.Windows.Forms.Button btnChuyenBan;
         private System.Windows.Forms.Label lblOrderMeta;
@@ -942,7 +1007,6 @@ namespace QuanLyQuanCaPhe.Forms
         private System.Windows.Forms.Label lblThongTinBan;
         private System.Windows.Forms.Label lblTablesTitle;
         private System.Windows.Forms.Panel panelTopbar;
-        private System.Windows.Forms.Button btnUserMenu;
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Button btnLamMoi;
         private System.Windows.Forms.Label lblPageTitle;

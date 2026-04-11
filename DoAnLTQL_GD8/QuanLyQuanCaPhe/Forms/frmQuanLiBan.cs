@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Navigation;
 
 namespace QuanLyQuanCaPhe.Forms
 {
@@ -15,6 +16,7 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly PermissionBUS _permissionBUS = new();
         private int? _banDangChonId;
         private bool _dangDongBoChonTrenGrid;
+        private bool _dangXuLyChuyenGopBan;
 
         public frmQuanLiBan(bool isEmbedded = false)
         {
@@ -32,18 +34,18 @@ namespace QuanLyQuanCaPhe.Forms
 
             cboKhuVuc.SelectedIndexChanged += FilterControl_Changed;
             cboTrangThai.SelectedIndexChanged += FilterControl_Changed;
-            txtSearch.TextChanged += FilterControl_Changed;
+            btnLamMoi.Click += btnLamMoi_Click;
             dgvDanhSachBan.KeyDown += dgvDanhSachBan_KeyDown;
             dgvDanhSachBan.SelectionChanged += dgvDanhSachBan_SelectionChanged;
-            KhoiTaoNutLamMoi();
 
-            btnBanHang.Click += (_, _) => OpenStandaloneForm(new frmBanHang(), PermissionFeatures.BanHang);
-            btnQuanLyBan.Click += (_, _) => OpenStandaloneForm(new frmQuanLiBan(), PermissionFeatures.Menu);
-            btnQuanLyMon.Click += (_, _) => OpenStandaloneForm(new frmQuanLiMon(), PermissionFeatures.Menu);
-            btnKhachHang.Click += (_, _) => OpenStandaloneForm(new frmKhachHang(), PermissionFeatures.KhachHang);
-            btnNhanVien.Click += (_, _) => OpenStandaloneForm(new frmNhanVien(), PermissionFeatures.NhanVien);
-            btnHoaDon.Click += (_, _) => OpenStandaloneForm(new frmHoaDon(), PermissionFeatures.HoaDon);
-            btnThongKe.Click += (_, _) => MoTinhNangThongKe();
+            btnBanHang.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.BanHang, () => new frmBanHang(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnQuanLyBan.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.Menu, () => new frmQuanLiBan(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnQuanLyMon.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.Menu, () => new frmQuanLiMon(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnCongThuc.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.Menu, () => new frmCongThuc(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnKhachHang.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.KhachHang, () => new frmKhachHang(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnNhanVien.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.NhanVien, () => new frmNhanVien(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnHoaDon.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.HoaDon, () => new frmHoaDon(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
+            btnThongKe.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.ThongKe, () => new frmThongKe(isEmbedded: true), onCurrentFormReactivated: RefreshView, skipNavigation: _isEmbedded);
             btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
         }
 
@@ -60,6 +62,11 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void frmQuanLiBan_Load(object? sender, EventArgs e)
         {
+            if (ChildFormRuntimePolicy.TryBlockStandalone(this, _isEmbedded, "Quan ly ban"))
+            {
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.Menu, PermissionActions.View, "Bạn không có quyền truy cập chức năng Quản lý bàn.");
@@ -118,33 +125,11 @@ namespace QuanLyQuanCaPhe.Forms
             btnBanHang.Visible = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
             btnQuanLyBan.Visible = coQuyenMenu;
             btnQuanLyMon.Visible = coQuyenMenu;
+            btnCongThuc.Visible = coQuyenMenu;
             btnKhachHang.Visible = coQuyenKhachHang;
             btnHoaDon.Visible = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
             btnNhanVien.Visible = _permissionBUS.CanManageEmployees();
             btnThongKe.Visible = _permissionBUS.CanViewReport();
-        }
-
-        private void KhoiTaoNutLamMoi()
-        {
-            var btnLamMoi = new Button
-            {
-                BackColor = Color.FromArgb(248, 245, 241),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = Color.FromArgb(65, 48, 39),
-                Location = new Point(txtSearch.Right + 12, txtSearch.Top),
-                Name = "btnLamMoiBan",
-                Size = new Size(96, 30),
-                TabStop = false,
-                Text = "Làm mới",
-                UseVisualStyleBackColor = false
-            };
-
-            btnLamMoi.FlatAppearance.BorderColor = Color.FromArgb(224, 214, 203);
-            btnLamMoi.Click += btnLamMoi_Click;
-
-            panelTopbar.Controls.Add(btnLamMoi);
-            btnLamMoi.BringToFront();
         }
 
         private void LoadThongKe()
@@ -160,7 +145,7 @@ namespace QuanLyQuanCaPhe.Forms
         {
             var khuVuc = cboKhuVuc.SelectedItem?.ToString();
             var trangThai = cboTrangThai.SelectedItem?.ToString();
-            var tuKhoa = txtSearch.Text.Trim();
+            var tuKhoa = string.Empty;
 
             var dsBan = _banBUS.LayDanhSachBan(khuVuc, trangThai, tuKhoa);
 
@@ -216,17 +201,17 @@ namespace QuanLyQuanCaPhe.Forms
 
                 switch (trangThaiText)
                 {
-                    case "Sẵn sàng":
-                        btnBan.BackColor = Color.LightCyan;
-                        btnBan.ForeColor = Color.DarkCyan;
+                    case "Trống":
+                        btnBan.BackColor = Color.FromArgb(230, 246, 236);
+                        btnBan.ForeColor = Color.FromArgb(33, 112, 57);
                         break;
-                    case "Đang phục vụ":
-                        btnBan.BackColor = Color.LightGoldenrodYellow;
-                        btnBan.ForeColor = Color.DarkOrange;
+                    case "Có khách":
+                        btnBan.BackColor = Color.FromArgb(255, 236, 232);
+                        btnBan.ForeColor = Color.FromArgb(156, 43, 30);
                         break;
-                    case "Đặt trước":
-                        btnBan.BackColor = Color.MistyRose;
-                        btnBan.ForeColor = Color.DarkRed;
+                    case "Chờ dọn / Đã thanh toán":
+                        btnBan.BackColor = Color.FromArgb(255, 246, 214);
+                        btnBan.ForeColor = Color.FromArgb(148, 108, 0);
                         break;
                 }
 
@@ -285,8 +270,13 @@ namespace QuanLyQuanCaPhe.Forms
             RefreshView();
         }
 
-        private void btnGopBan_Click(object? sender, EventArgs e)
+        private async void btnGopBan_Click(object? sender, EventArgs e)
         {
+            if (_dangXuLyChuyenGopBan)
+            {
+                return;
+            }
+
             var banNguon = GetBanDangChon();
             if (banNguon == null)
             {
@@ -319,16 +309,45 @@ namespace QuanLyQuanCaPhe.Forms
                 Left = 105,
                 Top = 18,
                 Width = 290,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                DataSource = dsBanDich,
-                DisplayMember = nameof(BanDTO.TenBan),
-                ValueMember = nameof(BanDTO.ID)
+                DropDownStyle = ComboBoxStyle.DropDownList
             };
 
             var rdoChuyenBan = new RadioButton { Left = 105, Top = 58, Width = 120, Text = "Chuyển bàn", Checked = true };
             var rdoGopBan = new RadioButton { Left = 230, Top = 58, Width = 120, Text = "Gộp bàn" };
             var btnThucHien = new Button { Left = 239, Top = 108, Width = 75, Text = "Lưu", DialogResult = DialogResult.OK };
             var btnHuy = new Button { Left = 320, Top = 108, Width = 75, Text = "Hủy", DialogResult = DialogResult.Cancel };
+
+            void CapNhatDanhSachBanDich(bool laChuyenBan)
+            {
+                var danhSachLoc = dsBanDich
+                    .Where(x => laChuyenBan ? x.TrangThai == 0 : x.TrangThai == 1)
+                    .ToList();
+
+                cboBanDich.DataSource = danhSachLoc;
+                cboBanDich.DisplayMember = nameof(BanDTO.TenBan);
+                cboBanDich.ValueMember = nameof(BanDTO.ID);
+
+                cboBanDich.Enabled = danhSachLoc.Count > 0;
+                btnThucHien.Enabled = danhSachLoc.Count > 0;
+            }
+
+            rdoChuyenBan.CheckedChanged += (_, _) =>
+            {
+                if (rdoChuyenBan.Checked)
+                {
+                    CapNhatDanhSachBanDich(laChuyenBan: true);
+                }
+            };
+
+            rdoGopBan.CheckedChanged += (_, _) =>
+            {
+                if (rdoGopBan.Checked)
+                {
+                    CapNhatDanhSachBanDich(laChuyenBan: false);
+                }
+            };
+
+            CapNhatDanhSachBanDich(laChuyenBan: true);
 
             dialog.Controls.AddRange(new Control[] { lblBanDich, cboBanDich, rdoChuyenBan, rdoGopBan, btnThucHien, btnHuy });
             dialog.AcceptButton = btnThucHien;
@@ -341,16 +360,37 @@ namespace QuanLyQuanCaPhe.Forms
 
             if (cboBanDich.SelectedValue is not int banDichId)
             {
-                MessageBox.Show("Vui lòng chọn bàn đích.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    rdoChuyenBan.Checked
+                        ? "Không có bàn trống để chuyển."
+                        : "Không có bàn đang phục vụ để gộp.",
+                    "Thông báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
                 return;
             }
 
-            var result = _banBUS.ChuyenHoacGopBan(new BanChuyenGopRequestDTO
+            var request = new BanChuyenGopRequestDTO
             {
                 BanNguonId = banNguon.ID,
                 BanDichId = banDichId,
                 LaChuyenBan = rdoChuyenBan.Checked
-            });
+            };
+
+            _dangXuLyChuyenGopBan = true;
+            CapNhatTrangThaiDangXuLyBan(true);
+
+            BanActionResultDTO result;
+            try
+            {
+                result = await Task.Run(() => _banBUS.ChuyenHoacGopBan(request));
+            }
+            finally
+            {
+                _dangXuLyChuyenGopBan = false;
+                CapNhatTrangThaiDangXuLyBan(false);
+            }
+
             if (!result.ThanhCong)
             {
                 MessageBox.Show(result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -499,39 +539,19 @@ namespace QuanLyQuanCaPhe.Forms
             LoadDanhSachBanLenGrid();
         }
 
-        private void OpenStandaloneForm(Form targetForm, string feature)
+        private void CapNhatTrangThaiDangXuLyBan(bool dangXuLy)
         {
-            if (_isEmbedded)
-            {
-                targetForm.Dispose();
-                return;
-            }
+            UseWaitCursor = dangXuLy;
 
-            if (!_permissionBUS.CheckPermission(feature, PermissionActions.View))
-            {
-                targetForm.Dispose();
-                MessageBox.Show("Ban khong co quyen truy cap chuc nang nay.", "Thong bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            btnThemBan.Enabled = !dangXuLy;
+            btnGopBan.Enabled = !dangXuLy;
+            btnXoaBan.Enabled = !dangXuLy;
+            btnLamMoi.Enabled = !dangXuLy;
 
-            Hide();
-            targetForm.FormClosed += (_, _) =>
-            {
-                if (!IsDisposed && !Disposing)
-                {
-                    Show();
-                    BringToFront();
-                    Activate();
-                    RefreshView();
-                }
-            };
-
-            targetForm.Show(this);
-        }
-
-        private void MoTinhNangThongKe()
-        {
-            OpenStandaloneForm(new frmThongKe(), PermissionFeatures.ThongKe);
+            cboKhuVuc.Enabled = !dangXuLy;
+            cboTrangThai.Enabled = !dangXuLy;
+            dgvDanhSachBan.Enabled = !dangXuLy;
+            flowBanSoDo.Enabled = !dangXuLy;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
