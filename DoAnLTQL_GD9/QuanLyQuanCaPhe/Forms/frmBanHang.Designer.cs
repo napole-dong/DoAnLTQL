@@ -217,7 +217,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnCongThuc.Padding = new Padding(20, 0, 0, 0);
             btnCongThuc.Size = new Size(230, 48);
             btnCongThuc.TabIndex = 3;
-            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.Text = "\U0001f9ea  Công thức";
             btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
             btnCongThuc.UseVisualStyleBackColor = true;
             // 
@@ -396,7 +396,7 @@ namespace QuanLyQuanCaPhe.Forms
             dgvOrder.Dock = DockStyle.Fill;
             dgvOrder.EnableHeadersVisualStyles = false;
             dgvOrder.GridColor = Color.FromArgb(236, 229, 221);
-            dgvOrder.Location = new Point(12, 244);
+            dgvOrder.Location = new Point(12, 278);
             dgvOrder.MultiSelect = false;
             dgvOrder.Name = "dgvOrder";
             dgvOrder.ReadOnly = true;
@@ -404,7 +404,7 @@ namespace QuanLyQuanCaPhe.Forms
             dgvOrder.RowHeadersWidth = 51;
             dgvOrder.RowTemplate.Height = 32;
             dgvOrder.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvOrder.Size = new Size(576, 178);
+            dgvOrder.Size = new Size(576, 144);
             dgvOrder.TabIndex = 1;
             // 
             // colTenMon
@@ -630,7 +630,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblKhachHang.ForeColor = Color.FromArgb(130, 112, 96);
             lblKhachHang.Location = new Point(4, 66);
             lblKhachHang.Name = "lblKhachHang";
-            lblKhachHang.Size = new Size(84, 20);
+            lblKhachHang.Size = new Size(86, 20);
             lblKhachHang.TabIndex = 4;
             lblKhachHang.Text = "Khách hàng";
             // 
@@ -883,7 +883,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnLamMoi.FlatStyle = FlatStyle.Flat;
             btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
             btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
-            btnLamMoi.Location = new Point(531, 23);
+            btnLamMoi.Location = new Point(209, 19);
             btnLamMoi.Name = "btnLamMoi";
             btnLamMoi.Size = new Size(95, 30);
             btnLamMoi.TabIndex = 2;
@@ -897,7 +897,7 @@ namespace QuanLyQuanCaPhe.Forms
             txtSearch.BorderStyle = BorderStyle.FixedSingle;
             txtSearch.Font = new Font("Segoe UI", 10F);
             txtSearch.ForeColor = Color.DimGray;
-            txtSearch.Location = new Point(245, 23);
+            txtSearch.Location = new Point(321, 19);
             txtSearch.Name = "txtSearch";
             txtSearch.PlaceholderText = "🔍  Tìm bàn hoặc món";
             txtSearch.Size = new Size(280, 30);

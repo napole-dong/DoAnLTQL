@@ -411,6 +411,7 @@ public class OrderService : IOrderService
                 var soLuongXoaTaiDong = Math.Min(soLuongCanXoa, chiTiet.SoLuongBan);
                 if (soLuongXoaTaiDong >= chiTiet.SoLuongBan)
                 {
+                    hoaDon.HoaDon_ChiTiet.Remove(chiTiet);
                     context.HoaDon_ChiTiet.Remove(chiTiet);
                 }
                 else
@@ -610,6 +611,7 @@ public class OrderService : IOrderService
                 var soLuongGiamTaiDong = Math.Min(soLuongCanGiamMonCu, chiTiet.SoLuongBan);
                 if (soLuongGiamTaiDong >= chiTiet.SoLuongBan)
                 {
+                    hoaDon.HoaDon_ChiTiet.Remove(chiTiet);
                     context.HoaDon_ChiTiet.Remove(chiTiet);
                 }
                 else

@@ -573,7 +573,10 @@ public class HoaDonDAL : IHoaDonRepository
                 TenNhanVien = x.NhanVien.HoVaTen,
                 TrangThai = x.TrangThai,
                 RowVersion = x.RowVersion,
-                TongTien = x.TongTien
+                TongTien = x.HoaDon_ChiTiet
+                    .Where(ct => ct.SoLuongBan > 0)
+                    .Select(ct => (decimal?)ct.ThanhTien)
+                    .Sum() ?? 0m
             });
     }
 
@@ -651,7 +654,10 @@ public class HoaDonDAL : IHoaDonRepository
                 NhanVienID = x.NhanVienID,
                 TenNhanVien = x.NhanVien.HoVaTen,
                 TrangThai = x.TrangThai,
-                TongTien = x.TongTien,
+                TongTien = x.HoaDon_ChiTiet
+                    .Where(ct => ct.SoLuongBan > 0)
+                    .Select(ct => (decimal?)ct.ThanhTien)
+                    .Sum() ?? 0m,
                 RowVersion = x.RowVersion
             })
             .FirstOrDefault();
@@ -698,7 +704,7 @@ public class HoaDonDAL : IHoaDonRepository
             TenNhanVien = hoaDonHeader.TenNhanVien,
             TrangThai = hoaDonHeader.TrangThai,
             RowVersion = hoaDonHeader.RowVersion,
-            TongTien = hoaDonHeader.TongTien,
+            TongTien = chiTietDtos.Sum(x => x.ThanhTien),
             ChiTiet = chiTietDtos
         };
     }
