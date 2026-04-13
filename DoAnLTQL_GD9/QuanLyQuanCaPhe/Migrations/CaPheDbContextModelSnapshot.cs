@@ -130,12 +130,68 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("TenBan")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Ban_TenBan");
+
                     b.HasIndex("TrangThai")
                         .HasDatabaseName("IX_Ban_TrangThai");
 
                     b.ToTable("Ban", null, t =>
                         {
                             t.HasCheckConstraint("CK_Ban_TrangThai", "[TrangThai] IN (0, 1, 2)");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaChiTietPhieuNhap", b =>
+                {
+                    b.Property<int>("PhieuNhapID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NguyenLieuID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DonGiaNhap")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SoLuong")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal>("ThanhTien")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("PhieuNhapID", "NguyenLieuID");
+
+                    b.HasIndex("NguyenLieuID");
+
+                    b.ToTable("ChiTietPhieuNhap", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ChiTietPhieuNhap_DonGiaNhap", "[DonGiaNhap] >= 0");
+
+                            t.HasCheckConstraint("CK_ChiTietPhieuNhap_SoLuong", "[SoLuong] > 0");
+
+                            t.HasCheckConstraint("CK_ChiTietPhieuNhap_ThanhTien", "[ThanhTien] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaChiTietPhieuXuat", b =>
+                {
+                    b.Property<int>("PhieuXuatID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NguyenLieuID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("SoLuong")
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("PhieuXuatID", "NguyenLieuID");
+
+                    b.HasIndex("NguyenLieuID");
+
+                    b.ToTable("ChiTietPhieuXuat", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ChiTietPhieuXuat_SoLuong", "[SoLuong] > 0");
                         });
                 });
 
@@ -226,6 +282,8 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.ToTable("HoaDon", null, t =>
                         {
+                            t.HasCheckConstraint("CK_HoaDon_TongTien_Range", "[TongTien] >= 0 AND [TongTien] <= 1000000000000");
+
                             t.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2, 3)");
                         });
                 });
@@ -264,6 +322,11 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasDefaultValue(false);
 
                     b.HasKey("ID");
+
+                    b.HasIndex("DienThoai")
+                        .IsUnique()
+                        .HasDatabaseName("UX_KhachHang_DienThoai_Active")
+                        .HasFilter("[IsDeleted] = 0 AND [DienThoai] IS NOT NULL");
 
                     b.HasIndex("IsDeleted");
 
@@ -304,6 +367,11 @@ namespace QuanLyQuanCaPhe.Migrations
                     b.HasKey("ID");
 
                     b.HasIndex("IsDeleted");
+
+                    b.HasIndex("TenLoai")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LoaiMon_TenLoai_Active")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("LoaiMon", (string)null);
                 });
@@ -368,6 +436,8 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.ToTable("Mon", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Mon_DonGia_Range", "[DonGia] >= 0 AND [DonGia] <= 1000000000");
+
                             t.HasCheckConstraint("CK_Mon_TrangThai", "[TrangThai] IN (0, 1, 2)");
                         });
                 });
@@ -413,6 +483,10 @@ namespace QuanLyQuanCaPhe.Migrations
 
                     b.ToTable("NguyenLieu", null, t =>
                         {
+                            t.HasCheckConstraint("CK_NguyenLieu_GiaNhapGanNhat_NonNegative", "[GiaNhapGanNhat] >= 0");
+
+                            t.HasCheckConstraint("CK_NguyenLieu_SoLuongTon_NonNegative", "[SoLuongTon] >= 0");
+
                             t.HasCheckConstraint("CK_NguyenLieu_TrangThai", "[TrangThai] IN (0, 1, 2)");
                         });
                 });
@@ -501,21 +575,17 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<decimal>("GiaNhap")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime>("NgayNhap")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSDATETIME()");
 
-                    b.Property<int>("NguyenLieuID")
+                    b.Property<int>("NhanVienID")
                         .HasColumnType("int");
-
-                    b.Property<decimal>("SoLuongNhap")
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("ID");
 
-                    b.HasIndex("NguyenLieuID");
+                    b.HasIndex("NhanVienID", "NgayNhap");
 
                     b.ToTable("PhieuNhapKho", (string)null);
                 });
@@ -538,20 +608,14 @@ namespace QuanLyQuanCaPhe.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSDATETIME()");
 
-                    b.Property<int>("NguyenLieuID")
+                    b.Property<int>("NhanVienID")
                         .HasColumnType("int");
-
-                    b.Property<decimal>("SoLuongXuat")
-                        .HasColumnType("decimal(18,3)");
 
                     b.HasKey("ID");
 
-                    b.HasIndex("NguyenLieuID", "NgayXuat");
+                    b.HasIndex("NhanVienID", "NgayXuat");
 
-                    b.ToTable("PhieuXuatKho", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_PhieuXuatKho_SoLuongXuat", "[SoLuongXuat] > 0");
-                        });
+                    b.ToTable("PhieuXuatKho", (string)null);
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaUser", b =>
@@ -647,6 +711,44 @@ namespace QuanLyQuanCaPhe.Migrations
                     b.Navigation("Mon");
                 });
 
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaChiTietPhieuNhap", b =>
+                {
+                    b.HasOne("QuanLyQuanCaPhe.Data.dtaNguyenLieu", "NguyenLieu")
+                        .WithMany("ChiTietPhieuNhap")
+                        .HasForeignKey("NguyenLieuID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyQuanCaPhe.Data.dtaPhieuNhapKho", "PhieuNhap")
+                        .WithMany("ChiTietPhieuNhap")
+                        .HasForeignKey("PhieuNhapID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("NguyenLieu");
+
+                    b.Navigation("PhieuNhap");
+                });
+
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaChiTietPhieuXuat", b =>
+                {
+                    b.HasOne("QuanLyQuanCaPhe.Data.dtaNguyenLieu", "NguyenLieu")
+                        .WithMany("ChiTietPhieuXuat")
+                        .HasForeignKey("NguyenLieuID")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("QuanLyQuanCaPhe.Data.dtaPhieuXuatKho", "PhieuXuat")
+                        .WithMany("ChiTietPhieuXuat")
+                        .HasForeignKey("PhieuXuatID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("NguyenLieu");
+
+                    b.Navigation("PhieuXuat");
+                });
+
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaCongThucMon", b =>
                 {
                     b.HasOne("QuanLyQuanCaPhe.Data.dtaMon", "Mon")
@@ -716,24 +818,24 @@ namespace QuanLyQuanCaPhe.Migrations
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaPhieuNhapKho", b =>
                 {
-                    b.HasOne("QuanLyQuanCaPhe.Data.dtaNguyenLieu", "NguyenLieu")
+                    b.HasOne("QuanLyQuanCaPhe.Data.dtaNhanVien", "NhanVien")
                         .WithMany("PhieuNhapKho")
-                        .HasForeignKey("NguyenLieuID")
+                        .HasForeignKey("NhanVienID")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("NguyenLieu");
+                    b.Navigation("NhanVien");
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaPhieuXuatKho", b =>
                 {
-                    b.HasOne("QuanLyQuanCaPhe.Data.dtaNguyenLieu", "NguyenLieu")
+                    b.HasOne("QuanLyQuanCaPhe.Data.dtaNhanVien", "NhanVien")
                         .WithMany("PhieuXuatKho")
-                        .HasForeignKey("NguyenLieuID")
+                        .HasForeignKey("NhanVienID")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("NguyenLieu");
+                    b.Navigation("NhanVien");
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaUser", b =>
@@ -784,18 +886,32 @@ namespace QuanLyQuanCaPhe.Migrations
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaNguyenLieu", b =>
                 {
+                    b.Navigation("ChiTietPhieuNhap");
+
+                    b.Navigation("ChiTietPhieuXuat");
+
                     b.Navigation("CongThucMon");
-
-                    b.Navigation("PhieuNhapKho");
-
-                    b.Navigation("PhieuXuatKho");
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaNhanVien", b =>
                 {
                     b.Navigation("HoaDon");
 
+                    b.Navigation("PhieuNhapKho");
+
+                    b.Navigation("PhieuXuatKho");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaPhieuNhapKho", b =>
+                {
+                    b.Navigation("ChiTietPhieuNhap");
+                });
+
+            modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaPhieuXuatKho", b =>
+                {
+                    b.Navigation("ChiTietPhieuXuat");
                 });
 
             modelBuilder.Entity("QuanLyQuanCaPhe.Data.dtaVaiTro", b =>

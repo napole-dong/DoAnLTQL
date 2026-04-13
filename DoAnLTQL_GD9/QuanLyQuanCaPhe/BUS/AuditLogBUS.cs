@@ -22,6 +22,7 @@ public class AuditLogBUS : IAuditLogService
             ["DELETE_PRODUCT"] = "Warning",
             ["CREATE_INVOICE"] = "Info",
             ["UPDATE_INVOICE"] = "Info",
+            ["VOID_INVOICE"] = "Warning",
             ["DELETE_INVOICE"] = "Warning",
             ["ADD_ITEM"] = "Info",
             ["REMOVE_ITEM"] = "Warning",
@@ -33,12 +34,19 @@ public class AuditLogBUS : IAuditLogService
             ["REMOVEITEM"] = "Warning",
             ["REPLACEITEM"] = "Warning",
             ["CHECKOUT"] = "Info",
+            ["VOID"] = "Warning",
             ["CANCEL"] = "Warning",
             ["CANCEL_INVOICE"] = "Warning",
             ["SOFTDELETENHANVIEN"] = "Warning",
             ["RESTORENHANVIEN"] = "Info",
             ["HARDDELETENHANVIEN"] = "Critical",
-            ["DELETENHANVIEN_TRIGGER"] = "Critical"
+            ["DELETENHANVIEN_TRIGGER"] = "Critical",
+
+            // Print actions
+            ["PRINT_ORIGINAL"] = "Info",
+            ["PRINT_COPY"] = "Info",
+            ["PRINT_DRAFT"] = "Info",
+            ["PRINT_BLOCKED"] = "Warning"
         };
 
     private readonly IAuditLogRepository _auditLogDAL;

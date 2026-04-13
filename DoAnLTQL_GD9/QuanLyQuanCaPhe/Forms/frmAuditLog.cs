@@ -257,6 +257,7 @@ namespace QuanLyQuanCaPhe.Forms
                 string.Equals(actionKey, AuditActions.LoginFailed, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(actionKey, AuditActions.DeleteUser, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(actionKey, AuditActions.DeleteProduct, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(actionKey, AuditActions.VoidInvoice, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(actionKey, AuditActions.DeleteInvoice, StringComparison.OrdinalIgnoreCase);
 
             var isWarningAction =

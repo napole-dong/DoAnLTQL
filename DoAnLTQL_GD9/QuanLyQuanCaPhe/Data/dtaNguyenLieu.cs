@@ -11,7 +11,7 @@ public class dtaNguyenLieu
     public string TrangThaiTextLegacy { get; set; } = string.Empty;
     public int TrangThai { get; set; }
 
-    public ICollection<dtaPhieuNhapKho> PhieuNhapKho { get; set; } = new List<dtaPhieuNhapKho>();
+    public ICollection<dtaChiTietPhieuNhap> ChiTietPhieuNhap { get; set; } = new List<dtaChiTietPhieuNhap>();
     public ICollection<dtaCongThucMon> CongThucMon { get; set; } = new List<dtaCongThucMon>();
-    public ICollection<dtaPhieuXuatKho> PhieuXuatKho { get; set; } = new List<dtaPhieuXuatKho>();
+    public ICollection<dtaChiTietPhieuXuat> ChiTietPhieuXuat { get; set; } = new List<dtaChiTietPhieuXuat>();
 }

@@ -87,7 +87,8 @@ namespace QuanLyQuanCaPhe
         private static void KhoiTaoDuLieuQuyenMacDinh(IServiceProvider serviceProvider)
         {
             var taiKhoanMacDinhDAL = serviceProvider.GetRequiredService<ITaiKhoanMacDinhRepository>();
-            var ketQuaKhoiTaoTaiKhoan = taiKhoanMacDinhDAL.DamBaoTaiKhoanMacDinh("123");
+            var bootstrapPassword = Environment.GetEnvironmentVariable("CAPHE_BOOTSTRAP_PASSWORD");
+            var ketQuaKhoiTaoTaiKhoan = taiKhoanMacDinhDAL.DamBaoTaiKhoanMacDinh(bootstrapPassword);
 
             AppLogger.Info(
                 $"Default accounts ensured. RolesCreated={ketQuaKhoiTaoTaiKhoan.SoVaiTroTaoMoi}, AccountsCreated={ketQuaKhoiTaoTaiKhoan.SoTaiKhoanTaoMoi}, AccountsUpdated={ketQuaKhoiTaoTaiKhoan.SoTaiKhoanCapNhat}.",

@@ -78,8 +78,6 @@
             colGiaNhapGanNhatKho = new DataGridViewTextBoxColumn();
             colTrangThaiKho = new DataGridViewTextBoxColumn();
             panelDanhSachHeader = new Panel();
-            btnXuatKho = new Button();
-            btnNhapKho = new Button();
             txtTimNguyenLieu = new TextBox();
             lblTimNguyenLieu = new Label();
             lblDanhSachKhoTitle = new Label();
@@ -229,7 +227,7 @@
             btnCongThuc.Padding = new Padding(20, 0, 0, 0);
             btnCongThuc.Size = new Size(230, 48);
             btnCongThuc.TabIndex = 3;
-            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.Text = "\U0001f9ea  Công thức";
             btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
             btnCongThuc.UseVisualStyleBackColor = true;
             // 
@@ -730,8 +728,6 @@
             // panelDanhSachHeader
             // 
             panelDanhSachHeader.BackColor = Color.White;
-            panelDanhSachHeader.Controls.Add(btnXuatKho);
-            panelDanhSachHeader.Controls.Add(btnNhapKho);
             panelDanhSachHeader.Controls.Add(txtTimNguyenLieu);
             panelDanhSachHeader.Controls.Add(lblTimNguyenLieu);
             panelDanhSachHeader.Controls.Add(lblDanhSachKhoTitle);
@@ -741,43 +737,13 @@
             panelDanhSachHeader.Size = new Size(735, 84);
             panelDanhSachHeader.TabIndex = 0;
             // 
-            // btnXuatKho
-            // 
-            btnXuatKho.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnXuatKho.BackColor = Color.FromArgb(154, 106, 71);
-            btnXuatKho.FlatAppearance.BorderSize = 0;
-            btnXuatKho.FlatStyle = FlatStyle.Flat;
-            btnXuatKho.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnXuatKho.ForeColor = Color.White;
-            btnXuatKho.Location = new Point(626, 45);
-            btnXuatKho.Name = "btnXuatKho";
-            btnXuatKho.Size = new Size(95, 32);
-            btnXuatKho.TabIndex = 4;
-            btnXuatKho.Text = "Xuất kho";
-            btnXuatKho.UseVisualStyleBackColor = false;
-            // 
-            // btnNhapKho
-            // 
-            btnNhapKho.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnNhapKho.BackColor = Color.FromArgb(94, 64, 47);
-            btnNhapKho.FlatAppearance.BorderSize = 0;
-            btnNhapKho.FlatStyle = FlatStyle.Flat;
-            btnNhapKho.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnNhapKho.ForeColor = Color.White;
-            btnNhapKho.Location = new Point(525, 45);
-            btnNhapKho.Name = "btnNhapKho";
-            btnNhapKho.Size = new Size(95, 32);
-            btnNhapKho.TabIndex = 3;
-            btnNhapKho.Text = "Nhập kho";
-            btnNhapKho.UseVisualStyleBackColor = false;
-            // 
             // txtTimNguyenLieu
             // 
             txtTimNguyenLieu.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtTimNguyenLieu.BorderStyle = BorderStyle.FixedSingle;
             txtTimNguyenLieu.Location = new Point(152, 48);
             txtTimNguyenLieu.Name = "txtTimNguyenLieu";
-            txtTimNguyenLieu.Size = new Size(360, 27);
+            txtTimNguyenLieu.Size = new Size(566, 27);
             txtTimNguyenLieu.TabIndex = 2;
             // 
             // lblTimNguyenLieu
@@ -1125,8 +1091,6 @@
         private Panel panelDanhSachKho;
         private DataGridView dgvDanhSachKho;
         private Panel panelDanhSachHeader;
-        private Button btnXuatKho;
-        private Button btnNhapKho;
         private TextBox txtTimNguyenLieu;
         private Label lblTimNguyenLieu;
         private Label lblDanhSachKhoTitle;

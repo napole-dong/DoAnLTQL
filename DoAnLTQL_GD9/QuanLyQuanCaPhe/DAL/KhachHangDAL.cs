@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Audit;
+using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.SoftDelete;
 
 namespace QuanLyQuanCaPhe.DAL;
@@ -8,6 +11,12 @@ namespace QuanLyQuanCaPhe.DAL;
 public class KhachHangDAL : IKhachHangRepository
 {
     private readonly ISoftDeleteService _softDeleteService = new SoftDeleteService();
+    private readonly IActivityLogWriter _activityLogWriter;
+
+    public KhachHangDAL(IActivityLogWriter? activityLogWriter = null)
+    {
+        _activityLogWriter = AppServiceProvider.Resolve(activityLogWriter, () => new ActivityLogService());
+    }
 
     public List<KhachHangDTO> GetDanhSachKhach(string? tuKhoa)
     {
@@ -51,6 +60,17 @@ public class KhachHangDAL : IKhachHangRepository
         context.KhachHang.Add(khach);
         context.SaveChanges();
 
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.CreateCustomer,
+            entity: "KhachHang",
+            entityId: khach.ID.ToString(),
+            description: $"Đã thêm khách hàng {khach.HoVaTen}.",
+            oldValue: null,
+            newValue: TaoKhachHangSnapshot(khach),
+            performedBy: nguoiDung?.TenDangNhap);
+
         khachDTO.ID = khach.ID;
         return khachDTO;
     }
@@ -64,10 +84,33 @@ public class KhachHangDAL : IKhachHangRepository
             return false;
         }
 
+        var oldSnapshot = TaoKhachHangSnapshot(khach);
+        var hoVaTenCu = khach.HoVaTen;
+        var dienThoaiCu = khach.DienThoai;
+        var diaChiCu = khach.DiaChi;
+
         khach.HoVaTen = khachDTO.HoVaTen;
         khach.DienThoai = string.IsNullOrWhiteSpace(khachDTO.DienThoai) ? null : khachDTO.DienThoai;
         khach.DiaChi = string.IsNullOrWhiteSpace(khachDTO.DiaChi) ? null : khachDTO.DiaChi;
         context.SaveChanges();
+
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.UpdateCustomer,
+            entity: "KhachHang",
+            entityId: khach.ID.ToString(),
+            description: TaoMoTaCapNhatKhachHang(
+                khach.ID,
+                hoVaTenCu,
+                khach.HoVaTen,
+                dienThoaiCu,
+                khach.DienThoai,
+                diaChiCu,
+                khach.DiaChi),
+            oldValue: oldSnapshot,
+            newValue: TaoKhachHangSnapshot(khach),
+            performedBy: nguoiDung?.TenDangNhap);
 
         return true;
     }
@@ -83,7 +126,25 @@ public class KhachHangDAL : IKhachHangRepository
             return false;
         }
 
-        return _softDeleteService.SoftDelete(context, khach);
+        var oldSnapshot = TaoKhachHangSnapshot(khach);
+        var daXoa = _softDeleteService.SoftDelete(context, khach);
+        if (!daXoa)
+        {
+            return false;
+        }
+
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.DeleteCustomer,
+            entity: "KhachHang",
+            entityId: khach.ID.ToString(),
+            description: $"Đã ngừng hoạt động khách hàng {khach.HoVaTen}.",
+            oldValue: oldSnapshot,
+            newValue: TaoKhachHangSnapshot(khach),
+            performedBy: nguoiDung?.TenDangNhap);
+
+        return true;
     }
 
     public bool RestoreKhach(int khachId)
@@ -97,7 +158,20 @@ public class KhachHangDAL : IKhachHangRepository
             return false;
         }
 
+        var oldSnapshot = TaoKhachHangSnapshot(khach);
         _softDeleteService.Restore(context, khach);
+
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.RestoreCustomer,
+            entity: "KhachHang",
+            entityId: khach.ID.ToString(),
+            description: $"Đã khôi phục khách hàng {khach.HoVaTen}.",
+            oldValue: oldSnapshot,
+            newValue: TaoKhachHangSnapshot(khach),
+            performedBy: nguoiDung?.TenDangNhap);
+
         return true;
     }
 
@@ -112,8 +186,68 @@ public class KhachHangDAL : IKhachHangRepository
             return false;
         }
 
+        var oldSnapshot = TaoKhachHangSnapshot(khach);
         _softDeleteService.HardDelete(context, khach);
+
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.HardDeleteCustomer,
+            entity: "KhachHang",
+            entityId: khachId.ToString(),
+            description: $"Đã xóa vĩnh viễn khách hàng {khach.HoVaTen}.",
+            oldValue: oldSnapshot,
+            newValue: new
+            {
+                DeletedPermanently = true,
+                KhachHangId = khachId
+            },
+            performedBy: nguoiDung?.TenDangNhap);
+
         return true;
+    }
+
+    private static object TaoKhachHangSnapshot(dtaKhachHang khach)
+    {
+        return new
+        {
+            khach.ID,
+            khach.HoVaTen,
+            khach.DienThoai,
+            khach.DiaChi,
+            khach.IsDeleted,
+            khach.DeletedAt,
+            khach.DeletedBy
+        };
+    }
+
+    private static string TaoMoTaCapNhatKhachHang(
+        int khachId,
+        string hoVaTenCu,
+        string hoVaTenMoi,
+        string? dienThoaiCu,
+        string? dienThoaiMoi,
+        string? diaChiCu,
+        string? diaChiMoi)
+    {
+        var moTa = $"Đã cập nhật khách hàng {hoVaTenMoi} (ID: {khachId}).";
+
+        if (!string.Equals(hoVaTenCu, hoVaTenMoi, StringComparison.OrdinalIgnoreCase))
+        {
+            moTa += $" Họ tên: {hoVaTenCu} -> {hoVaTenMoi}.";
+        }
+
+        if (!string.Equals(dienThoaiCu ?? string.Empty, dienThoaiMoi ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            moTa += $" Điện thoại: {(dienThoaiCu ?? "-")} -> {(dienThoaiMoi ?? "-")}.";
+        }
+
+        if (!string.Equals(diaChiCu ?? string.Empty, diaChiMoi ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            moTa += $" Địa chỉ: {(diaChiCu ?? "-")} -> {(diaChiMoi ?? "-")}.";
+        }
+
+        return moTa;
     }
 
     private static List<KhachHangReadModel> QueryDanhSachKhachRows(CaPheDbContext context, string? tuKhoa)

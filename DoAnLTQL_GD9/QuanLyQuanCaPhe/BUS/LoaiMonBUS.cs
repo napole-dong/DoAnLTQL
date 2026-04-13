@@ -103,27 +103,8 @@ public class LoaiMonBUS : ILoaiMonService
             return (false, "Vui lòng chọn loại món cần xóa.");
         }
 
-        var coMonDangThuocLoai = _loaiMonDAL.LoaiDangSuDung(id);
-
-        var daXoa = _loaiMonDAL.XoaLoai(id);
-        if (daXoa)
-        {
-            return coMonDangThuocLoai
-                ? (true, "Đã ngừng bán toàn bộ món thuộc loại và xóa loại món thành công.")
-                : (true, "Xóa loại món thành công.");
-        }
-
-        if (!_loaiMonDAL.LoaiTonTai(id))
-        {
-            return (false, "Không tìm thấy loại món để xóa.");
-        }
-
-        if (_loaiMonDAL.LoaiDangSuDung(id))
-        {
-            return (false, "Không thể xóa loại món do ràng buộc dữ liệu.");
-        }
-
-        return (false, "Không thể xóa loại món do ràng buộc dữ liệu.");
+        var ketQua = _loaiMonDAL.XoaLoai(id);
+        return (ketQua.ThanhCong, ketQua.ThongBao);
     }
 
     public (bool ThanhCong, string ThongBao) ChuyenMonSangLoaiKhac(int loaiNguonId, int loaiDichId)

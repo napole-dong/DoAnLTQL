@@ -15,13 +15,8 @@ public sealed class TaiKhoanMacDinhDAL : ITaiKhoanMacDinhRepository
 
     public sealed record KhoiTaoTaiKhoanMacDinhResult(int SoVaiTroTaoMoi, int SoTaiKhoanTaoMoi, int SoTaiKhoanCapNhat);
 
-    public KhoiTaoTaiKhoanMacDinhResult DamBaoTaiKhoanMacDinh(string matKhauMacDinh)
+    public KhoiTaoTaiKhoanMacDinhResult DamBaoTaiKhoanMacDinh(string? matKhauMacDinh)
     {
-        if (string.IsNullOrWhiteSpace(matKhauMacDinh))
-        {
-            throw new ArgumentException("Mat khau mac dinh khong duoc de trong.", nameof(matKhauMacDinh));
-        }
-
         using var context = new CaPheDbContext();
 
         var soVaiTroTaoMoi = 0;
@@ -29,90 +24,79 @@ public sealed class TaiKhoanMacDinhDAL : ITaiKhoanMacDinhRepository
         var soTaiKhoanCapNhat = 0;
 
         var vaiTroMap = DamBaoVaiTroMacDinh(context, ref soVaiTroTaoMoi);
+        var adminRoleId = vaiTroMap[RoleEnum.Admin];
+
+        var daTonTaiTaiKhoanAdmin = context.User
+            .AsNoTracking()
+            .Any(x => x.VaiTroID == adminRoleId);
+
+        var matKhauMacDinhChuan = string.IsNullOrWhiteSpace(matKhauMacDinh)
+            ? null
+            : matKhauMacDinh.Trim();
+        var coMatKhauBootstrap = !string.IsNullOrWhiteSpace(matKhauMacDinhChuan);
+
+        if (!daTonTaiTaiKhoanAdmin && !coMatKhauBootstrap)
+        {
+            throw new InvalidOperationException("Missing CAPHE_BOOTSTRAP_PASSWORD for first-time bootstrap.");
+        }
+
+        if (daTonTaiTaiKhoanAdmin && !coMatKhauBootstrap)
+        {
+            return new KhoiTaoTaiKhoanMacDinhResult(soVaiTroTaoMoi, 0, soTaiKhoanCapNhat);
+        }
+
+        var matKhauDaBam = MatKhauService.BamMatKhau(matKhauMacDinhChuan!);
 
         foreach (var taiKhoan in TaiKhoanMacDinh)
         {
-            var vaiTroId = vaiTroMap[taiKhoan.VaiTro];
-            var user = context.User
+            var userHienTai = context.User
                 .FirstOrDefault(x => x.TenDangNhap == taiKhoan.TenDangNhap);
 
-            if (user == null)
+            if (userHienTai != null)
             {
-                var nhanVien = TaoNhanVienMacDinh(taiKhoan.HoVaTen);
-                context.NhanVien.Add(nhanVien);
-                context.SaveChanges();
-
-                context.User.Add(new dtaUser
+                var daCapNhat = false;
+                if (!MatKhauService.KiemTraMatKhau(matKhauMacDinhChuan!, userHienTai.MatKhau))
                 {
-                    NhanVienID = nhanVien.ID,
-                    VaiTroID = vaiTroId,
-                    TenDangNhap = taiKhoan.TenDangNhap,
-                    MatKhau = MatKhauService.BamMatKhau(matKhauMacDinh),
-                    HoatDong = true
-                });
-
-                context.SaveChanges();
-                soTaiKhoanTaoMoi++;
-                continue;
-            }
-
-            var daCapNhat = false;
-
-            if (user.VaiTroID != vaiTroId)
-            {
-                user.VaiTroID = vaiTroId;
-                daCapNhat = true;
-            }
-
-            if (!user.HoatDong)
-            {
-                user.HoatDong = true;
-                daCapNhat = true;
-            }
-
-            if (!MatKhauService.KiemTraMatKhau(matKhauMacDinh, user.MatKhau) || MatKhauService.CanNangCapHash(user.MatKhau))
-            {
-                user.MatKhau = MatKhauService.BamMatKhau(matKhauMacDinh);
-                daCapNhat = true;
-            }
-
-            var nhanVienLienKet = context.NhanVien
-                .IgnoreQueryFilters()
-                .FirstOrDefault(x => x.ID == user.NhanVienID);
-
-            if (nhanVienLienKet == null)
-            {
-                var nhanVienMoi = TaoNhanVienMacDinh(taiKhoan.HoVaTen);
-                context.NhanVien.Add(nhanVienMoi);
-                context.SaveChanges();
-
-                user.NhanVienID = nhanVienMoi.ID;
-                daCapNhat = true;
-            }
-            else
-            {
-                if (nhanVienLienKet.IsDeleted)
-                {
-                    nhanVienLienKet.IsDeleted = false;
-                    nhanVienLienKet.DeletedAt = null;
-                    nhanVienLienKet.DeletedBy = null;
+                    userHienTai.MatKhau = matKhauDaBam;
                     daCapNhat = true;
                 }
 
-                if (string.IsNullOrWhiteSpace(nhanVienLienKet.HoVaTen))
+                var vaiTroMacDinh = vaiTroMap[taiKhoan.VaiTro];
+                if (userHienTai.VaiTroID != vaiTroMacDinh)
                 {
-                    nhanVienLienKet.HoVaTen = taiKhoan.HoVaTen;
+                    userHienTai.VaiTroID = vaiTroMacDinh;
                     daCapNhat = true;
                 }
-            }
 
-            if (!daCapNhat)
-            {
+                if (!userHienTai.HoatDong)
+                {
+                    userHienTai.HoatDong = true;
+                    daCapNhat = true;
+                }
+
+                if (daCapNhat)
+                {
+                    soTaiKhoanCapNhat++;
+                }
+
                 continue;
             }
 
+            context.User.Add(new dtaUser
+            {
+                NhanVien = TaoNhanVienMacDinh(taiKhoan.HoVaTen),
+                VaiTroID = vaiTroMap[taiKhoan.VaiTro],
+                TenDangNhap = taiKhoan.TenDangNhap,
+                MatKhau = matKhauDaBam,
+                HoatDong = true
+            });
+
+            soTaiKhoanTaoMoi++;
+        }
+
+        if (soTaiKhoanTaoMoi > 0 || soTaiKhoanCapNhat > 0)
+        {
             context.SaveChanges();
-            soTaiKhoanCapNhat++;
         }
 
         return new KhoiTaoTaiKhoanMacDinhResult(soVaiTroTaoMoi, soTaiKhoanTaoMoi, soTaiKhoanCapNhat);
@@ -121,6 +105,7 @@ public sealed class TaiKhoanMacDinhDAL : ITaiKhoanMacDinhRepository
     private static Dictionary<RoleEnum, int> DamBaoVaiTroMacDinh(CaPheDbContext context, ref int soVaiTroTaoMoi)
     {
         var ketQua = new Dictionary<RoleEnum, int>();
+        var canLuuThayDoi = false;
 
         foreach (var vaiTro in (RoleEnum[])Enum.GetValues(typeof(RoleEnum)))
         {
@@ -138,10 +123,28 @@ public sealed class TaiKhoanMacDinhDAL : ITaiKhoanMacDinhRepository
                 };
 
                 context.VaiTro.Add(duLieuVaiTro);
-                context.SaveChanges();
                 soVaiTroTaoMoi++;
+                canLuuThayDoi = true;
             }
 
+            ketQua[vaiTro] = duLieuVaiTro.ID;
+        }
+
+        if (canLuuThayDoi)
+        {
+            context.SaveChanges();
+        }
+
+        foreach (var vaiTro in (RoleEnum[])Enum.GetValues(typeof(RoleEnum)))
+        {
+            if (ketQua[vaiTro] > 0)
+            {
+                continue;
+            }
+
+            var tenVaiTro = RoleMapper.ToRoleName(vaiTro);
+            var duLieuVaiTro = context.VaiTro
+                .First(x => x.TenVaiTro == tenVaiTro);
             ketQua[vaiTro] = duLieuVaiTro.ID;
         }
 

@@ -412,7 +412,10 @@ public class BanHangBUS : IBanHangService
 
             if (dongBoKhachHang)
             {
-                var ketQuaCapNhatKhach = _hoaDonDAL.CapNhatKhachHangChoHoaDonMo(phieu.HoaDonID.Value, khachHangId);
+                var ketQuaCapNhatKhach = _hoaDonDAL.CapNhatKhachHangChoHoaDonMo(
+                    phieu.HoaDonID.Value,
+                    khachHangId,
+                    phieu.HoaDonRowVersion);
                 if (!ketQuaCapNhatKhach.ThanhCong)
                 {
                     return (BusMessageCatalog.CreateActionResult(false, ketQuaCapNhatKhach.ThongBao), 0, null);
@@ -507,7 +510,10 @@ public class BanHangBUS : IBanHangService
             return BusMessageCatalog.CreateActionResult(true, string.Empty);
         }
 
-        var ketQuaCapNhatKhach = _hoaDonDAL.CapNhatKhachHangChoHoaDonMo(phieu.HoaDonID.Value, khachHangId);
+        var ketQuaCapNhatKhach = _hoaDonDAL.CapNhatKhachHangChoHoaDonMo(
+            phieu.HoaDonID.Value,
+            khachHangId,
+            phieu.HoaDonRowVersion);
         return ketQuaCapNhatKhach.ThanhCong
             ? BusMessageCatalog.CreateActionResult(true, string.Empty)
             : BusMessageCatalog.CreateActionResult(false, ketQuaCapNhatKhach.ThongBao);

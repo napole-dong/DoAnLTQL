@@ -1,4 +1,4 @@
-﻿using QuanLyQuanCaPhe.BUS;
+using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Presenters;
 using QuanLyQuanCaPhe.Services.Auth;
@@ -6,6 +6,7 @@ using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.HoaDon;
 using QuanLyQuanCaPhe.Services.Navigation;
 using QuanLyQuanCaPhe.Services.UI;
+using QuanLyQuanCaPhe.Services.Diagnostics;
 using System.ComponentModel;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -23,19 +24,14 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly HoaDonPresenter _hoaDonPresenter;
         private readonly SearchDebounceHelper _timKiemDebounce;
 
-        private HoaDonManHinhState _manHinhState = HoaDonManHinhState.Xem;
         private bool _dangNapDuLieu;
         private bool _dangXuLyHuyHoaDon;
         private bool _dangXuLyThuTien;
-        private bool _dangXuLyLuuHoaDon;
         private bool _dangXuLyChiTietHoaDon;
         private int? _hoaDonDangChonId;
         private byte[]? _hoaDonDangChonRowVersion;
         private decimal _tongTienDangChon;
         private BindingList<HoaDonChiTietDTO> _chiTietBindingList = new();
-        private bool _dangXuLyThayDoiChiTiet;
-        private short _soLuongCuTruocKhiSua;
-        private int _monIdDangSua;
         private readonly ContextMenuStrip _menuChiTietHoaDon = new();
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
@@ -95,8 +91,8 @@ namespace QuanLyQuanCaPhe.Forms
             colSoLuong.DataPropertyName = nameof(HoaDonChiTietDTO.SoLuong);
             colDonGia.DataPropertyName = nameof(HoaDonChiTietDTO.DonGiaHienThi);
             colThanhTien.DataPropertyName = nameof(HoaDonChiTietDTO.ThanhTienHienThi);
-            colSoLuong.ReadOnly = false;
-            dgvChiTietHoaDon.EditMode = DataGridViewEditMode.EditOnEnter;
+            colSoLuong.ReadOnly = true;
+            dgvChiTietHoaDon.EditMode = DataGridViewEditMode.EditProgrammatically;
             dgvChiTietHoaDon.AllowUserToDeleteRows = false;
 
             KhoiTaoMenuChiTietHoaDon();
@@ -112,12 +108,7 @@ namespace QuanLyQuanCaPhe.Forms
         {
             Load += frmHoaDon_Load;
             dgvDanhSachHoaDon.SelectionChanged += dgvDanhSachHoaDon_SelectionChanged;
-            dgvChiTietHoaDon.CellBeginEdit += dgvChiTietHoaDon_CellBeginEdit;
-            dgvChiTietHoaDon.CellValidating += dgvChiTietHoaDon_CellValidating;
-            dgvChiTietHoaDon.CellValueChanged += dgvChiTietHoaDon_CellValueChanged;
             dgvChiTietHoaDon.SelectionChanged += dgvChiTietHoaDon_SelectionChanged;
-            dgvChiTietHoaDon.RowsRemoved += dgvChiTietHoaDon_RowsRemoved;
-            dgvChiTietHoaDon.UserDeletedRow += dgvChiTietHoaDon_UserDeletedRow;
             dgvChiTietHoaDon.CellMouseDown += dgvChiTietHoaDon_CellMouseDown;
             dgvChiTietHoaDon.KeyDown += dgvChiTietHoaDon_KeyDown;
             txtTimKiemHoaDon.TextChanged += txtTimKiemHoaDon_TextChanged;
@@ -125,15 +116,11 @@ namespace QuanLyQuanCaPhe.Forms
             btnLocXem.Click += (_, _) => TaiDanhSachHoaDon();
             btnLamMoi.Click += btnLamMoi_Click;
 
-            btnThemMoi.Click += btnThemMoi_Click;
-            btnSua.Click += btnSua_Click;
-            btnLuu.Click += btnLuu_Click;
-            btnBoQua.Click += btnBoQua_Click;
             btnXoaHuy.Click += btnXoaHuy_Click;
 
             btnThemMonVaoHoaDon.Click += btnThemMonVaoHoaDon_Click;
+            btnXoaMonKhoiHoaDon.Click += async (_, _) => await ThuXoaMonDangChonAsync();
             btnXacNhanThuTien.Click += btnXacNhanThuTien_Click;
-            btnInHoaDon.Click += btnInHoaDon_Click;
 
             txtTienKhachDua.TextChanged += txtTienKhachDua_TextChanged;
 
@@ -156,11 +143,6 @@ namespace QuanLyQuanCaPhe.Forms
 
             var menuXoaMon = new ToolStripMenuItem("Xóa món đã chọn");
             menuXoaMon.Click += async (_, _) => await ThuXoaMonDangChonAsync();
-
-            var menuDoiMon = new ToolStripMenuItem("Đổi món theo món đang chọn");
-            menuDoiMon.Click += async (_, _) => await ThuDoiMonDangChonTheoMonDaChonAsync();
-
-            _menuChiTietHoaDon.Items.Add(menuDoiMon);
             _menuChiTietHoaDon.Items.Add(menuXoaMon);
 
             dgvChiTietHoaDon.ContextMenuStrip = _menuChiTietHoaDon;
@@ -197,7 +179,7 @@ namespace QuanLyQuanCaPhe.Forms
             TaiDanhSachBanKhach();
             TaiDanhSachMon();
             TaiDanhSachHoaDon(giuHoaDonDangChon: false);
-            ChuyenStateManHinh(HoaDonManHinhState.Xem);
+            CapNhatDieuKienXuLyNut(LayHoaDonDangChon());
         }
 
         private void ApDungPhanQuyenDieuHuong()
@@ -246,10 +228,9 @@ namespace QuanLyQuanCaPhe.Forms
             cboTrangThaiLoc.Items.AddRange(new object[]
             {
                 "Tất cả",
-                "Draft",
+                "Open",
                 "Paid",
-                "Closed",
-                "Cancelled"
+                "Voided"
             });
         }
 
@@ -257,16 +238,15 @@ namespace QuanLyQuanCaPhe.Forms
         {
             var dsTrangThai = new List<TrangThaiHoaDonOption>
             {
-                new() { Value = (int)HoaDonTrangThai.Draft, Text = HoaDonBUS.ChuyenTrangThaiHoaDon((int)HoaDonTrangThai.Draft) },
+                new() { Value = (int)HoaDonTrangThai.Open, Text = HoaDonBUS.ChuyenTrangThaiHoaDon((int)HoaDonTrangThai.Open) },
                 new() { Value = (int)HoaDonTrangThai.Paid, Text = HoaDonBUS.ChuyenTrangThaiHoaDon((int)HoaDonTrangThai.Paid) },
-                new() { Value = (int)HoaDonTrangThai.Closed, Text = HoaDonBUS.ChuyenTrangThaiHoaDon((int)HoaDonTrangThai.Closed) },
-                new() { Value = (int)HoaDonTrangThai.Cancelled, Text = HoaDonBUS.ChuyenTrangThaiHoaDon((int)HoaDonTrangThai.Cancelled) }
+                new() { Value = (int)HoaDonTrangThai.Voided, Text = HoaDonBUS.ChuyenTrangThaiHoaDon((int)HoaDonTrangThai.Voided) }
             };
 
             cboTrangThai.DataSource = dsTrangThai;
             cboTrangThai.DisplayMember = nameof(TrangThaiHoaDonOption.Text);
             cboTrangThai.ValueMember = nameof(TrangThaiHoaDonOption.Value);
-            cboTrangThai.SelectedValue = (int)HoaDonTrangThai.Draft;
+            cboTrangThai.SelectedValue = (int)HoaDonTrangThai.Open;
             cboTrangThai.Enabled = false;
         }
 
@@ -298,17 +278,29 @@ namespace QuanLyQuanCaPhe.Forms
             }
         }
 
-        private void TaiDanhSachHoaDon(bool giuHoaDonDangChon = true)
+        private async void TaiDanhSachHoaDon(bool giuHoaDonDangChon = true)
         {
             var boLoc = new HoaDonFilterDTO
             {
                 TuKhoa = txtTimKiemHoaDon.Text,
                 TuNgay = dtpTuNgay.Value,
                 DenNgay = dtpDenNgay.Value,
-                TrangThai = HoaDonBUS.ChuyenTextSangTrangThaiLoc(cboTrangThaiLoc.SelectedItem?.ToString())
+                TrangThai = HoaDonBUS.ChuyenTextSangTrangThaiLoc(cboTrangThaiLoc.SelectedItem?.ToString()),
+                PageNumber = 1,
+                PageSize = 50
             };
 
-            var dsHoaDon = _hoaDonBUS.LayDanhSachHoaDon(boLoc);
+            List<HoaDonDTO> dsHoaDon;
+            try
+            {
+                dsHoaDon = await _hoaDonBUS.LayDanhSachHoaDonAsync(boLoc);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error(ex, "TaiDanhSachHoaDon failed.", nameof(frmHoaDon));
+                MessageBox.Show("Không thể tải danh sách hóa đơn. Vui lòng thử lại.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             _dangNapDuLieu = true;
             try
@@ -435,7 +427,7 @@ namespace QuanLyQuanCaPhe.Forms
         {
             txtMaHoaDon.Text = string.Empty;
             dtpNgayTao.Value = DateTime.Now;
-            cboTrangThai.SelectedValue = (int)HoaDonTrangThai.ChuaThanhToan;
+            cboTrangThai.SelectedValue = (int)HoaDonTrangThai.Open;
             _hoaDonDangChonRowVersion = null;
 
             _chiTietBindingList = new BindingList<HoaDonChiTietDTO>();
@@ -466,80 +458,6 @@ namespace QuanLyQuanCaPhe.Forms
             e.SuppressKeyPress = true;
         }
 
-        private void dgvChiTietHoaDon_CellBeginEdit(object? sender, DataGridViewCellCancelEventArgs e)
-        {
-            if (_dangNapDuLieu || e.RowIndex < 0 || e.ColumnIndex != colSoLuong.Index)
-            {
-                return;
-            }
-
-            if (dgvChiTietHoaDon.Rows[e.RowIndex].DataBoundItem is not HoaDonChiTietDTO chiTiet)
-            {
-                return;
-            }
-
-            _soLuongCuTruocKhiSua = chiTiet.SoLuong;
-            _monIdDangSua = chiTiet.MonID;
-        }
-
-        private void dgvChiTietHoaDon_CellValidating(object? sender, DataGridViewCellValidatingEventArgs e)
-        {
-            if (_dangNapDuLieu || _dangXuLyThayDoiChiTiet || e.RowIndex < 0 || e.ColumnIndex != colSoLuong.Index)
-            {
-                return;
-            }
-
-            var hoaDon = LayHoaDonDangChon();
-            if (hoaDon == null || hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
-            {
-                MessageBox.Show("Chỉ cập nhật số lượng cho hóa đơn chưa thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                e.Cancel = true;
-                return;
-            }
-
-            var textSoLuong = (e.FormattedValue?.ToString() ?? string.Empty).Trim();
-            if (!short.TryParse(textSoLuong, out var soLuongMoi) || soLuongMoi < 0)
-            {
-                MessageBox.Show("Số lượng món phải lớn hơn hoặc bằng 0 (nhập 0 để xóa món).", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                e.Cancel = true;
-            }
-        }
-
-        private async void dgvChiTietHoaDon_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
-        {
-            if (_dangNapDuLieu || _dangXuLyThayDoiChiTiet || e.RowIndex < 0 || e.ColumnIndex != colSoLuong.Index)
-            {
-                return;
-            }
-
-            if (dgvChiTietHoaDon.Rows[e.RowIndex].DataBoundItem is not HoaDonChiTietDTO chiTiet)
-            {
-                return;
-            }
-
-            await XuLyThayDoiSoLuongChiTietAsync(chiTiet);
-        }
-
-        private void dgvChiTietHoaDon_RowsRemoved(object? sender, DataGridViewRowsRemovedEventArgs e)
-        {
-            if (_dangNapDuLieu)
-            {
-                return;
-            }
-
-            CapNhatTongTien();
-        }
-
-        private void dgvChiTietHoaDon_UserDeletedRow(object? sender, DataGridViewRowEventArgs e)
-        {
-            if (_dangNapDuLieu)
-            {
-                return;
-            }
-
-            CapNhatTongTien();
-        }
-
         private void dgvChiTietHoaDon_CellMouseDown(object? sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.RowIndex < 0 || e.Button != MouseButtons.Right)
@@ -564,309 +482,11 @@ namespace QuanLyQuanCaPhe.Forms
             e.SuppressKeyPress = true;
         }
 
-        private async Task XuLyThayDoiSoLuongChiTietAsync(HoaDonChiTietDTO chiTiet)
-        {
-            if (_dangXuLyThayDoiChiTiet
-                || _dangXuLyChiTietHoaDon
-                || _dangXuLyLuuHoaDon
-                || _dangXuLyThuTien
-                || _dangXuLyHuyHoaDon)
-            {
-                return;
-            }
-
-            _dangXuLyChiTietHoaDon = true;
-            CapNhatTrangThaiDangXuLyHoaDon();
-
-            try
-            {
-                if (!TryLayHoaDonDangChonCoTheChinhSua(out var hoaDon))
-                {
-                    TaiDanhSachHoaDon();
-                    return;
-                }
-
-                if (chiTiet.SoLuong < 0)
-                {
-                    MessageBox.Show("Số lượng món phải lớn hơn hoặc bằng 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    KhoiPhucSoLuongCu(chiTiet);
-                    return;
-                }
-
-                if (chiTiet.SoLuong == 0)
-                {
-                    var xacNhan = MessageBox.Show(
-                        $"Xóa món '{chiTiet.TenMon}' khỏi hóa đơn?",
-                        "Xác nhận",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (xacNhan != DialogResult.Yes)
-                    {
-                        KhoiPhucSoLuongCu(chiTiet);
-                        return;
-                    }
-
-                    var soLuongCanXoa = (short)Math.Clamp(_soLuongCuTruocKhiSua > 0 ? _soLuongCuTruocKhiSua : 1, 1, short.MaxValue);
-                    var ketQuaXoa = await Task.Run(() => _orderService.RemoveItemFromOrder(
-                        hoaDon.ID,
-                        chiTiet.MonID,
-                        soLuongCanXoa,
-                        _hoaDonDangChonRowVersion));
-
-                    if (!ketQuaXoa.ThanhCong)
-                    {
-                        if (LaThongBaoXungDotDuLieu(ketQuaXoa.ThongBao))
-                        {
-                            TaiDanhSachHoaDon();
-                        }
-                        else
-                        {
-                            KhoiPhucSoLuongCu(chiTiet);
-                        }
-
-                        MessageBox.Show(ketQuaXoa.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    _dangXuLyThayDoiChiTiet = true;
-                    try
-                    {
-                        _chiTietBindingList.Remove(chiTiet);
-                        _chiTietBindingList.ResetBindings();
-                    }
-                    finally
-                    {
-                        _dangXuLyThayDoiChiTiet = false;
-                    }
-
-                    CapNhatTongTien();
-                    TaiDanhSachHoaDon();
-                    return;
-                }
-
-                if (_monIdDangSua == chiTiet.MonID && _soLuongCuTruocKhiSua > 0 && chiTiet.SoLuong == _soLuongCuTruocKhiSua)
-                {
-                    CapNhatTongTien();
-                    return;
-                }
-
-                var ketQuaCapNhat = await Task.Run(() => _hoaDonBUS.CapNhatSoLuongMonTrongHoaDon(
-                    hoaDon.ID,
-                    chiTiet.MonID,
-                    chiTiet.SoLuong,
-                    _hoaDonDangChonRowVersion));
-
-                if (!ketQuaCapNhat.ThanhCong)
-                {
-                    if (LaThongBaoXungDotDuLieu(ketQuaCapNhat.ThongBao))
-                    {
-                        TaiDanhSachHoaDon();
-                    }
-                    else
-                    {
-                        KhoiPhucSoLuongCu(chiTiet);
-                    }
-
-                    MessageBox.Show(ketQuaCapNhat.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                _chiTietBindingList.ResetBindings();
-                CapNhatTongTien();
-                TaiDanhSachHoaDon();
-            }
-            finally
-            {
-                _dangXuLyChiTietHoaDon = false;
-                CapNhatTrangThaiDangXuLyHoaDon();
-                _soLuongCuTruocKhiSua = 0;
-                _monIdDangSua = 0;
-            }
-        }
-
-        private void KhoiPhucSoLuongCu(HoaDonChiTietDTO chiTiet)
-        {
-            if (_soLuongCuTruocKhiSua <= 0)
-            {
-                return;
-            }
-
-            _dangXuLyThayDoiChiTiet = true;
-            try
-            {
-                chiTiet.SoLuong = _soLuongCuTruocKhiSua;
-                _chiTietBindingList.ResetBindings();
-            }
-            finally
-            {
-                _dangXuLyThayDoiChiTiet = false;
-            }
-
-            CapNhatTongTien();
-        }
-
         private void btnLamMoi_Click(object? sender, EventArgs e)
         {
             txtTimKiemHoaDon.Clear();
             KhoiTaoBoLocMacDinh();
             TaiDanhSachHoaDon(giuHoaDonDangChon: false);
-        }
-
-        private void btnThemMoi_Click(object? sender, EventArgs e)
-        {
-            ChuyenStateManHinh(HoaDonManHinhState.ThemMoi);
-            HienThiManHinhTaoMoi();
-        }
-
-        private void HienThiManHinhTaoMoi()
-        {
-            _dangNapDuLieu = true;
-            try
-            {
-                _hoaDonDangChonId = null;
-                _hoaDonDangChonRowVersion = null;
-                txtMaHoaDon.Text = HoaDonBUS.DinhDangMaHoaDon(_hoaDonBUS.LayMaHoaDonTiepTheo());
-                dtpNgayTao.Value = DateTime.Now;
-
-                if (cboBanKhach.Items.Count > 0)
-                {
-                    cboBanKhach.SelectedIndex = 0;
-                }
-
-                cboTrangThai.SelectedValue = (int)HoaDonTrangThai.ChuaThanhToan;
-
-                _chiTietBindingList = new BindingList<HoaDonChiTietDTO>();
-                dgvChiTietHoaDon.DataSource = null;
-                dgvChiTietHoaDon.DataSource = _chiTietBindingList;
-                nudSoLuong.Value = nudSoLuong.Minimum;
-                _tongTienDangChon = 0;
-                lblTongTienValue.Text = _hoaDonTienService.DinhDangTien(0);
-                txtTienKhachDua.Clear();
-                lblTienThoiValue.Text = _hoaDonTienService.DinhDangTien(0);
-            }
-            finally
-            {
-                _dangNapDuLieu = false;
-            }
-        }
-
-        private void btnSua_Click(object? sender, EventArgs e)
-        {
-            var hoaDon = LayHoaDonDangChon();
-            if (hoaDon == null)
-            {
-                MessageBox.Show("Vui lòng chọn hóa đơn cần sửa.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
-            {
-                MessageBox.Show("Chỉ sửa được hóa đơn chưa thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            ChuyenStateManHinh(HoaDonManHinhState.ChinhSua);
-        }
-
-        private async void btnLuu_Click(object? sender, EventArgs e)
-        {
-            if (_dangXuLyLuuHoaDon || _dangXuLyThuTien || _dangXuLyHuyHoaDon || _dangXuLyChiTietHoaDon)
-            {
-                return;
-            }
-
-            if (!TryTaoThongTinLuu(out var request))
-            {
-                return;
-            }
-
-            _dangXuLyLuuHoaDon = true;
-            CapNhatTrangThaiDangXuLyHoaDon();
-
-            try
-            {
-                if (_manHinhState == HoaDonManHinhState.ThemMoi)
-                {
-                    var ketQuaThem = await Task.Run(() => _hoaDonBUS.ThemHoaDon(request));
-                    if (!ketQuaThem.Result.ThanhCong)
-                    {
-                        MessageBox.Show(ketQuaThem.Result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    _hoaDonDangChonId = ketQuaThem.HoaDonId;
-                    ChuyenStateManHinh(HoaDonManHinhState.Xem);
-                    TaiDanhSachHoaDon();
-                    MessageBox.Show(ketQuaThem.Result.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                if (_manHinhState == HoaDonManHinhState.ChinhSua)
-                {
-                    request.ID = _hoaDonDangChonId ?? 0;
-                    var ketQuaCapNhat = await Task.Run(() => _hoaDonBUS.CapNhatHoaDon(request));
-                    if (!ketQuaCapNhat.ThanhCong)
-                    {
-                        if (LaThongBaoXungDotDuLieu(ketQuaCapNhat.ThongBao))
-                        {
-                            TaiDanhSachHoaDon();
-                        }
-
-                        MessageBox.Show(ketQuaCapNhat.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-
-                    ChuyenStateManHinh(HoaDonManHinhState.Xem);
-                    TaiDanhSachHoaDon();
-                    MessageBox.Show(ketQuaCapNhat.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            finally
-            {
-                _dangXuLyLuuHoaDon = false;
-                CapNhatTrangThaiDangXuLyHoaDon();
-            }
-        }
-
-        private bool TryTaoThongTinLuu(out HoaDonSaveRequestDTO request)
-        {
-            request = new HoaDonSaveRequestDTO();
-
-            var ketQua = _hoaDonPresenter.ValidateSaveRequest(
-                cboBanKhach.SelectedValue,
-                _manHinhState == HoaDonManHinhState.ChinhSua,
-                _hoaDonDangChonRowVersion);
-
-            if (!ketQua.HopLe)
-            {
-                MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-                if (ketQua.TruongLoi == HoaDonInputField.BanKhach)
-                {
-                    cboBanKhach.Focus();
-                }
-
-                if (ketQua.TruongLoi == HoaDonInputField.HoaDon)
-                {
-                    TaiDanhSachHoaDon();
-                }
-
-                return false;
-            }
-
-            request.BanID = ketQua.BanId!.Value;
-            request.NgayLap = dtpNgayTao.Value;
-            request.TrangThai = (int)HoaDonTrangThai.ChuaThanhToan;
-            request.RowVersion = _hoaDonDangChonRowVersion?.ToArray();
-
-            return true;
-        }
-
-        private void btnBoQua_Click(object? sender, EventArgs e)
-        {
-            ChuyenStateManHinh(HoaDonManHinhState.Xem);
-            TaiDanhSachHoaDon();
         }
 
         private async void btnXoaHuy_Click(object? sender, EventArgs e)
@@ -883,21 +503,21 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            if (hoaDon.TrangThai == (int)HoaDonTrangThai.Paid)
+            if (HoaDonStateMachine.IsPaid(hoaDon.TrangThai))
             {
                 MessageBox.Show("Hóa đơn đã thanh toán, không thể hủy.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            if (hoaDon.TrangThai == (int)HoaDonTrangThai.Closed)
+            if (HoaDonStateMachine.IsVoided(hoaDon.TrangThai))
             {
-                MessageBox.Show("Hóa đơn đã hoàn tất phục vụ, không thể hủy.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Hóa đơn này đã được Void trước đó.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            if (hoaDon.TrangThai == (int)HoaDonTrangThai.Cancelled)
+            if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
             {
-                MessageBox.Show("Hóa đơn này đã hủy trước đó.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Chỉ có thể Void hóa đơn Open.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -1027,7 +647,7 @@ namespace QuanLyQuanCaPhe.Forms
 
         private async void btnThemMonVaoHoaDon_Click(object? sender, EventArgs e)
         {
-            if (_dangXuLyChiTietHoaDon || _dangXuLyLuuHoaDon || _dangXuLyThuTien || _dangXuLyHuyHoaDon)
+            if (_dangXuLyChiTietHoaDon || _dangXuLyThuTien || _dangXuLyHuyHoaDon)
             {
                 return;
             }
@@ -1074,34 +694,6 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
-            _dangXuLyThayDoiChiTiet = true;
-            try
-            {
-                var dongTonTai = _chiTietBindingList.FirstOrDefault(x => x.MonID == monId);
-                if (dongTonTai != null)
-                {
-                    dongTonTai.SoLuong = (short)Math.Clamp(dongTonTai.SoLuong + soLuong, 1, short.MaxValue);
-                }
-                else if (cboMon.SelectedItem is HoaDonMonItemDTO monMoi)
-                {
-                    _chiTietBindingList.Add(new HoaDonChiTietDTO
-                    {
-                        MonID = monMoi.MonID,
-                        TenMon = monMoi.TenMon,
-                        SoLuong = soLuong,
-                        DonGia = monMoi.DonGia
-                    });
-                }
-
-                _chiTietBindingList.ResetBindings();
-            }
-            finally
-            {
-                _dangXuLyThayDoiChiTiet = false;
-            }
-
-            CapNhatTongTien();
-
             TaiDanhSachHoaDon();
             MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -1109,9 +701,7 @@ namespace QuanLyQuanCaPhe.Forms
         private async Task ThuXoaMonDangChonAsync()
         {
             if (_dangNapDuLieu
-                || _dangXuLyThayDoiChiTiet
                 || _dangXuLyChiTietHoaDon
-                || _dangXuLyLuuHoaDon
                 || _dangXuLyThuTien
                 || _dangXuLyHuyHoaDon)
             {
@@ -1168,134 +758,7 @@ namespace QuanLyQuanCaPhe.Forms
                 MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
-            _dangXuLyThayDoiChiTiet = true;
-            try
-            {
-                _chiTietBindingList.Remove(chiTiet);
-                _chiTietBindingList.ResetBindings();
-            }
-            finally
-            {
-                _dangXuLyThayDoiChiTiet = false;
-            }
-
-            CapNhatTongTien();
             TaiDanhSachHoaDon();
-        }
-
-        private async Task ThuDoiMonDangChonTheoMonDaChonAsync()
-        {
-            if (_dangNapDuLieu
-                || _dangXuLyThayDoiChiTiet
-                || _dangXuLyChiTietHoaDon
-                || _dangXuLyLuuHoaDon
-                || _dangXuLyThuTien
-                || _dangXuLyHuyHoaDon)
-            {
-                return;
-            }
-
-            if (!TryLayHoaDonDangChonCoTheChinhSua(out var hoaDon))
-            {
-                return;
-            }
-
-            if (!DataGridViewSelectionHelper.TryGetCurrentOrSelectedItem<HoaDonChiTietDTO>(dgvChiTietHoaDon, out var chiTietDangChon, out _)
-                || chiTietDangChon == null)
-            {
-                MessageBox.Show("Vui lòng chọn món cần đổi trên lưới chi tiết.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (cboMon.SelectedValue is not int monMoiId || monMoiId <= 0)
-            {
-                MessageBox.Show("Vui lòng chọn món mới ở combobox trước khi đổi.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                cboMon.Focus();
-                return;
-            }
-
-            if (chiTietDangChon.MonID == monMoiId)
-            {
-                MessageBox.Show("Món mới trùng món hiện tại, không cần đổi.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            var xacNhan = MessageBox.Show(
-                $"Đổi món '{chiTietDangChon.TenMon}' thành món đang chọn?",
-                "Xác nhận",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (xacNhan != DialogResult.Yes)
-            {
-                return;
-            }
-
-            var soLuongCanDoi = chiTietDangChon.SoLuong;
-            _dangXuLyChiTietHoaDon = true;
-            CapNhatTrangThaiDangXuLyHoaDon();
-
-            BanActionResultDTO ketQua;
-            try
-            {
-                ketQua = await Task.Run(() => _orderService.ReplaceItemInOrder(
-                    hoaDon.ID,
-                    chiTietDangChon.MonID,
-                    monMoiId,
-                    soLuongCanDoi,
-                    _hoaDonDangChonRowVersion));
-            }
-            finally
-            {
-                _dangXuLyChiTietHoaDon = false;
-                CapNhatTrangThaiDangXuLyHoaDon();
-            }
-
-            if (!ketQua.ThanhCong)
-            {
-                if (LaThongBaoXungDotDuLieu(ketQua.ThongBao))
-                {
-                    TaiDanhSachHoaDon();
-                }
-
-                MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (cboMon.SelectedItem is not HoaDonMonItemDTO monMoi)
-            {
-                TaiDanhSachHoaDon();
-                MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            _dangXuLyThayDoiChiTiet = true;
-            try
-            {
-                var dongTonTai = _chiTietBindingList.FirstOrDefault(x => x.MonID == monMoi.MonID && !ReferenceEquals(x, chiTietDangChon));
-                if (dongTonTai != null)
-                {
-                    dongTonTai.SoLuong = (short)Math.Clamp(dongTonTai.SoLuong + chiTietDangChon.SoLuong, 1, short.MaxValue);
-                    _chiTietBindingList.Remove(chiTietDangChon);
-                }
-                else
-                {
-                    chiTietDangChon.MonID = monMoi.MonID;
-                    chiTietDangChon.TenMon = monMoi.TenMon;
-                    chiTietDangChon.DonGia = monMoi.DonGia;
-                }
-
-                _chiTietBindingList.ResetBindings();
-            }
-            finally
-            {
-                _dangXuLyThayDoiChiTiet = false;
-            }
-
-            CapNhatTongTien();
-            TaiDanhSachHoaDon();
-            MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private bool TryLayHoaDonDangChonCoTheChinhSua(out HoaDonDTO hoaDon)
@@ -1309,9 +772,9 @@ namespace QuanLyQuanCaPhe.Forms
                 return false;
             }
 
-            if (hoaDonDangChon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
+            if (!HoaDonStateMachine.IsOpen(hoaDonDangChon.TrangThai))
             {
-                MessageBox.Show("Chỉ được sửa hóa đơn ở trạng thái chưa thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Chỉ thao tác trên hóa đơn Open.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -1360,10 +823,11 @@ namespace QuanLyQuanCaPhe.Forms
             _dangXuLyThuTien = true;
             CapNhatTrangThaiDangXuLyHoaDon();
 
+            var hoaDonId = hoaDon!.ID;
+
             BanActionResultDTO ketQua;
             try
             {
-                var hoaDonId = hoaDon!.ID;
                 var rowVersion = _hoaDonDangChonRowVersion?.ToArray();
                 ketQua = await Task.Run(() => _orderService.Checkout(hoaDonId, rowVersion));
             }
@@ -1388,26 +852,6 @@ namespace QuanLyQuanCaPhe.Forms
             MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void btnInHoaDon_Click(object? sender, EventArgs e)
-        {
-            var hoaDon = LayHoaDonDangChon();
-            if (hoaDon == null)
-            {
-                MessageBox.Show("Vui lòng chọn hóa đơn cần in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var chiTiet = _hoaDonBUS.LayHoaDonTheoId(hoaDon.ID);
-            if (chiTiet == null)
-            {
-                MessageBox.Show("Không tìm thấy dữ liệu hóa đơn để in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var noiDungXemTruoc = _hoaDonPreviewService.TaoNoiDungXemTruoc(chiTiet);
-            MessageBox.Show(noiDungXemTruoc, "Xem trước hóa đơn", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
         private void txtTienKhachDua_TextChanged(object? sender, EventArgs e)
         {
             if (_dangNapDuLieu)
@@ -1418,17 +862,6 @@ namespace QuanLyQuanCaPhe.Forms
             CapNhatTongTien();
         }
 
-        private void ChuyenStateManHinh(HoaDonManHinhState state)
-        {
-            _manHinhState = state;
-
-            var hoaDon = state == HoaDonManHinhState.ThemMoi
-                ? null
-                : LayHoaDonDangChon();
-
-            ApDungTrangThaiDieuKhien(hoaDon);
-        }
-
         private void CapNhatDieuKienXuLyNut(HoaDonDTO? hoaDon)
         {
             ApDungTrangThaiDieuKhien(hoaDon);
@@ -1436,56 +869,51 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungTrangThaiDieuKhien(HoaDonDTO? hoaDon)
         {
-            var trangThai = _hoaDonFormStateService.TaoTrangThai(_manHinhState, hoaDon);
+            var trangThai = _hoaDonFormStateService.TaoTrangThai(HoaDonManHinhState.Xem, hoaDon);
             var isAdmin = _permissionBUS.IsAdmin();
             var coQuyenXem = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
             var coQuyenTao = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Create);
             var coQuyenCapNhat = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update);
             var coQuyenCapNhatBanHang = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
             var coTheChinhSuaHoaDon = NguoiDungHienTaiService.LayNguoiDungDangNhap() != null;
-            var coQuyenChinhSuaHoaDon = coTheChinhSuaHoaDon && (coQuyenTao || coQuyenCapNhat);
             var coQuyenChinhSuaChiTietHoaDon = coTheChinhSuaHoaDon && (coQuyenTao || coQuyenCapNhat || coQuyenCapNhatBanHang);
             var coQuyenThuTien = CoQuyenXuLyThanhToanHoaDon();
-            var coQuyenXoa = _permissionBUS.CanDeleteInvoice()
-                             && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Delete));
-            var choPhepSuaChiTiet = trangThai.ChoPhepThemMon && coQuyenChinhSuaChiTietHoaDon;
+            var coQuyenVoid = _permissionBUS.CanDeleteInvoice()
+                              && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Delete));
+            var khoaToanBoUiDoDaThanhToan = trangThai.KhoaToanBoChiTietDoDaThanhToan;
+            var choPhepSuaChiTiet = trangThai.ChoPhepThemMon && coQuyenChinhSuaChiTietHoaDon && !khoaToanBoUiDoDaThanhToan;
+            var choPhepXoaMon = trangThai.ChoPhepXoaMon && coQuyenChinhSuaChiTietHoaDon && !khoaToanBoUiDoDaThanhToan;
+            var choPhepThanhToan = trangThai.ChoPhepThuTien && coQuyenThuTien && !khoaToanBoUiDoDaThanhToan;
+            var choPhepVoid = trangThai.ChoPhepHuy && coQuyenVoid && !khoaToanBoUiDoDaThanhToan;
 
-            cboBanKhach.Enabled = trangThai.ChoPhepSuaThongTinChung && coQuyenChinhSuaHoaDon;
-            dtpNgayTao.Enabled = trangThai.ChoPhepSuaThongTinChung && coQuyenChinhSuaHoaDon;
+            cboBanKhach.Enabled = false;
+            dtpNgayTao.Enabled = false;
             cboTrangThai.Enabled = false;
 
-            panelMasterFilter.Enabled = trangThai.ChoPhepLocMaster && coQuyenXem;
-            dgvDanhSachHoaDon.Enabled = trangThai.ChoPhepGridMaster && coQuyenXem;
+            panelMasterFilter.Enabled = coQuyenXem;
+            dgvDanhSachHoaDon.Enabled = coQuyenXem;
 
-            btnThemMoi.Visible = coQuyenTao;
-            btnSua.Visible = coQuyenChinhSuaHoaDon;
-            btnLuu.Visible = coQuyenChinhSuaHoaDon;
-            btnBoQua.Visible = coQuyenChinhSuaHoaDon;
             btnThemMonVaoHoaDon.Visible = coQuyenChinhSuaChiTietHoaDon;
+            btnXoaMonKhoiHoaDon.Visible = coQuyenChinhSuaChiTietHoaDon;
             btnXacNhanThuTien.Visible = coQuyenThuTien;
-            btnInHoaDon.Visible = coQuyenXem;
-            btnXoaHuy.Visible = coQuyenXoa;
-
-            btnThemMoi.Enabled = btnThemMoi.Visible && trangThai.ChoPhepThemMoi;
-            btnSua.Enabled = btnSua.Visible && trangThai.ChoPhepSua;
-            btnXoaHuy.Enabled = btnXoaHuy.Visible && trangThai.ChoPhepHuy;
-            btnLuu.Enabled = btnLuu.Visible && trangThai.ChoPhepLuu;
-            btnBoQua.Enabled = btnBoQua.Visible && trangThai.ChoPhepBoQua;
+            btnXoaHuy.Visible = coQuyenVoid;
 
             btnThemMonVaoHoaDon.Enabled = btnThemMonVaoHoaDon.Visible && choPhepSuaChiTiet;
+            btnXoaMonKhoiHoaDon.Enabled = btnXoaMonKhoiHoaDon.Visible && choPhepXoaMon;
             cboMon.Enabled = choPhepSuaChiTiet;
             nudSoLuong.Enabled = choPhepSuaChiTiet;
-            btnXacNhanThuTien.Enabled = btnXacNhanThuTien.Visible && trangThai.ChoPhepThuTien;
-            btnInHoaDon.Enabled = btnInHoaDon.Visible && trangThai.ChoPhepIn;
+            btnXacNhanThuTien.Enabled = btnXacNhanThuTien.Visible && choPhepThanhToan;
+            txtTienKhachDua.Enabled = choPhepThanhToan;
+            btnXoaHuy.Enabled = btnXoaHuy.Visible && choPhepVoid;
 
-            dgvChiTietHoaDon.Enabled = coQuyenXem;
-            dgvChiTietHoaDon.ReadOnly = !choPhepSuaChiTiet;
+            dgvChiTietHoaDon.Enabled = coQuyenXem && !khoaToanBoUiDoDaThanhToan;
+            dgvChiTietHoaDon.ReadOnly = true;
             dgvChiTietHoaDon.AllowUserToDeleteRows = false;
             colTenMon.ReadOnly = true;
-            colSoLuong.ReadOnly = !choPhepSuaChiTiet;
+            colSoLuong.ReadOnly = true;
             colDonGia.ReadOnly = true;
             colThanhTien.ReadOnly = true;
-            _menuChiTietHoaDon.Enabled = choPhepSuaChiTiet;
+            _menuChiTietHoaDon.Enabled = choPhepXoaMon;
         }
 
         private bool CoQuyenXuLyThanhToanHoaDon()
@@ -1501,20 +929,18 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void CapNhatTrangThaiDangXuLyHoaDon()
         {
-            var dangXuLy = _dangXuLyThuTien || _dangXuLyHuyHoaDon || _dangXuLyLuuHoaDon || _dangXuLyChiTietHoaDon;
+            var dangXuLy = _dangXuLyThuTien || _dangXuLyHuyHoaDon || _dangXuLyChiTietHoaDon;
             UiLoadingStateHelper.Apply(
                 this,
                 dangXuLy,
-                btnThemMoi,
-                btnSua,
                 btnXacNhanThuTien,
                 btnXoaHuy,
-                btnLuu,
-                btnBoQua,
                 btnThemMonVaoHoaDon,
+                btnXoaMonKhoiHoaDon,
                 cboMon,
                 nudSoLuong,
                 dgvChiTietHoaDon,
+                txtTienKhachDua,
                 txtTimKiemHoaDon,
                 btnLocXem,
                 btnLamMoi);

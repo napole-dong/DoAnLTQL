@@ -3,10 +3,10 @@ namespace QuanLyQuanCaPhe.Data;
 public class dtaPhieuXuatKho
 {
     public int ID { get; set; }
-    public int NguyenLieuID { get; set; }
-    public decimal SoLuongXuat { get; set; }
     public DateTime NgayXuat { get; set; }
     public string LyDo { get; set; } = string.Empty;
+    public int NhanVienID { get; set; }
 
-    public dtaNguyenLieu NguyenLieu { get; set; } = null!;
+    public dtaNhanVien NhanVien { get; set; } = null!;
+    public ICollection<dtaChiTietPhieuXuat> ChiTietPhieuXuat { get; set; } = new List<dtaChiTietPhieuXuat>();
 }

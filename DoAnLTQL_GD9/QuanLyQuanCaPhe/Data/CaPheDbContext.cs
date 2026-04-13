@@ -80,8 +80,10 @@ public class CaPheDbContext : DbContext
     public DbSet<dtaAuditLog> AuditLog { get; set; } = null!;
     public DbSet<dtaNguyenLieu> NguyenLieu { get; set; } = null!;
     public DbSet<dtaPhieuNhapKho> PhieuNhapKho { get; set; } = null!;
+    public DbSet<dtaChiTietPhieuNhap> ChiTietPhieuNhap { get; set; } = null!;
     public DbSet<dtaCongThucMon> CongThucMon { get; set; } = null!;
     public DbSet<dtaPhieuXuatKho> PhieuXuatKho { get; set; } = null!;
+    public DbSet<dtaChiTietPhieuXuat> ChiTietPhieuXuat { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -102,6 +104,10 @@ public class CaPheDbContext : DbContext
 
             entity.HasIndex(x => x.TrangThai)
                 .HasDatabaseName("IX_Ban_TrangThai");
+
+            entity.HasIndex(x => x.TenBan)
+                .HasDatabaseName("UX_Ban_TenBan")
+                .IsUnique();
         });
 
         modelBuilder.Entity<dtaKhachHang>(entity =>
@@ -120,6 +126,11 @@ public class CaPheDbContext : DbContext
             entity.Property(x => x.DiaChi)
                 .HasMaxLength(255)
                 .IsRequired(false);
+
+            entity.HasIndex(x => x.DienThoai)
+                .HasDatabaseName("UX_KhachHang_DienThoai_Active")
+                .HasFilter("[IsDeleted] = 0 AND [DienThoai] IS NOT NULL")
+                .IsUnique();
         });
 
         modelBuilder.Entity<dtaLoaiMon>(entity =>
@@ -135,6 +146,11 @@ public class CaPheDbContext : DbContext
                 .HasMaxLength(500)
                 .IsRequired(false)
                 .HasDefaultValue(string.Empty);
+
+            entity.HasIndex(x => x.TenLoai)
+                .HasDatabaseName("UX_LoaiMon_TenLoai_Active")
+                .HasFilter("[IsDeleted] = 0")
+                .IsUnique();
         });
 
         modelBuilder.Entity<dtaMon>(entity =>
@@ -142,6 +158,7 @@ public class CaPheDbContext : DbContext
             entity.ToTable("Mon", table =>
             {
                 table.HasCheckConstraint("CK_Mon_TrangThai", "[TrangThai] IN (0, 1, 2)");
+                table.HasCheckConstraint("CK_Mon_DonGia_Range", "[DonGia] >= 0 AND [DonGia] <= 1000000000");
             });
 
             entity.HasKey(x => x.ID);
@@ -203,6 +220,7 @@ public class CaPheDbContext : DbContext
             entity.ToTable("HoaDon", table =>
             {
                 table.HasCheckConstraint("CK_HoaDon_TrangThai", "[TrangThai] IN (0, 1, 2, 3)");
+                table.HasCheckConstraint("CK_HoaDon_TongTien_Range", "[TongTien] >= 0 AND [TongTien] <= 1000000000000");
             });
             entity.HasKey(x => x.ID);
 
@@ -335,6 +353,8 @@ public class CaPheDbContext : DbContext
             entity.ToTable("NguyenLieu", table =>
             {
                 table.HasCheckConstraint("CK_NguyenLieu_TrangThai", "[TrangThai] IN (0, 1, 2)");
+                table.HasCheckConstraint("CK_NguyenLieu_SoLuongTon_NonNegative", "[SoLuongTon] >= 0");
+                table.HasCheckConstraint("CK_NguyenLieu_GiaNhapGanNhat_NonNegative", "[GiaNhapGanNhat] >= 0");
             });
 
             entity.HasKey(x => x.ID);
@@ -373,22 +393,53 @@ public class CaPheDbContext : DbContext
             entity.ToTable("PhieuNhapKho");
             entity.HasKey(x => x.ID);
 
-            entity.Property(x => x.SoLuongNhap)
-                .HasColumnType("decimal(18,2)")
-                .IsRequired();
-
-            entity.Property(x => x.GiaNhap)
-                .HasColumnType("decimal(18,2)")
-                .IsRequired();
+            entity.Property(x => x.NgayNhap)
+                .HasDefaultValueSql("SYSDATETIME()");
 
             entity.Property(x => x.GhiChu)
                 .HasMaxLength(500)
                 .IsRequired(false);
 
+            entity.HasIndex(x => new { x.NhanVienID, x.NgayNhap });
+
+            entity.HasOne(x => x.NhanVien)
+                .WithMany(x => x.PhieuNhapKho)
+                .HasForeignKey(x => x.NhanVienID)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<dtaChiTietPhieuNhap>(entity =>
+        {
+            entity.ToTable("ChiTietPhieuNhap", table =>
+            {
+                table.HasCheckConstraint("CK_ChiTietPhieuNhap_SoLuong", "[SoLuong] > 0");
+                table.HasCheckConstraint("CK_ChiTietPhieuNhap_DonGiaNhap", "[DonGiaNhap] >= 0");
+                table.HasCheckConstraint("CK_ChiTietPhieuNhap_ThanhTien", "[ThanhTien] >= 0");
+            });
+
+            entity.HasKey(x => new { x.PhieuNhapID, x.NguyenLieuID });
+
+            entity.Property(x => x.SoLuong)
+                .HasColumnType("decimal(18,3)")
+                .IsRequired();
+
+            entity.Property(x => x.DonGiaNhap)
+                .HasColumnType("decimal(18,2)")
+                .IsRequired();
+
+            entity.Property(x => x.ThanhTien)
+                .HasColumnType("decimal(18,2)")
+                .IsRequired();
+
             entity.HasIndex(x => x.NguyenLieuID);
 
+            entity.HasOne(x => x.PhieuNhap)
+                .WithMany(x => x.ChiTietPhieuNhap)
+                .HasForeignKey(x => x.PhieuNhapID)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasOne(x => x.NguyenLieu)
-                .WithMany(x => x.PhieuNhapKho)
+                .WithMany(x => x.ChiTietPhieuNhap)
                 .HasForeignKey(x => x.NguyenLieuID)
                 .OnDelete(DeleteBehavior.NoAction);
         });
@@ -420,28 +471,47 @@ public class CaPheDbContext : DbContext
 
         modelBuilder.Entity<dtaPhieuXuatKho>(entity =>
         {
-            entity.ToTable("PhieuXuatKho", table =>
-            {
-                table.HasCheckConstraint("CK_PhieuXuatKho_SoLuongXuat", "[SoLuongXuat] > 0");
-            });
+            entity.ToTable("PhieuXuatKho");
 
             entity.HasKey(x => x.ID);
-
-            entity.Property(x => x.SoLuongXuat)
-                .HasColumnType("decimal(18,3)")
-                .IsRequired();
 
             entity.Property(x => x.NgayXuat).HasDefaultValueSql("SYSDATETIME()");
             entity.Property(x => x.LyDo)
                 .HasMaxLength(500)
                 .IsRequired();
 
-            entity.HasOne(x => x.NguyenLieu)
+            entity.HasIndex(x => new { x.NhanVienID, x.NgayXuat });
+
+            entity.HasOne(x => x.NhanVien)
                 .WithMany(x => x.PhieuXuatKho)
+                .HasForeignKey(x => x.NhanVienID)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<dtaChiTietPhieuXuat>(entity =>
+        {
+            entity.ToTable("ChiTietPhieuXuat", table =>
+            {
+                table.HasCheckConstraint("CK_ChiTietPhieuXuat_SoLuong", "[SoLuong] > 0");
+            });
+
+            entity.HasKey(x => new { x.PhieuXuatID, x.NguyenLieuID });
+
+            entity.Property(x => x.SoLuong)
+                .HasColumnType("decimal(18,3)")
+                .IsRequired();
+
+            entity.HasIndex(x => x.NguyenLieuID);
+
+            entity.HasOne(x => x.PhieuXuat)
+                .WithMany(x => x.ChiTietPhieuXuat)
+                .HasForeignKey(x => x.PhieuXuatID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.NguyenLieu)
+                .WithMany(x => x.ChiTietPhieuXuat)
                 .HasForeignKey(x => x.NguyenLieuID)
                 .OnDelete(DeleteBehavior.NoAction);
-
-            entity.HasIndex(x => new { x.NguyenLieuID, x.NgayXuat });
         });
 
         modelBuilder.Entity<dtaUser>(entity =>

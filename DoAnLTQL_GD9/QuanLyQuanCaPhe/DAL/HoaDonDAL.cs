@@ -24,9 +24,29 @@ public class HoaDonDAL : IHoaDonRepository
 
     public List<HoaDonDTO> GetDanhSachHoaDon(HoaDonFilterDTO boLoc)
     {
-        using var context = new CaPheDbContext();
+        return GetDanhSachHoaDonAsync(boLoc)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
 
-        var hoaDonRows = QueryDanhSachHoaDonRows(context, boLoc);
+    public async Task<List<HoaDonDTO>> GetDanhSachHoaDonAsync(HoaDonFilterDTO boLoc, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(boLoc);
+
+        if (boLoc.PageNumber <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(boLoc.PageNumber), "PageNumber phải lớn hơn 0.");
+        }
+
+        if (boLoc.PageSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(boLoc.PageSize), "PageSize phải lớn hơn 0.");
+        }
+
+        await using var context = new CaPheDbContext();
+
+        var hoaDonRows = await QueryDanhSachHoaDonRowsAsync(context, boLoc, cancellationToken).ConfigureAwait(false);
         return MapDanhSachHoaDonDtos(hoaDonRows);
     }
 
@@ -173,7 +193,7 @@ public class HoaDonDAL : IHoaDonRepository
                     KhachHangID = khachHangId,
                     CustomerName = customerName,
                     NgayLap = request.NgayLap,
-                    TrangThai = (int)HoaDonTrangThai.Draft,
+                    TrangThai = (int)HoaDonTrangThai.Open,
                     TongTien = 0m,
                     GhiChuHoaDon = string.Empty
                 };
@@ -204,7 +224,7 @@ public class HoaDonDAL : IHoaDonRepository
                         request.BanID,
                         request.KhachHangID,
                         request.NgayLap,
-                        TrangThai = HoaDonTrangThai.Draft.ToString()
+                        TrangThai = HoaDonTrangThai.Open.ToString()
                     },
                     performedBy: nguoiDung?.TenDangNhap);
             }
@@ -258,9 +278,9 @@ public class HoaDonDAL : IHoaDonRepository
             .Property(x => x.RowVersion)
             .OriginalValue = request.RowVersion;
 
-        if (hoaDon.TrangThai != (int)HoaDonTrangThai.Draft)
+        if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
         {
-            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Chỉ được sửa hóa đơn chưa thanh toán." };
+            return new BanActionResultDTO { ThanhCong = false, ThongBao = "Chỉ được sửa hóa đơn Open." };
         }
 
         var oldSnapshot = new
@@ -357,12 +377,12 @@ public class HoaDonDAL : IHoaDonRepository
     public BanActionResultDTO HuyHoaDon(int hoaDonId, byte[]? rowVersion = null)
     {
         var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap()?.TenDangNhap ?? "system";
-        return _orderService.CancelInvoice(hoaDonId, "Hủy hóa đơn", nguoiDung, rowVersion);
+        return _orderService.VoidInvoice(hoaDonId, "Hủy hóa đơn", nguoiDung, rowVersion);
     }
 
     public BanActionResultDTO HuyHoaDon(int hoaDonId, string reason, string user, byte[]? rowVersion = null)
     {
-        return _orderService.CancelInvoice(hoaDonId, reason, user, rowVersion);
+        return _orderService.VoidInvoice(hoaDonId, reason, user, rowVersion);
     }
 
     public BanActionResultDTO XacNhanThuTien(int hoaDonId, byte[]? rowVersion = null)
@@ -370,7 +390,7 @@ public class HoaDonDAL : IHoaDonRepository
         return _orderService.Checkout(hoaDonId, rowVersion);
     }
 
-    public BanActionResultDTO CapNhatKhachHangChoHoaDonMo(int hoaDonId, int? khachHangId)
+    public BanActionResultDTO CapNhatKhachHangChoHoaDonMo(int hoaDonId, int? khachHangId, byte[]? rowVersion = null)
     {
         if (hoaDonId <= 0)
         {
@@ -378,6 +398,15 @@ public class HoaDonDAL : IHoaDonRepository
             {
                 ThanhCong = false,
                 ThongBao = "Vui lòng chọn hóa đơn hợp lệ."
+            };
+        }
+
+        if (rowVersion == null || rowVersion.Length == 0)
+        {
+            return new BanActionResultDTO
+            {
+                ThanhCong = false,
+                ThongBao = "Thiếu RowVersion hợp lệ."
             };
         }
 
@@ -393,12 +422,16 @@ public class HoaDonDAL : IHoaDonRepository
             };
         }
 
-        if (hoaDon.TrangThai != (int)HoaDonTrangThai.Draft)
+        context.Entry(hoaDon)
+            .Property(x => x.RowVersion)
+            .OriginalValue = rowVersion;
+
+        if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
         {
             return new BanActionResultDTO
             {
                 ThanhCong = false,
-                ThongBao = "Chỉ cập nhật khách hàng cho hóa đơn chưa thanh toán."
+                ThongBao = "Chỉ cập nhật khách hàng cho hóa đơn Open."
             };
         }
 
@@ -505,11 +538,29 @@ public class HoaDonDAL : IHoaDonRepository
 
     private static List<HoaDonListReadModel> QueryDanhSachHoaDonRows(CaPheDbContext context, HoaDonFilterDTO boLoc)
     {
+        return BuildDanhSachHoaDonProjection(context, boLoc)
+            .ToList();
+    }
+
+    private static Task<List<HoaDonListReadModel>> QueryDanhSachHoaDonRowsAsync(
+        CaPheDbContext context,
+        HoaDonFilterDTO boLoc,
+        CancellationToken cancellationToken)
+    {
+        return BuildDanhSachHoaDonProjection(context, boLoc)
+            .ToListAsync(cancellationToken);
+    }
+
+    private static IQueryable<HoaDonListReadModel> BuildDanhSachHoaDonProjection(CaPheDbContext context, HoaDonFilterDTO boLoc)
+    {
         var query = BuildHoaDonFilterQuery(context, boLoc);
+        var skip = (boLoc.PageNumber - 1) * boLoc.PageSize;
 
         return query
             .OrderByDescending(x => x.NgayLap)
             .ThenByDescending(x => x.ID)
+            .Skip(skip)
+            .Take(boLoc.PageSize)
             .Select(x => new HoaDonListReadModel
             {
                 ID = x.ID,
@@ -523,8 +574,7 @@ public class HoaDonDAL : IHoaDonRepository
                 TrangThai = x.TrangThai,
                 RowVersion = x.RowVersion,
                 TongTien = x.TongTien
-            })
-            .ToList();
+            });
     }
 
     private static IQueryable<dtaHoadon> BuildHoaDonFilterQuery(CaPheDbContext context, HoaDonFilterDTO boLoc)
@@ -533,13 +583,19 @@ public class HoaDonDAL : IHoaDonRepository
         var denNgay = boLoc.DenNgay.Date.AddDays(1).AddTicks(-1);
 
         var query = context.HoaDon
-            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(x => x.NgayLap >= tuNgay && x.NgayLap <= denNgay);
 
         if (boLoc.TrangThai.HasValue)
         {
-            query = query.Where(x => x.TrangThai == boLoc.TrangThai.Value);
+            if (boLoc.TrangThai.Value == (int)HoaDonTrangThai.Voided)
+            {
+                query = query.Where(x => x.TrangThai == (int)HoaDonTrangThai.Voided || x.TrangThai == (int)HoaDonTrangThai.Closed);
+            }
+            else
+            {
+                query = query.Where(x => x.TrangThai == boLoc.TrangThai.Value);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(boLoc.TuKhoa))

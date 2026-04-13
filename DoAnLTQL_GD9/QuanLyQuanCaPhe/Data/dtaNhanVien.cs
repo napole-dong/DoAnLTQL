@@ -12,4 +12,6 @@ public class dtaNhanVien : ISoftDelete
 
     public dtaUser? User { get; set; }
     public ICollection<dtaHoadon> HoaDon { get; set; } = new List<dtaHoadon>();
+    public ICollection<dtaPhieuNhapKho> PhieuNhapKho { get; set; } = new List<dtaPhieuNhapKho>();
+    public ICollection<dtaPhieuXuatKho> PhieuXuatKho { get; set; } = new List<dtaPhieuXuatKho>();
 }

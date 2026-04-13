@@ -17,9 +17,10 @@ public class LoaiMonDalDeleteIntegrationTests
         var mon = TestDataSeeder.CreateMon(context, loai.ID, "Mon xoa", 25000m, trangThai: 1);
 
         var sut = new LoaiMonDAL();
-        var daXoa = sut.XoaLoai(loai.ID);
+        var ketQua = sut.XoaLoai(loai.ID);
 
-        daXoa.Should().BeTrue();
+        ketQua.ThanhCong.Should().BeTrue();
+        ketQua.ThongBao.Should().NotBeNullOrWhiteSpace();
 
         using var verifyContext = scope.CreateContext();
 
@@ -47,8 +48,9 @@ public class LoaiMonDalDeleteIntegrationTests
         using var scope = new SqliteTestScope();
 
         var sut = new LoaiMonDAL();
-        var daXoa = sut.XoaLoai(999999);
+        var ketQua = sut.XoaLoai(999999);
 
-        daXoa.Should().BeFalse();
+        ketQua.ThanhCong.Should().BeFalse();
+        ketQua.ThongBao.Should().Contain("Không tìm thấy loại món");
     }
 }

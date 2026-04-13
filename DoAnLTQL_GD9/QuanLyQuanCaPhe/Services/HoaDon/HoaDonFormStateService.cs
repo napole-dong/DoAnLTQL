@@ -4,9 +4,7 @@ namespace QuanLyQuanCaPhe.Services.HoaDon
 {
     public enum HoaDonManHinhState
     {
-        Xem,
-        ThemMoi,
-        ChinhSua
+        Xem
     }
 
     public class HoaDonFormControlState
@@ -22,39 +20,36 @@ namespace QuanLyQuanCaPhe.Services.HoaDon
         public bool ChoPhepBoQua { get; set; }
 
         public bool ChoPhepThemMon { get; set; }
+        public bool ChoPhepXoaMon { get; set; }
         public bool ChoPhepThuTien { get; set; }
-        public bool ChoPhepIn { get; set; }
+        public bool KhoaToanBoChiTietDoDaThanhToan { get; set; }
     }
 
     public class HoaDonFormStateService
     {
-        public HoaDonFormControlState TaoTrangThai(HoaDonManHinhState manHinhState, HoaDonDTO? hoaDon)
+        public HoaDonFormControlState TaoTrangThai(HoaDonManHinhState _, HoaDonDTO? hoaDon)
         {
-            var dangSua = manHinhState != HoaDonManHinhState.Xem;
-            var dangThemMoi = manHinhState == HoaDonManHinhState.ThemMoi;
-            var dangChinhSua = manHinhState == HoaDonManHinhState.ChinhSua;
-            var laHoaDonMo = hoaDon?.TrangThai == (int)HoaDonTrangThai.ChuaThanhToan;
+            var laHoaDonMo = hoaDon != null && HoaDonStateMachine.IsOpen(hoaDon.TrangThai);
+            var laHoaDonDaThanhToan = hoaDon != null && HoaDonStateMachine.IsPaid(hoaDon.TrangThai);
             var coTongTien = hoaDon?.TongTien > 0;
             var coHoaDon = hoaDon != null;
-            var choPhepSuaTrongCheDoSua = dangChinhSua && laHoaDonMo;
-            var choPhepSuaThongTinChung = dangThemMoi || choPhepSuaTrongCheDoSua;
-            var choPhepLuu = dangThemMoi || choPhepSuaTrongCheDoSua;
 
             return new HoaDonFormControlState
             {
-                ChoPhepSuaThongTinChung = choPhepSuaThongTinChung,
-                ChoPhepLocMaster = !dangSua,
-                ChoPhepGridMaster = !dangSua,
+                ChoPhepSuaThongTinChung = false,
+                ChoPhepLocMaster = true,
+                ChoPhepGridMaster = true,
 
-                ChoPhepThemMoi = !dangSua,
-                ChoPhepSua = !dangSua && laHoaDonMo,
-                ChoPhepHuy = !dangSua && laHoaDonMo,
-                ChoPhepLuu = choPhepLuu,
-                ChoPhepBoQua = dangSua,
+                ChoPhepThemMoi = false,
+                ChoPhepSua = false,
+                ChoPhepHuy = laHoaDonMo,
+                ChoPhepLuu = false,
+                ChoPhepBoQua = false,
 
                 ChoPhepThemMon = laHoaDonMo,
-                ChoPhepThuTien = !dangSua && laHoaDonMo && coTongTien,
-                ChoPhepIn = !dangSua && coHoaDon
+                ChoPhepXoaMon = laHoaDonMo,
+                ChoPhepThuTien = laHoaDonMo && coTongTien,
+                KhoaToanBoChiTietDoDaThanhToan = laHoaDonDaThanhToan
             };
         }
     }

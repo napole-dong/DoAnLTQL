@@ -79,9 +79,9 @@ public sealed class HoaDonPresenter
             return HoaDonValidationResult.ThatBai("Vui lòng chọn hóa đơn cần thu tiền.", HoaDonInputField.HoaDon);
         }
 
-        if (hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
+        if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
         {
-            return HoaDonValidationResult.ThatBai("Hóa đơn này không còn ở trạng thái chờ thanh toán.", HoaDonInputField.HoaDon);
+            return HoaDonValidationResult.ThatBai("Hóa đơn không ở trạng thái Open (chờ thanh toán).", HoaDonInputField.HoaDon);
         }
 
         if (tongTien <= 0)

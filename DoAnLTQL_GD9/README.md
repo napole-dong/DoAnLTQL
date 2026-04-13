@@ -81,6 +81,16 @@ Thu tu xac dinh environment:
 Mac dinh local trong `App.config` dang tro toi:
 - `Server=localhost\SQLEXPRESS;Database=QuanLyQuanCaPhe;...`
 
+### 5.2.1) Cau hinh password bootstrap tai khoan mac dinh
+- Chi bat buoc o lan khoi tao dau tien, khi database chua co tai khoan admin.
+- Neu database da co tai khoan admin, ung dung van khoi dong duoc khi khong dat bien nay.
+- Neu can dong bo lai mat khau tai khoan mac dinh (`admin`, `manager`, `staff`), dat lai bien nay va khoi dong lai ung dung 1 lan.
+- Dat bien cho user hien tai (PowerShell):
+
+```powershell
+[Environment]::SetEnvironmentVariable("CAPHE_BOOTSTRAP_PASSWORD", "123", "User")
+```
+
 ### 5.3) Build
 Chay trong thu muc `DoAnLTQL_GD9/QuanLyQuanCaPhe`:
 
@@ -118,9 +128,9 @@ dotnet ef database update
   - `QuanLyQuanCaPhe/docs/migration-strategy-staging-prod.md`
 
 ## 7) Tai khoan bootstrap (dev)
-- admin / 123
-- manager / 123
-- staff / 123
+- admin / <gia tri CAPHE_BOOTSTRAP_PASSWORD luc bootstrap>
+- manager / <gia tri CAPHE_BOOTSTRAP_PASSWORD luc bootstrap>
+- staff / <gia tri CAPHE_BOOTSTRAP_PASSWORD luc bootstrap>
 
 Khuyen nghi: doi mat khau ngay sau khi setup moi truong.
 

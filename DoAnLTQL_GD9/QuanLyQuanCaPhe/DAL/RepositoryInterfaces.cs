@@ -50,6 +50,7 @@ public interface IDangNhapRepository
 public interface IHoaDonRepository
 {
     List<HoaDonDTO> GetDanhSachHoaDon(HoaDonFilterDTO boLoc);
+    Task<List<HoaDonDTO>> GetDanhSachHoaDonAsync(HoaDonFilterDTO boLoc, CancellationToken cancellationToken = default);
     HoaDonDTO? GetHoaDonTheoId(int hoaDonId);
     int GetNextHoaDonId();
     List<HoaDonBanKhachItemDTO> GetDanhSachBanKhach();
@@ -61,7 +62,7 @@ public interface IHoaDonRepository
     BanActionResultDTO HuyHoaDon(int hoaDonId, byte[]? rowVersion = null);
     BanActionResultDTO HuyHoaDon(int hoaDonId, string reason, string user, byte[]? rowVersion = null);
     BanActionResultDTO XacNhanThuTien(int hoaDonId, byte[]? rowVersion = null);
-    BanActionResultDTO CapNhatKhachHangChoHoaDonMo(int hoaDonId, int? khachHangId);
+    BanActionResultDTO CapNhatKhachHangChoHoaDonMo(int hoaDonId, int? khachHangId, byte[]? rowVersion = null);
 }
 
 public interface IKhachHangRepository
@@ -86,7 +87,7 @@ public interface ILoaiMonRepository
     bool CapNhatLoai(int id, string tenLoai, string? moTa);
     bool ChuyenMonSangLoaiKhac(int loaiNguonId, int loaiDichId);
     bool LoaiDangSuDung(int id);
-    bool XoaLoai(int id);
+    OperationResult XoaLoai(int id);
 }
 
 public interface IMonRepository
@@ -111,7 +112,8 @@ public interface INguyenLieuRepository
     int GetNextNguyenLieuId();
     NguyenLieuDTO ThemNguyenLieu(NguyenLieuDTO nguyenLieuDTO);
     bool CapNhatNguyenLieu(NguyenLieuDTO nguyenLieuDTO);
-    bool XoaNguyenLieu(int maNguyenLieu);
+    OperationResult XoaNguyenLieu(int maNguyenLieu);
+    (bool ThanhCong, string ThongBao) NhapKhoNhieuNguyenLieu(IEnumerable<NhapKhoChiTietDTO> dsChiTiet, string? ghiChu);
     (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu);
 }
 
@@ -146,7 +148,7 @@ public interface ITaiKhoanRepository
 
 public interface ITaiKhoanMacDinhRepository
 {
-    TaiKhoanMacDinhDAL.KhoiTaoTaiKhoanMacDinhResult DamBaoTaiKhoanMacDinh(string matKhauMacDinh);
+    TaiKhoanMacDinhDAL.KhoiTaoTaiKhoanMacDinhResult DamBaoTaiKhoanMacDinh(string? matKhauMacDinh);
 }
 
 public interface IThongKeRepository

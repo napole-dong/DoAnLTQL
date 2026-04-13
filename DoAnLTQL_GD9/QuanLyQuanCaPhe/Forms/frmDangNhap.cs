@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
+using QuanLyQuanCaPhe.Services.Diagnostics;
 
 namespace QuanLyQuanCaPhe.Forms
 {
@@ -49,9 +50,9 @@ namespace QuanLyQuanCaPhe.Forms
             txtMatKhau.Focus();
         }
 
-        private void btnDangNhap_Click(object? sender, EventArgs e)
+        private async void btnDangNhap_Click(object? sender, EventArgs e)
         {
-            XuLyDangNhap();
+            await XuLyDangNhapAsync();
         }
 
         private void btnThoat_Click(object? sender, EventArgs e)
@@ -64,7 +65,7 @@ namespace QuanLyQuanCaPhe.Forms
             XoaTrangThaiLoi();
         }
 
-        private void XuLyDangNhap()
+        private async Task XuLyDangNhapAsync()
         {
             if (_dangXuLyDangNhap)
             {
@@ -76,7 +77,12 @@ namespace QuanLyQuanCaPhe.Forms
 
             try
             {
-                var ketQua = _dangNhapBUS.DangNhap(txtTenDangNhap.Text, txtMatKhau.Text);
+                AppLogger.Info("Login requested from login form.", nameof(frmDangNhap));
+
+                var ketQua = await Task
+                    .Run(() => _dangNhapBUS.DangNhap(txtTenDangNhap.Text, txtMatKhau.Text))
+                    .WaitAsync(TimeSpan.FromSeconds(20));
+
                 if (!ketQua.ThanhCong || ketQua.ThongTinDangNhap == null)
                 {
                     HienThiLoiTheoTruong(ketQua.TruongLoi, ketQua.ThongBao);
@@ -85,13 +91,20 @@ namespace QuanLyQuanCaPhe.Forms
 
                 ThongTinDangNhap = ketQua.ThongTinDangNhap;
                 LuuTaiKhoanDaNho();
+                AppLogger.Info("Login form accepted credentials.", nameof(frmDangNhap));
 
                 DialogResult = DialogResult.OK;
                 Close();
             }
+            catch (TimeoutException)
+            {
+                HienThiThongBaoLoi("Đăng nhập đang quá thời gian chờ. Vui lòng kiểm tra kết nối và thử lại.");
+                AppLogger.Warning("Login request timed out after 20 seconds.", nameof(frmDangNhap));
+            }
             catch (Exception ex)
             {
                 HienThiThongBaoLoi("Không thể kết nối cơ sở dữ liệu. Vui lòng thử lại.");
+                AppLogger.Error(ex, "Login failed due to system exception.", nameof(frmDangNhap));
                 MessageBox.Show(
                     $"Đăng nhập thất bại do lỗi hệ thống.\nChi tiết: {ex.Message}",
                     "Lỗi",

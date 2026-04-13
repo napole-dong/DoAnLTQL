@@ -1,12 +1,22 @@
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Audit;
+using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Diagnostics;
 
 namespace QuanLyQuanCaPhe.DAL;
 
 public class NguyenLieuDAL : INguyenLieuRepository
 {
+    private readonly IActivityLogWriter _activityLogWriter;
+
+    public NguyenLieuDAL(IActivityLogWriter? activityLogWriter = null)
+    {
+        _activityLogWriter = AppServiceProvider.Resolve(activityLogWriter, () => new ActivityLogService());
+    }
+
     public List<NguyenLieuDTO> GetDanhSachNguyenLieu(string? tuKhoa)
     {
         using var context = new CaPheDbContext();
@@ -48,6 +58,17 @@ public class NguyenLieuDAL : INguyenLieuRepository
         context.Set<dtaNguyenLieu>().Add(nguyenLieu);
         context.SaveChanges();
 
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.CreateIngredient,
+            entity: "NguyenLieu",
+            entityId: nguyenLieu.ID.ToString(),
+            description: $"Đã thêm nguyên liệu {nguyenLieu.TenNguyenLieu}.",
+            oldValue: null,
+            newValue: TaoNguyenLieuSnapshot(nguyenLieu),
+            performedBy: nguoiDung?.TenDangNhap);
+
         nguyenLieuDTO.MaNguyenLieu = nguyenLieu.ID;
         return nguyenLieuDTO;
     }
@@ -62,6 +83,14 @@ public class NguyenLieuDAL : INguyenLieuRepository
             return false;
         }
 
+        var oldSnapshot = TaoNguyenLieuSnapshot(nguyenLieu);
+        var tenCu = nguyenLieu.TenNguyenLieu;
+        var donViTinhCu = nguyenLieu.DonViTinh;
+        var soLuongTonCu = nguyenLieu.SoLuongTon;
+        var mucCanhBaoCu = nguyenLieu.MucCanhBao;
+        var giaNhapGanNhatCu = nguyenLieu.GiaNhapGanNhat;
+        var trangThaiCu = nguyenLieu.TrangThai;
+
         nguyenLieu.TenNguyenLieu = nguyenLieuDTO.TenNguyenLieu;
         nguyenLieu.DonViTinh = nguyenLieuDTO.DonViTinh;
         nguyenLieu.SoLuongTon = nguyenLieuDTO.SoLuongTon;
@@ -71,37 +100,191 @@ public class NguyenLieuDAL : INguyenLieuRepository
         nguyenLieu.TrangThaiTextLegacy = nguyenLieuDTO.TrangThaiHienThi;
 
         context.SaveChanges();
+
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        _activityLogWriter.Log(
+            userId: nguoiDung?.UserId,
+            action: AuditActions.UpdateIngredient,
+            entity: "NguyenLieu",
+            entityId: nguyenLieu.ID.ToString(),
+            description: TaoMoTaCapNhatNguyenLieu(
+                nguyenLieu.ID,
+                tenCu,
+                nguyenLieu.TenNguyenLieu,
+                donViTinhCu,
+                nguyenLieu.DonViTinh,
+                soLuongTonCu,
+                nguyenLieu.SoLuongTon,
+                mucCanhBaoCu,
+                nguyenLieu.MucCanhBao,
+                giaNhapGanNhatCu,
+                nguyenLieu.GiaNhapGanNhat,
+                trangThaiCu,
+                nguyenLieu.TrangThai),
+            oldValue: oldSnapshot,
+            newValue: TaoNguyenLieuSnapshot(nguyenLieu),
+            performedBy: nguoiDung?.TenDangNhap);
+
         return true;
     }
 
-    public bool XoaNguyenLieu(int maNguyenLieu)
+    public OperationResult XoaNguyenLieu(int maNguyenLieu)
     {
         using var context = new CaPheDbContext();
 
         var nguyenLieu = context.Set<dtaNguyenLieu>().FirstOrDefault(x => x.ID == maNguyenLieu);
         if (nguyenLieu == null)
         {
-            return false;
+            return OperationResult.Failure("Không tìm thấy nguyên liệu để xóa.");
+        }
+
+        var oldSnapshot = TaoNguyenLieuSnapshot(nguyenLieu);
+        var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+
+        if (CoDuLieuPhatSinhKhoHoacCongThuc(context, maNguyenLieu))
+        {
+            ChuyenSangTrangThaiNgungDung(nguyenLieu);
+            context.SaveChanges();
+
+            _activityLogWriter.Log(
+                userId: nguoiDung?.UserId,
+                action: AuditActions.DeleteIngredient,
+                entity: "NguyenLieu",
+                entityId: nguyenLieu.ID.ToString(),
+                description: $"Không thể xóa cứng nguyên liệu {nguyenLieu.TenNguyenLieu}; hệ thống đã chuyển sang trạng thái ngừng dùng.",
+                oldValue: oldSnapshot,
+                newValue: TaoNguyenLieuSnapshot(nguyenLieu),
+                performedBy: nguoiDung?.TenDangNhap);
+
+            return OperationResult.Success("Nguyên liệu đã phát sinh dữ liệu kho/công thức. Hệ thống chuyển sang trạng thái ngừng dùng.");
         }
 
         context.Set<dtaNguyenLieu>().Remove(nguyenLieu);
-        context.SaveChanges();
-        return true;
+
+        try
+        {
+            context.SaveChanges();
+
+            _activityLogWriter.Log(
+                userId: nguoiDung?.UserId,
+                action: AuditActions.DeleteIngredient,
+                entity: "NguyenLieu",
+                entityId: maNguyenLieu.ToString(),
+                description: $"Đã xóa nguyên liệu {nguyenLieu.TenNguyenLieu}.",
+                oldValue: oldSnapshot,
+                newValue: new
+                {
+                    DeletedPermanently = true,
+                    NguyenLieuId = maNguyenLieu
+                },
+                performedBy: nguoiDung?.TenDangNhap);
+
+            return OperationResult.Success("Xóa nguyên liệu thành công.");
+        }
+        catch (DbUpdateException ex) when (LaLoiRangBuocKhoaNgoai(ex))
+        {
+            AppLogger.Warning(
+                $"Delete ingredient blocked by FK. NguyenLieuID={maNguyenLieu}. Fallback to inactive status.",
+                nameof(NguyenLieuDAL));
+
+            using var fallbackContext = new CaPheDbContext();
+            var nguyenLieuCanCapNhat = fallbackContext.Set<dtaNguyenLieu>().FirstOrDefault(x => x.ID == maNguyenLieu);
+            if (nguyenLieuCanCapNhat == null)
+            {
+                return OperationResult.Failure("Không tìm thấy nguyên liệu để xóa.");
+            }
+
+            ChuyenSangTrangThaiNgungDung(nguyenLieuCanCapNhat);
+            fallbackContext.SaveChanges();
+
+            _activityLogWriter.Log(
+                userId: nguoiDung?.UserId,
+                action: AuditActions.DeleteIngredient,
+                entity: "NguyenLieu",
+                entityId: nguyenLieuCanCapNhat.ID.ToString(),
+                description: $"Xóa nguyên liệu {nguyenLieuCanCapNhat.TenNguyenLieu} bị chặn bởi ràng buộc dữ liệu; hệ thống đã chuyển sang ngừng dùng.",
+                oldValue: oldSnapshot,
+                newValue: TaoNguyenLieuSnapshot(nguyenLieuCanCapNhat),
+                performedBy: nguoiDung?.TenDangNhap);
+
+            return OperationResult.Success("Nguyên liệu đã phát sinh dữ liệu kho/công thức. Hệ thống chuyển sang trạng thái ngừng dùng.");
+        }
     }
 
     public (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu)
     {
+        return NhapKhoNhieuNguyenLieu(
+            new[]
+            {
+                new NhapKhoChiTietDTO
+                {
+                    NguyenLieuID = maNguyenLieu,
+                    SoLuong = soLuongNhap,
+                    DonGiaNhap = giaNhap
+                }
+            },
+            ghiChu);
+    }
+
+    public (bool ThanhCong, string ThongBao) NhapKhoNhieuNguyenLieu(IEnumerable<NhapKhoChiTietDTO> dsChiTiet, string? ghiChu)
+    {
         using var correlationScope = CorrelationContext.BeginScope();
 
-        AppLogger.Info($"Start NhapKho. NguyenLieuID={maNguyenLieu}, SoLuongNhap={soLuongNhap}.", nameof(NguyenLieuDAL));
+        if (dsChiTiet == null)
+        {
+            return (false, "Danh sách chi tiết nhập kho không hợp lệ.");
+        }
+
+        var dsChiTietDaChuanHoa = dsChiTiet
+            .Where(x => x != null)
+            .Select(x => new NhapKhoChiTietDTO
+            {
+                NguyenLieuID = x.NguyenLieuID,
+                SoLuong = decimal.Round(x.SoLuong, 3, MidpointRounding.AwayFromZero),
+                DonGiaNhap = decimal.Round(x.DonGiaNhap, 2, MidpointRounding.AwayFromZero)
+            })
+            .ToList();
+
+        if (dsChiTietDaChuanHoa.Count == 0)
+        {
+            return (false, "Phiếu nhập kho phải có ít nhất 1 dòng chi tiết.");
+        }
+
+        if (dsChiTietDaChuanHoa.Any(x => x.NguyenLieuID <= 0 || x.SoLuong <= 0 || x.DonGiaNhap < 0))
+        {
+            return (false, "Có dòng chi tiết nhập kho không hợp lệ.");
+        }
+
+        var coNguyenLieuTrung = dsChiTietDaChuanHoa
+            .GroupBy(x => x.NguyenLieuID)
+            .Any(g => g.Count() > 1);
+        if (coNguyenLieuTrung)
+        {
+            return (false, "Một nguyên liệu chỉ được xuất hiện 1 lần trong cùng phiếu nhập.");
+        }
+
+        var nguoiDungDangNhap = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        if (nguoiDungDangNhap == null || nguoiDungDangNhap.NhanVienId <= 0)
+        {
+            return (false, "Không xác định được nhân viên đang thao tác. Vui lòng đăng nhập lại.");
+        }
+
+        var nhanVienId = nguoiDungDangNhap.NhanVienId;
+        var dsNguyenLieuId = dsChiTietDaChuanHoa
+            .Select(x => x.NguyenLieuID)
+            .Distinct()
+            .ToArray();
+
+        AppLogger.Info($"Start NhapKhoNhieuNguyenLieu. SoDong={dsChiTietDaChuanHoa.Count}.", nameof(NguyenLieuDAL));
         AppLogger.Audit(
             "Inventory.Import.Start",
             "Bat dau nhap kho.",
             new
             {
-                NguyenLieuId = maNguyenLieu,
-                SoLuongNhap = soLuongNhap,
-                GiaNhap = giaNhap
+                SoDong = dsChiTietDaChuanHoa.Count,
+                NguyenLieuIds = dsNguyenLieuId,
+                NhanVienId = nhanVienId,
+                TongSoLuong = dsChiTietDaChuanHoa.Sum(x => x.SoLuong)
             },
             nameof(NguyenLieuDAL));
 
@@ -109,36 +292,71 @@ public class NguyenLieuDAL : INguyenLieuRepository
         {
             return ExecutionStrategyTransactionRunner.ExecuteAsync(async context =>
             {
-                var nguyenLieu = await context.NguyenLieu
-                    .FirstOrDefaultAsync(x => x.ID == maNguyenLieu)
+                var nhanVienTonTai = await context.NhanVien
+                    .AsNoTracking()
+                    .AnyAsync(x => x.ID == nhanVienId)
                     .ConfigureAwait(false);
-                if (nguyenLieu == null)
+                if (!nhanVienTonTai)
                 {
                     AppLogger.Audit(
                         "Inventory.Import.Rejected",
+                        "Nhan vien thao tac khong hop le.",
+                        new { NhanVienId = nhanVienId },
+                        nameof(NguyenLieuDAL));
+                    return (false, "Tài khoản đăng nhập không liên kết nhân viên hợp lệ. Vui lòng liên hệ quản trị viên.");
+                }
+
+                var dsNguyenLieu = await context.NguyenLieu
+                    .Where(x => dsNguyenLieuId.Contains(x.ID))
+                    .ToDictionaryAsync(x => x.ID)
+                    .ConfigureAwait(false);
+
+                if (dsNguyenLieu.Count != dsNguyenLieuId.Length)
+                {
+                    var dsThieu = dsNguyenLieuId
+                        .Where(x => !dsNguyenLieu.ContainsKey(x))
+                        .ToArray();
+
+                    AppLogger.Audit(
+                        "Inventory.Import.Rejected",
                         "Khong tim thay nguyen lieu de nhap kho.",
-                        new { NguyenLieuId = maNguyenLieu },
+                        new { NguyenLieuIdsKhongTonTai = dsThieu },
                         nameof(NguyenLieuDAL));
                     return (false, "Không tìm thấy nguyên liệu để nhập kho.");
                 }
 
-                var soLuongTonTruoc = nguyenLieu.SoLuongTon;
+                var tonKhoTruoc = dsNguyenLieu.ToDictionary(x => x.Key, x => x.Value.SoLuongTon);
 
                 var phieuNhap = new dtaPhieuNhapKho
                 {
-                    NguyenLieuID = maNguyenLieu,
-                    SoLuongNhap = soLuongNhap,
-                    GiaNhap = giaNhap,
                     NgayNhap = DateTime.Now,
+                    NhanVienID = nhanVienId,
                     GhiChu = string.IsNullOrWhiteSpace(ghiChu) ? null : ghiChu.Trim()
                 };
 
                 context.PhieuNhapKho.Add(phieuNhap);
 
-                nguyenLieu.SoLuongTon += soLuongNhap;
-                nguyenLieu.GiaNhapGanNhat = giaNhap;
-                nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
-                nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
+                foreach (var chiTiet in dsChiTietDaChuanHoa)
+                {
+                    var nguyenLieu = dsNguyenLieu[chiTiet.NguyenLieuID];
+
+                    context.ChiTietPhieuNhap.Add(new dtaChiTietPhieuNhap
+                    {
+                        PhieuNhap = phieuNhap,
+                        NguyenLieuID = chiTiet.NguyenLieuID,
+                        SoLuong = chiTiet.SoLuong,
+                        DonGiaNhap = chiTiet.DonGiaNhap,
+                        ThanhTien = decimal.Round(
+                            chiTiet.SoLuong * chiTiet.DonGiaNhap,
+                            2,
+                            MidpointRounding.AwayFromZero)
+                    });
+
+                    nguyenLieu.SoLuongTon += chiTiet.SoLuong;
+                    nguyenLieu.GiaNhapGanNhat = chiTiet.DonGiaNhap;
+                    nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
+                    nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
+                }
 
                 await context.SaveChangesAsync().ConfigureAwait(false);
 
@@ -147,11 +365,17 @@ public class NguyenLieuDAL : INguyenLieuRepository
                     "Nhap kho thanh cong.",
                     new
                     {
-                        NguyenLieuId = maNguyenLieu,
-                        SoLuongNhap = soLuongNhap,
-                        SoLuongTonTruoc = soLuongTonTruoc,
-                        SoLuongTonSau = nguyenLieu.SoLuongTon,
-                        GiaNhap = giaNhap
+                        SoDong = dsChiTietDaChuanHoa.Count,
+                        NhanVienId = nhanVienId,
+                        PhieuNhapId = phieuNhap.ID,
+                        ChiTiet = dsChiTietDaChuanHoa.Select(x => new
+                        {
+                            x.NguyenLieuID,
+                            x.SoLuong,
+                            x.DonGiaNhap,
+                            SoLuongTonTruoc = tonKhoTruoc[x.NguyenLieuID],
+                            SoLuongTonSau = dsNguyenLieu[x.NguyenLieuID].SoLuongTon
+                        }).ToList()
                     },
                     nameof(NguyenLieuDAL));
 
@@ -163,7 +387,7 @@ public class NguyenLieuDAL : INguyenLieuRepository
             var mappedError = AppExceptionMapper.Map(ex);
             AppLogger.Error(
                 ex,
-                $"Unexpected failure in NhapKho. NguyenLieuID={maNguyenLieu}.",
+                "Unexpected failure in NhapKhoNhieuNguyenLieu.",
                 nameof(NguyenLieuDAL),
                 mappedError.Code);
             AppLogger.Audit(
@@ -171,9 +395,9 @@ public class NguyenLieuDAL : INguyenLieuRepository
                 "Nhap kho that bai do loi he thong.",
                 new
                 {
-                    NguyenLieuId = maNguyenLieu,
-                    SoLuongNhap = soLuongNhap,
-                    GiaNhap = giaNhap
+                    SoDong = dsChiTietDaChuanHoa.Count,
+                    NguyenLieuIds = dsNguyenLieuId,
+                    NhanVienId = nhanVienId
                 },
                 nameof(NguyenLieuDAL));
 
@@ -182,6 +406,71 @@ public class NguyenLieuDAL : INguyenLieuRepository
                 ex);
             return (false, thongBao);
         }
+    }
+
+    private static object TaoNguyenLieuSnapshot(dtaNguyenLieu nguyenLieu)
+    {
+        return new
+        {
+            nguyenLieu.ID,
+            nguyenLieu.TenNguyenLieu,
+            nguyenLieu.DonViTinh,
+            nguyenLieu.SoLuongTon,
+            nguyenLieu.MucCanhBao,
+            nguyenLieu.GiaNhapGanNhat,
+            nguyenLieu.TrangThai,
+            nguyenLieu.TrangThaiTextLegacy
+        };
+    }
+
+    private static string TaoMoTaCapNhatNguyenLieu(
+        int id,
+        string tenCu,
+        string tenMoi,
+        string donViTinhCu,
+        string donViTinhMoi,
+        decimal soLuongTonCu,
+        decimal soLuongTonMoi,
+        decimal mucCanhBaoCu,
+        decimal mucCanhBaoMoi,
+        decimal giaNhapCu,
+        decimal giaNhapMoi,
+        int trangThaiCu,
+        int trangThaiMoi)
+    {
+        var moTa = $"Đã cập nhật nguyên liệu {tenMoi} (ID: {id}).";
+
+        if (!string.Equals(tenCu, tenMoi, StringComparison.OrdinalIgnoreCase))
+        {
+            moTa += $" Tên: {tenCu} -> {tenMoi}.";
+        }
+
+        if (!string.Equals(donViTinhCu, donViTinhMoi, StringComparison.OrdinalIgnoreCase))
+        {
+            moTa += $" Đơn vị tính: {donViTinhCu} -> {donViTinhMoi}.";
+        }
+
+        if (soLuongTonCu != soLuongTonMoi)
+        {
+            moTa += $" Tồn kho: {soLuongTonCu:N3} -> {soLuongTonMoi:N3}.";
+        }
+
+        if (mucCanhBaoCu != mucCanhBaoMoi)
+        {
+            moTa += $" Mức cảnh báo: {mucCanhBaoCu:N3} -> {mucCanhBaoMoi:N3}.";
+        }
+
+        if (giaNhapCu != giaNhapMoi)
+        {
+            moTa += $" Giá nhập gần nhất: {giaNhapCu:N0} -> {giaNhapMoi:N0}.";
+        }
+
+        if (trangThaiCu != trangThaiMoi)
+        {
+            moTa += $" Trạng thái: {ChuyenTrangThaiNguyenLieuTextLegacy(trangThaiCu, soLuongTonCu)} -> {ChuyenTrangThaiNguyenLieuTextLegacy(trangThaiMoi, soLuongTonMoi)}.";
+        }
+
+        return moTa;
     }
 
     private static List<NguyenLieuReadModel> QueryDanhSachNguyenLieuSapHetRows(CaPheDbContext context)
@@ -297,6 +586,32 @@ public class NguyenLieuDAL : INguyenLieuRepository
             2 => soLuongTon <= 0 ? "Hết hàng" : "Sắp hết",
             _ => soLuongTon <= 0 ? "Hết hàng" : "Đang sử dụng"
         };
+    }
+
+    private static bool CoDuLieuPhatSinhKhoHoacCongThuc(CaPheDbContext context, int maNguyenLieu)
+    {
+        return context.ChiTietPhieuNhap.Any(x => x.NguyenLieuID == maNguyenLieu)
+            || context.ChiTietPhieuXuat.Any(x => x.NguyenLieuID == maNguyenLieu)
+            || context.CongThucMon.Any(x => x.NguyenLieuID == maNguyenLieu);
+    }
+
+    private static void ChuyenSangTrangThaiNgungDung(dtaNguyenLieu nguyenLieu)
+    {
+        nguyenLieu.TrangThai = 0;
+        nguyenLieu.TrangThaiTextLegacy = "Ngừng dùng";
+    }
+
+    private static bool LaLoiRangBuocKhoaNgoai(DbUpdateException exception)
+    {
+        var message = string.Concat(exception.Message, " ", exception.InnerException?.Message);
+        return message.Contains("REFERENCE constraint", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FOREIGN KEY constraint", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FOREIGN KEY constraint failed", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FK_ChiTietPhieuXuat_NguyenLieu_NguyenLieuID", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FK_ChiTietPhieuNhap_NguyenLieu_NguyenLieuID", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FK_PhieuXuatKho_NguyenLieu_NguyenLieuID", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FK_CongThucMon_NguyenLieu_NguyenLieuID", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("FK_PhieuNhapKho_NguyenLieu_NguyenLieuID", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class NguyenLieuReadModel

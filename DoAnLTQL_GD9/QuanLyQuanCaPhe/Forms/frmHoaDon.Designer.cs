@@ -28,13 +28,13 @@ namespace QuanLyQuanCaPhe.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle7 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle8 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle10 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle9 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle11 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle14 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle12 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle13 = new DataGridViewCellStyle();
             panelSidebar = new Panel();
             btnDangXuat = new Button();
             flowSidebarMenu = new FlowLayoutPanel();
@@ -55,6 +55,12 @@ namespace QuanLyQuanCaPhe.Forms
             splitHoaDon = new SplitContainer();
             panelMaster = new Panel();
             dgvDanhSachHoaDon = new DataGridView();
+            colMaHoaDon = new DataGridViewTextBoxColumn();
+            colNgayLap = new DataGridViewTextBoxColumn();
+            colBanKhach = new DataGridViewTextBoxColumn();
+            colTongTien = new DataGridViewTextBoxColumn();
+            colTrangThaiHoaDon = new DataGridViewTextBoxColumn();
+            colNhanVienLap = new DataGridViewTextBoxColumn();
             panelMasterFilter = new Panel();
             btnLocXem = new Button();
             cboTrangThaiLoc = new ComboBox();
@@ -72,15 +78,9 @@ namespace QuanLyQuanCaPhe.Forms
             tableDetail = new TableLayoutPanel();
             panelActions = new Panel();
             flowActionNghiepVu = new FlowLayoutPanel();
-            btnInHoaDon = new Button();
             btnXacNhanThuTien = new Button();
             lblNhomNghiepVu = new Label();
             flowActionDuLieu = new FlowLayoutPanel();
-            btnThemMoi = new Button();
-            btnSua = new Button();
-            btnXoaHuy = new Button();
-            btnLuu = new Button();
-            btnBoQua = new Button();
             lblNhomDuLieu = new Label();
             panelTongKet = new Panel();
             grpTongKet = new GroupBox();
@@ -99,6 +99,7 @@ namespace QuanLyQuanCaPhe.Forms
             colThanhTien = new DataGridViewTextBoxColumn();
             panelThemMon = new Panel();
             btnThemMonVaoHoaDon = new Button();
+            btnXoaMonKhoiHoaDon = new Button();
             nudSoLuong = new NumericUpDown();
             lblSoLuong = new Label();
             cboMon = new ComboBox();
@@ -121,12 +122,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblTenQuan = new Label();
             lblChiTietTitle = new Label();
             lblThongTinChungTitle = new Label();
-            colMaHoaDon = new DataGridViewTextBoxColumn();
-            colNgayLap = new DataGridViewTextBoxColumn();
-            colBanKhach = new DataGridViewTextBoxColumn();
-            colTongTien = new DataGridViewTextBoxColumn();
-            colTrangThaiHoaDon = new DataGridViewTextBoxColumn();
-            colNhanVienLap = new DataGridViewTextBoxColumn();
+            btnXoaHuy = new Button();
             panelSidebar.SuspendLayout();
             flowSidebarMenu.SuspendLayout();
             panelLogo.SuspendLayout();
@@ -267,7 +263,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnCongThuc.Padding = new Padding(20, 0, 0, 0);
             btnCongThuc.Size = new Size(230, 48);
             btnCongThuc.TabIndex = 3;
-            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.Text = "\U0001f9ea  Công thức";
             btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
             btnCongThuc.UseVisualStyleBackColor = true;
             // 
@@ -440,25 +436,25 @@ namespace QuanLyQuanCaPhe.Forms
             dgvDanhSachHoaDon.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvDanhSachHoaDon.BackgroundColor = Color.White;
             dgvDanhSachHoaDon.BorderStyle = BorderStyle.None;
-            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle1.BackColor = Color.FromArgb(245, 237, 227);
-            dataGridViewCellStyle1.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
-            dataGridViewCellStyle1.ForeColor = Color.FromArgb(70, 53, 40);
-            dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(245, 237, 227);
-            dataGridViewCellStyle1.SelectionForeColor = Color.FromArgb(70, 53, 40);
-            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
-            dgvDanhSachHoaDon.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle8.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle8.BackColor = Color.FromArgb(245, 237, 227);
+            dataGridViewCellStyle8.Font = new Font("Segoe UI Semibold", 9.5F, FontStyle.Bold);
+            dataGridViewCellStyle8.ForeColor = Color.FromArgb(70, 53, 40);
+            dataGridViewCellStyle8.SelectionBackColor = Color.FromArgb(245, 237, 227);
+            dataGridViewCellStyle8.SelectionForeColor = Color.FromArgb(70, 53, 40);
+            dataGridViewCellStyle8.WrapMode = DataGridViewTriState.True;
+            dgvDanhSachHoaDon.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle8;
             dgvDanhSachHoaDon.ColumnHeadersHeight = 40;
             dgvDanhSachHoaDon.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             dgvDanhSachHoaDon.Columns.AddRange(new DataGridViewColumn[] { colMaHoaDon, colNgayLap, colBanKhach, colTongTien, colTrangThaiHoaDon, colNhanVienLap });
-            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle3.BackColor = Color.White;
-            dataGridViewCellStyle3.Font = new Font("Segoe UI", 9F);
-            dataGridViewCellStyle3.ForeColor = Color.FromArgb(64, 64, 64);
-            dataGridViewCellStyle3.SelectionBackColor = Color.FromArgb(248, 240, 232);
-            dataGridViewCellStyle3.SelectionForeColor = Color.FromArgb(63, 45, 35);
-            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.False;
-            dgvDanhSachHoaDon.DefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle10.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle10.BackColor = Color.White;
+            dataGridViewCellStyle10.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle10.ForeColor = Color.FromArgb(64, 64, 64);
+            dataGridViewCellStyle10.SelectionBackColor = Color.FromArgb(248, 240, 232);
+            dataGridViewCellStyle10.SelectionForeColor = Color.FromArgb(63, 45, 35);
+            dataGridViewCellStyle10.WrapMode = DataGridViewTriState.False;
+            dgvDanhSachHoaDon.DefaultCellStyle = dataGridViewCellStyle10;
             dgvDanhSachHoaDon.Dock = DockStyle.Fill;
             dgvDanhSachHoaDon.EnableHeadersVisualStyles = false;
             dgvDanhSachHoaDon.GridColor = Color.FromArgb(238, 230, 220);
@@ -472,6 +468,56 @@ namespace QuanLyQuanCaPhe.Forms
             dgvDanhSachHoaDon.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvDanhSachHoaDon.Size = new Size(584, 445);
             dgvDanhSachHoaDon.TabIndex = 2;
+            // 
+            // colMaHoaDon
+            // 
+            colMaHoaDon.FillWeight = 88F;
+            colMaHoaDon.HeaderText = "Mã HĐ";
+            colMaHoaDon.MinimumWidth = 6;
+            colMaHoaDon.Name = "colMaHoaDon";
+            colMaHoaDon.ReadOnly = true;
+            // 
+            // colNgayLap
+            // 
+            colNgayLap.FillWeight = 105F;
+            colNgayLap.HeaderText = "Ngày lập";
+            colNgayLap.MinimumWidth = 6;
+            colNgayLap.Name = "colNgayLap";
+            colNgayLap.ReadOnly = true;
+            // 
+            // colBanKhach
+            // 
+            colBanKhach.FillWeight = 140F;
+            colBanKhach.HeaderText = "Bàn/Khách hàng";
+            colBanKhach.MinimumWidth = 6;
+            colBanKhach.Name = "colBanKhach";
+            colBanKhach.ReadOnly = true;
+            // 
+            // colTongTien
+            // 
+            dataGridViewCellStyle9.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colTongTien.DefaultCellStyle = dataGridViewCellStyle9;
+            colTongTien.FillWeight = 92F;
+            colTongTien.HeaderText = "Tổng tiền";
+            colTongTien.MinimumWidth = 6;
+            colTongTien.Name = "colTongTien";
+            colTongTien.ReadOnly = true;
+            // 
+            // colTrangThaiHoaDon
+            // 
+            colTrangThaiHoaDon.FillWeight = 96F;
+            colTrangThaiHoaDon.HeaderText = "Trạng thái";
+            colTrangThaiHoaDon.MinimumWidth = 6;
+            colTrangThaiHoaDon.Name = "colTrangThaiHoaDon";
+            colTrangThaiHoaDon.ReadOnly = true;
+            // 
+            // colNhanVienLap
+            // 
+            colNhanVienLap.FillWeight = 110F;
+            colNhanVienLap.HeaderText = "Nhân viên lập";
+            colNhanVienLap.MinimumWidth = 6;
+            colNhanVienLap.Name = "colNhanVienLap";
+            colNhanVienLap.ReadOnly = true;
             // 
             // panelMasterFilter
             // 
@@ -512,7 +558,7 @@ namespace QuanLyQuanCaPhe.Forms
             cboTrangThaiLoc.BackColor = Color.FromArgb(248, 245, 241);
             cboTrangThaiLoc.DropDownStyle = ComboBoxStyle.DropDownList;
             cboTrangThaiLoc.FormattingEnabled = true;
-            cboTrangThaiLoc.Items.AddRange(new object[] { "Tất cả", "Đã thanh toán", "Chưa thanh toán", "Đã hủy" });
+            cboTrangThaiLoc.Items.AddRange(new object[] { "Tất cả", "Open", "Paid", "Voided" });
             cboTrangThaiLoc.Location = new Point(321, 91);
             cboTrangThaiLoc.Name = "cboTrangThaiLoc";
             cboTrangThaiLoc.Size = new Size(166, 28);
@@ -671,28 +717,12 @@ namespace QuanLyQuanCaPhe.Forms
             // flowActionNghiepVu
             // 
             flowActionNghiepVu.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            flowActionNghiepVu.Controls.Add(btnInHoaDon);
             flowActionNghiepVu.Controls.Add(btnXacNhanThuTien);
             flowActionNghiepVu.Location = new Point(0, 88);
             flowActionNghiepVu.Name = "flowActionNghiepVu";
             flowActionNghiepVu.Size = new Size(456, 38);
             flowActionNghiepVu.TabIndex = 3;
             flowActionNghiepVu.WrapContents = false;
-            // 
-            // btnInHoaDon
-            // 
-            btnInHoaDon.BackColor = Color.FromArgb(248, 245, 241);
-            btnInHoaDon.FlatAppearance.BorderSize = 0;
-            btnInHoaDon.FlatStyle = FlatStyle.Flat;
-            btnInHoaDon.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnInHoaDon.ForeColor = Color.FromArgb(65, 48, 39);
-            btnInHoaDon.Location = new Point(0, 0);
-            btnInHoaDon.Margin = new Padding(0, 0, 8, 0);
-            btnInHoaDon.Name = "btnInHoaDon";
-            btnInHoaDon.Size = new Size(180, 36);
-            btnInHoaDon.TabIndex = 0;
-            btnInHoaDon.Text = "In Hóa Đơn";
-            btnInHoaDon.UseVisualStyleBackColor = false;
             // 
             // btnXacNhanThuTien
             // 
@@ -701,12 +731,12 @@ namespace QuanLyQuanCaPhe.Forms
             btnXacNhanThuTien.FlatStyle = FlatStyle.Flat;
             btnXacNhanThuTien.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
             btnXacNhanThuTien.ForeColor = Color.FromArgb(24, 98, 77);
-            btnXacNhanThuTien.Location = new Point(188, 0);
+            btnXacNhanThuTien.Location = new Point(0, 0);
             btnXacNhanThuTien.Margin = new Padding(0);
             btnXacNhanThuTien.Name = "btnXacNhanThuTien";
             btnXacNhanThuTien.Size = new Size(224, 36);
             btnXacNhanThuTien.TabIndex = 1;
-            btnXacNhanThuTien.Text = "Xác nhận thu tiền";
+            btnXacNhanThuTien.Text = "Thanh toán";
             btnXacNhanThuTien.UseVisualStyleBackColor = false;
             // 
             // lblNhomNghiepVu
@@ -716,98 +746,19 @@ namespace QuanLyQuanCaPhe.Forms
             lblNhomNghiepVu.ForeColor = Color.FromArgb(79, 56, 43);
             lblNhomNghiepVu.Location = new Point(0, 64);
             lblNhomNghiepVu.Name = "lblNhomNghiepVu";
-            lblNhomNghiepVu.Size = new Size(159, 20);
+            lblNhomNghiepVu.Size = new Size(82, 20);
             lblNhomNghiepVu.TabIndex = 2;
-            lblNhomNghiepVu.Text = "Hành động nghiệp vụ";
+            lblNhomNghiepVu.Text = "Thanh toán";
             // 
             // flowActionDuLieu
             // 
             flowActionDuLieu.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            flowActionDuLieu.Controls.Add(btnThemMoi);
-            flowActionDuLieu.Controls.Add(btnSua);
             flowActionDuLieu.Controls.Add(btnXoaHuy);
-            flowActionDuLieu.Controls.Add(btnLuu);
-            flowActionDuLieu.Controls.Add(btnBoQua);
             flowActionDuLieu.Location = new Point(0, 24);
             flowActionDuLieu.Name = "flowActionDuLieu";
             flowActionDuLieu.Size = new Size(456, 36);
             flowActionDuLieu.TabIndex = 1;
             flowActionDuLieu.WrapContents = false;
-            // 
-            // btnThemMoi
-            // 
-            btnThemMoi.BackColor = Color.FromArgb(248, 245, 241);
-            btnThemMoi.FlatAppearance.BorderSize = 0;
-            btnThemMoi.FlatStyle = FlatStyle.Flat;
-            btnThemMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnThemMoi.ForeColor = Color.FromArgb(65, 48, 39);
-            btnThemMoi.Location = new Point(0, 0);
-            btnThemMoi.Margin = new Padding(0, 0, 10, 0);
-            btnThemMoi.Name = "btnThemMoi";
-            btnThemMoi.Size = new Size(72, 34);
-            btnThemMoi.TabIndex = 0;
-            btnThemMoi.Text = "Thêm";
-            btnThemMoi.UseVisualStyleBackColor = false;
-            // 
-            // btnSua
-            // 
-            btnSua.BackColor = Color.FromArgb(248, 245, 241);
-            btnSua.FlatAppearance.BorderSize = 0;
-            btnSua.FlatStyle = FlatStyle.Flat;
-            btnSua.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnSua.ForeColor = Color.FromArgb(65, 48, 39);
-            btnSua.Location = new Point(82, 0);
-            btnSua.Margin = new Padding(0, 0, 10, 0);
-            btnSua.Name = "btnSua";
-            btnSua.Size = new Size(62, 34);
-            btnSua.TabIndex = 1;
-            btnSua.Text = "Sửa";
-            btnSua.UseVisualStyleBackColor = false;
-            // 
-            // btnXoaHuy
-            // 
-            btnXoaHuy.BackColor = Color.FromArgb(204, 73, 73);
-            btnXoaHuy.FlatAppearance.BorderSize = 0;
-            btnXoaHuy.FlatStyle = FlatStyle.Flat;
-            btnXoaHuy.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnXoaHuy.ForeColor = Color.White;
-            btnXoaHuy.Location = new Point(154, 0);
-            btnXoaHuy.Margin = new Padding(0, 0, 10, 0);
-            btnXoaHuy.Name = "btnXoaHuy";
-            btnXoaHuy.Size = new Size(82, 34);
-            btnXoaHuy.TabIndex = 2;
-            btnXoaHuy.Text = "Xóa/Hủy";
-            btnXoaHuy.UseVisualStyleBackColor = false;
-            // 
-            // btnLuu
-            // 
-            btnLuu.BackColor = Color.FromArgb(34, 116, 197);
-            btnLuu.FlatAppearance.BorderSize = 0;
-            btnLuu.FlatStyle = FlatStyle.Flat;
-            btnLuu.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnLuu.ForeColor = Color.White;
-            btnLuu.Location = new Point(246, 0);
-            btnLuu.Margin = new Padding(0, 0, 10, 0);
-            btnLuu.Name = "btnLuu";
-            btnLuu.Size = new Size(62, 34);
-            btnLuu.TabIndex = 3;
-            btnLuu.Text = "Lưu";
-            btnLuu.UseVisualStyleBackColor = false;
-            // 
-            // btnBoQua
-            // 
-            btnBoQua.BackColor = Color.FromArgb(248, 245, 241);
-            btnBoQua.FlatAppearance.BorderSize = 0;
-            btnBoQua.FlatStyle = FlatStyle.Flat;
-            btnBoQua.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            btnBoQua.ForeColor = Color.FromArgb(79, 56, 43);
-            btnBoQua.Location = new Point(318, 0);
-            btnBoQua.Margin = new Padding(0);
-            btnBoQua.Name = "btnBoQua";
-            btnBoQua.Size = new Size(82, 34);
-            btnBoQua.TabIndex = 4;
-            btnBoQua.Text = "Bỏ qua";
-            btnBoQua.UseVisualStyleBackColor = false;
             // 
             // lblNhomDuLieu
             // 
@@ -816,9 +767,9 @@ namespace QuanLyQuanCaPhe.Forms
             lblNhomDuLieu.ForeColor = Color.FromArgb(79, 56, 43);
             lblNhomDuLieu.Location = new Point(0, 0);
             lblNhomDuLieu.Name = "lblNhomDuLieu";
-            lblNhomDuLieu.Size = new Size(137, 20);
+            lblNhomDuLieu.Size = new Size(111, 20);
             lblNhomDuLieu.TabIndex = 0;
-            lblNhomDuLieu.Text = "Hành động dữ liệu";
+            lblNhomDuLieu.Text = "Void hóa đơn";
             // 
             // panelTongKet
             // 
@@ -946,25 +897,25 @@ namespace QuanLyQuanCaPhe.Forms
             dgvChiTietHoaDon.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvChiTietHoaDon.BackgroundColor = Color.White;
             dgvChiTietHoaDon.BorderStyle = BorderStyle.None;
-            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle4.BackColor = Color.FromArgb(248, 245, 241);
-            dataGridViewCellStyle4.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            dataGridViewCellStyle4.ForeColor = Color.FromArgb(79, 63, 49);
-            dataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(248, 245, 241);
-            dataGridViewCellStyle4.SelectionForeColor = Color.FromArgb(79, 63, 49);
-            dataGridViewCellStyle4.WrapMode = DataGridViewTriState.True;
-            dgvChiTietHoaDon.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle11.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle11.BackColor = Color.FromArgb(248, 245, 241);
+            dataGridViewCellStyle11.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dataGridViewCellStyle11.ForeColor = Color.FromArgb(79, 63, 49);
+            dataGridViewCellStyle11.SelectionBackColor = Color.FromArgb(248, 245, 241);
+            dataGridViewCellStyle11.SelectionForeColor = Color.FromArgb(79, 63, 49);
+            dataGridViewCellStyle11.WrapMode = DataGridViewTriState.True;
+            dgvChiTietHoaDon.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle11;
             dgvChiTietHoaDon.ColumnHeadersHeight = 34;
             dgvChiTietHoaDon.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             dgvChiTietHoaDon.Columns.AddRange(new DataGridViewColumn[] { colTenMon, colSoLuong, colDonGia, colThanhTien });
-            dataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle7.BackColor = Color.White;
-            dataGridViewCellStyle7.Font = new Font("Segoe UI", 9F);
-            dataGridViewCellStyle7.ForeColor = Color.FromArgb(65, 48, 39);
-            dataGridViewCellStyle7.SelectionBackColor = Color.FromArgb(248, 240, 232);
-            dataGridViewCellStyle7.SelectionForeColor = Color.FromArgb(63, 45, 35);
-            dataGridViewCellStyle7.WrapMode = DataGridViewTriState.False;
-            dgvChiTietHoaDon.DefaultCellStyle = dataGridViewCellStyle7;
+            dataGridViewCellStyle14.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle14.BackColor = Color.White;
+            dataGridViewCellStyle14.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle14.ForeColor = Color.FromArgb(65, 48, 39);
+            dataGridViewCellStyle14.SelectionBackColor = Color.FromArgb(248, 240, 232);
+            dataGridViewCellStyle14.SelectionForeColor = Color.FromArgb(63, 45, 35);
+            dataGridViewCellStyle14.WrapMode = DataGridViewTriState.False;
+            dgvChiTietHoaDon.DefaultCellStyle = dataGridViewCellStyle14;
             dgvChiTietHoaDon.Dock = DockStyle.Fill;
             dgvChiTietHoaDon.EnableHeadersVisualStyles = false;
             dgvChiTietHoaDon.GridColor = Color.FromArgb(238, 230, 220);
@@ -989,8 +940,8 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // colSoLuong
             // 
-            dataGridViewCellStyle5.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            colSoLuong.DefaultCellStyle = dataGridViewCellStyle5;
+            dataGridViewCellStyle12.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            colSoLuong.DefaultCellStyle = dataGridViewCellStyle12;
             colSoLuong.FillWeight = 50F;
             colSoLuong.HeaderText = "SL";
             colSoLuong.MinimumWidth = 6;
@@ -999,8 +950,8 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // colDonGia
             // 
-            dataGridViewCellStyle6.Alignment = DataGridViewContentAlignment.MiddleRight;
-            colDonGia.DefaultCellStyle = dataGridViewCellStyle6;
+            dataGridViewCellStyle13.Alignment = DataGridViewContentAlignment.MiddleRight;
+            colDonGia.DefaultCellStyle = dataGridViewCellStyle13;
             colDonGia.FillWeight = 90F;
             colDonGia.HeaderText = "Đơn giá";
             colDonGia.MinimumWidth = 6;
@@ -1009,7 +960,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             // colThanhTien
             // 
-            colThanhTien.DefaultCellStyle = dataGridViewCellStyle6;
+            colThanhTien.DefaultCellStyle = dataGridViewCellStyle13;
             colThanhTien.FillWeight = 95F;
             colThanhTien.HeaderText = "Thành tiền";
             colThanhTien.MinimumWidth = 6;
@@ -1019,6 +970,7 @@ namespace QuanLyQuanCaPhe.Forms
             // panelThemMon
             // 
             panelThemMon.Controls.Add(btnThemMonVaoHoaDon);
+            panelThemMon.Controls.Add(btnXoaMonKhoiHoaDon);
             panelThemMon.Controls.Add(nudSoLuong);
             panelThemMon.Controls.Add(lblSoLuong);
             panelThemMon.Controls.Add(cboMon);
@@ -1038,21 +990,37 @@ namespace QuanLyQuanCaPhe.Forms
             btnThemMonVaoHoaDon.FlatStyle = FlatStyle.Flat;
             btnThemMonVaoHoaDon.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
             btnThemMonVaoHoaDon.ForeColor = Color.FromArgb(65, 48, 39);
-            btnThemMonVaoHoaDon.Location = new Point(363, 30);
+            btnThemMonVaoHoaDon.Location = new Point(283, 30);
             btnThemMonVaoHoaDon.Margin = new Padding(0);
             btnThemMonVaoHoaDon.Name = "btnThemMonVaoHoaDon";
-            btnThemMonVaoHoaDon.Size = new Size(84, 29);
+            btnThemMonVaoHoaDon.Size = new Size(78, 29);
             btnThemMonVaoHoaDon.TabIndex = 4;
             btnThemMonVaoHoaDon.Text = "Thêm món";
             btnThemMonVaoHoaDon.UseVisualStyleBackColor = false;
             // 
+            // btnXoaMonKhoiHoaDon
+            // 
+            btnXoaMonKhoiHoaDon.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnXoaMonKhoiHoaDon.BackColor = Color.FromArgb(247, 230, 230);
+            btnXoaMonKhoiHoaDon.FlatAppearance.BorderSize = 0;
+            btnXoaMonKhoiHoaDon.FlatStyle = FlatStyle.Flat;
+            btnXoaMonKhoiHoaDon.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            btnXoaMonKhoiHoaDon.ForeColor = Color.FromArgb(140, 36, 36);
+            btnXoaMonKhoiHoaDon.Location = new Point(367, 30);
+            btnXoaMonKhoiHoaDon.Margin = new Padding(6, 0, 0, 0);
+            btnXoaMonKhoiHoaDon.Name = "btnXoaMonKhoiHoaDon";
+            btnXoaMonKhoiHoaDon.Size = new Size(80, 29);
+            btnXoaMonKhoiHoaDon.TabIndex = 5;
+            btnXoaMonKhoiHoaDon.Text = "Xóa món";
+            btnXoaMonKhoiHoaDon.UseVisualStyleBackColor = false;
+            // 
             // nudSoLuong
             // 
             nudSoLuong.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            nudSoLuong.Location = new Point(289, 31);
+            nudSoLuong.Location = new Point(220, 31);
             nudSoLuong.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             nudSoLuong.Name = "nudSoLuong";
-            nudSoLuong.Size = new Size(67, 28);
+            nudSoLuong.Size = new Size(57, 28);
             nudSoLuong.TabIndex = 3;
             nudSoLuong.Value = new decimal(new int[] { 1, 0, 0, 0 });
             // 
@@ -1061,7 +1029,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblSoLuong.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblSoLuong.AutoSize = true;
             lblSoLuong.ForeColor = Color.DimGray;
-            lblSoLuong.Location = new Point(289, 8);
+            lblSoLuong.Location = new Point(220, 8);
             lblSoLuong.Name = "lblSoLuong";
             lblSoLuong.Size = new Size(76, 21);
             lblSoLuong.TabIndex = 2;
@@ -1074,7 +1042,7 @@ namespace QuanLyQuanCaPhe.Forms
             cboMon.FormattingEnabled = true;
             cboMon.Location = new Point(12, 30);
             cboMon.Name = "cboMon";
-            cboMon.Size = new Size(270, 28);
+            cboMon.Size = new Size(200, 28);
             cboMon.TabIndex = 1;
             // 
             // lblMon
@@ -1123,7 +1091,7 @@ namespace QuanLyQuanCaPhe.Forms
             cboTrangThai.BackColor = Color.FromArgb(248, 245, 241);
             cboTrangThai.DropDownStyle = ComboBoxStyle.DropDownList;
             cboTrangThai.FormattingEnabled = true;
-            cboTrangThai.Items.AddRange(new object[] { "Đã thanh toán", "Chưa thanh toán" });
+            cboTrangThai.Items.AddRange(new object[] { "Open", "Paid", "Voided" });
             cboTrangThai.Location = new Point(302, 100);
             cboTrangThai.Name = "cboTrangThai";
             cboTrangThai.Size = new Size(154, 28);
@@ -1296,55 +1264,20 @@ namespace QuanLyQuanCaPhe.Forms
             lblThongTinChungTitle.Text = "Thông tin chung hóa đơn";
             lblThongTinChungTitle.Visible = false;
             // 
-            // colMaHoaDon
+            // btnXoaHuy
             // 
-            colMaHoaDon.FillWeight = 88F;
-            colMaHoaDon.HeaderText = "Mã HĐ";
-            colMaHoaDon.MinimumWidth = 6;
-            colMaHoaDon.Name = "colMaHoaDon";
-            colMaHoaDon.ReadOnly = true;
-            // 
-            // colNgayLap
-            // 
-            colNgayLap.FillWeight = 105F;
-            colNgayLap.HeaderText = "Ngày lập";
-            colNgayLap.MinimumWidth = 6;
-            colNgayLap.Name = "colNgayLap";
-            colNgayLap.ReadOnly = true;
-            // 
-            // colBanKhach
-            // 
-            colBanKhach.FillWeight = 140F;
-            colBanKhach.HeaderText = "Bàn/Khách hàng";
-            colBanKhach.MinimumWidth = 6;
-            colBanKhach.Name = "colBanKhach";
-            colBanKhach.ReadOnly = true;
-            // 
-            // colTongTien
-            // 
-            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleRight;
-            colTongTien.DefaultCellStyle = dataGridViewCellStyle2;
-            colTongTien.FillWeight = 92F;
-            colTongTien.HeaderText = "Tổng tiền";
-            colTongTien.MinimumWidth = 6;
-            colTongTien.Name = "colTongTien";
-            colTongTien.ReadOnly = true;
-            // 
-            // colTrangThaiHoaDon
-            // 
-            colTrangThaiHoaDon.FillWeight = 96F;
-            colTrangThaiHoaDon.HeaderText = "Trạng thái";
-            colTrangThaiHoaDon.MinimumWidth = 6;
-            colTrangThaiHoaDon.Name = "colTrangThaiHoaDon";
-            colTrangThaiHoaDon.ReadOnly = true;
-            // 
-            // colNhanVienLap
-            // 
-            colNhanVienLap.FillWeight = 110F;
-            colNhanVienLap.HeaderText = "Nhân viên lập";
-            colNhanVienLap.MinimumWidth = 6;
-            colNhanVienLap.Name = "colNhanVienLap";
-            colNhanVienLap.ReadOnly = true;
+            btnXoaHuy.BackColor = Color.FromArgb(204, 73, 73);
+            btnXoaHuy.FlatAppearance.BorderSize = 0;
+            btnXoaHuy.FlatStyle = FlatStyle.Flat;
+            btnXoaHuy.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            btnXoaHuy.ForeColor = Color.White;
+            btnXoaHuy.Location = new Point(154, 0);
+            btnXoaHuy.Margin = new Padding(0, 0, 10, 0);
+            btnXoaHuy.Name = "btnXoaHuy";
+            btnXoaHuy.Size = new Size(160, 34);
+            btnXoaHuy.TabIndex = 2;
+            btnXoaHuy.Text = "Hủy hóa đơn (Void)";
+            btnXoaHuy.UseVisualStyleBackColor = false;
             // 
             // frmHoaDon
             // 
@@ -1456,6 +1389,7 @@ namespace QuanLyQuanCaPhe.Forms
         private DataGridViewTextBoxColumn colThanhTien;
         private Panel panelThemMon;
         private Button btnThemMonVaoHoaDon;
+        private Button btnXoaMonKhoiHoaDon;
         private NumericUpDown nudSoLuong;
         private Label lblSoLuong;
         private ComboBox cboMon;
@@ -1474,15 +1408,9 @@ namespace QuanLyQuanCaPhe.Forms
         private Label lblTongKetTitle;
         private Panel panelActions;
         private FlowLayoutPanel flowActionNghiepVu;
-        private Button btnInHoaDon;
         private Button btnXacNhanThuTien;
         private Label lblNhomNghiepVu;
         private FlowLayoutPanel flowActionDuLieu;
-        private Button btnThemMoi;
-        private Button btnSua;
-        private Button btnXoaHuy;
-        private Button btnLuu;
-        private Button btnBoQua;
         private Label lblNhomDuLieu;
         private Panel panelTopbar;
         private Label lblPageTitle;
@@ -1495,5 +1423,6 @@ namespace QuanLyQuanCaPhe.Forms
         private DataGridViewTextBoxColumn colTongTien;
         private DataGridViewTextBoxColumn colTrangThaiHoaDon;
         private DataGridViewTextBoxColumn colNhanVienLap;
+        private Button btnXoaHuy;
     }
 }

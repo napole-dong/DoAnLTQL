@@ -22,13 +22,23 @@ public class HoaDonBUS : IHoaDonService
 
     public List<HoaDonDTO> LayDanhSachHoaDon(HoaDonFilterDTO boLoc)
     {
+        return LayDanhSachHoaDonAsync(boLoc)
+            .ConfigureAwait(false)
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    public async Task<List<HoaDonDTO>> LayDanhSachHoaDonAsync(HoaDonFilterDTO boLoc, CancellationToken cancellationToken = default)
+    {
         if (!_permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View))
         {
             return new List<HoaDonDTO>();
         }
 
         var boLocDaChuanHoa = ChuanHoaBoLoc(boLoc);
-        var dsHoaDon = _hoaDonDAL.GetDanhSachHoaDon(boLocDaChuanHoa);
+        var dsHoaDon = await _hoaDonDAL
+            .GetDanhSachHoaDonAsync(boLocDaChuanHoa, cancellationToken)
+            .ConfigureAwait(false);
 
         GanTrangThaiHoaDon(dsHoaDon);
 
@@ -100,7 +110,7 @@ public class HoaDonBUS : IHoaDonService
         }
 
         request.NgayLap = request.NgayLap == default ? DateTime.Now : request.NgayLap;
-        request.TrangThai = (int)HoaDonTrangThai.ChuaThanhToan;
+        request.TrangThai = (int)HoaDonTrangThai.Open;
 
         var ketQua = _hoaDonDAL.ThemHoaDon(request);
         return (BusMessageCatalog.CreateActionResult(ketQua.ThanhCong, ketQua.ThongBao), ketQua.HoaDonId);
@@ -239,12 +249,24 @@ public class HoaDonBUS : IHoaDonService
 
     public BanActionResultDTO XacNhanThuTien(int hoaDonId, decimal tienKhachDua, byte[]? rowVersion = null)
     {
+        var userSession = _permissionBUS.LayUserSession();
+        if (userSession == null)
+        {
+            throw new UnauthorizedAccessException("Bạn chưa đăng nhập để thực hiện xác nhận thu tiền.");
+        }
+
+        var tenVaiTro = RoleMapper.ToRoleName(userSession.Role);
+        if (!RoleConstants.CoQuyenXacNhanThuTien(tenVaiTro))
+        {
+            throw new UnauthorizedAccessException("Vai trò hiện tại không được phép xác nhận thu tiền.");
+        }
+
         var coQuyenThuTien = _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update)
             || _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
 
         if (!coQuyenThuTien)
         {
-            return BusMessageCatalog.CreateActionResult(false, "Bạn không có quyền xác nhận thu tiền.");
+            throw new UnauthorizedAccessException("Bạn không có quyền xác nhận thu tiền.");
         }
 
         if (hoaDonId <= 0)
@@ -258,9 +280,9 @@ public class HoaDonBUS : IHoaDonService
             return BusMessageCatalog.CreateActionResult(false, "Không tìm thấy hóa đơn cần thu tiền.");
         }
 
-        if (hoaDon.TrangThai != 0)
+        if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
         {
-            return BusMessageCatalog.CreateActionResult(false, "Hóa đơn này không còn ở trạng thái chờ thanh toán.");
+            return BusMessageCatalog.CreateActionResult(false, "Hóa đơn không ở trạng thái Open (chờ thanh toán).");
         }
 
         if (hoaDon.TongTien <= 0)
@@ -293,12 +315,13 @@ public class HoaDonBUS : IHoaDonService
             return null;
         }
 
-        return trangThaiText switch
+        var text = trangThaiText.Trim();
+
+        return text switch
         {
-            "Draft" or "Chưa thanh toán" => (int)HoaDonTrangThai.Draft,
+            "Open" or "Mở" or "Chưa thanh toán" or "Draft" => (int)HoaDonTrangThai.Open,
             "Paid" or "Đã thanh toán" => (int)HoaDonTrangThai.Paid,
-            "Closed" or "Đã hoàn tất" => (int)HoaDonTrangThai.Closed,
-            "Cancelled" or "Đã hủy" => (int)HoaDonTrangThai.Cancelled,
+            "Voided" or "Void" or "Đã hủy" or "Cancelled" or "Closed" or "Đã hoàn tất" => (int)HoaDonTrangThai.Voided,
             _ => null
         };
     }
@@ -310,13 +333,7 @@ public class HoaDonBUS : IHoaDonService
 
     public static string ChuyenTrangThaiHoaDon(int trangThai)
     {
-        return (HoaDonTrangThai)trangThai switch
-        {
-            HoaDonTrangThai.Paid => "Paid",
-            HoaDonTrangThai.Closed => "Closed",
-            HoaDonTrangThai.Cancelled => "Cancelled",
-            _ => "Draft"
-        };
+        return HoaDonStateMachine.ToDisplayText(trangThai);
     }
 
     private static bool CoTheChinhSuaHoaDon()
@@ -326,12 +343,26 @@ public class HoaDonBUS : IHoaDonService
 
     private static HoaDonFilterDTO ChuanHoaBoLoc(HoaDonFilterDTO boLoc)
     {
+        ArgumentNullException.ThrowIfNull(boLoc);
+
+        if (boLoc.PageNumber <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(boLoc.PageNumber), "PageNumber phải lớn hơn 0.");
+        }
+
+        if (boLoc.PageSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(boLoc.PageSize), "PageSize phải lớn hơn 0.");
+        }
+
         var ketQua = new HoaDonFilterDTO
         {
             TuKhoa = BusInputHelper.NormalizeNullableText(boLoc.TuKhoa),
             TuNgay = boLoc.TuNgay == default ? DateTime.Today.AddDays(-30) : boLoc.TuNgay,
             DenNgay = boLoc.DenNgay == default ? DateTime.Today : boLoc.DenNgay,
-            TrangThai = boLoc.TrangThai
+            TrangThai = boLoc.TrangThai,
+            PageNumber = boLoc.PageNumber,
+            PageSize = boLoc.PageSize
         };
 
         if (ketQua.TuNgay > ketQua.DenNgay)

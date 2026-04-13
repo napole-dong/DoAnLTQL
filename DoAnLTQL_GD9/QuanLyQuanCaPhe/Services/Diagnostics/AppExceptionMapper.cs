@@ -35,8 +35,16 @@ public static class AppExceptionMapper
                 fallbackUserMessage ?? "Ban khong co quyen thuc hien thao tac nay.");
         }
 
-        if (exception is InvalidOperationException)
+        if (exception is InvalidOperationException invalidOperationEx)
         {
+            if ((invalidOperationEx.Message ?? string.Empty)
+                .Contains("CAPHE_BOOTSTRAP_PASSWORD", StringComparison.OrdinalIgnoreCase))
+            {
+                return new AppErrorDescriptor(
+                    AppErrorCode.InvalidOperation,
+                    fallbackUserMessage ?? "Thieu CAPHE_BOOTSTRAP_PASSWORD de khoi tao tai khoan mac dinh lan dau. Vui long cau hinh bien moi truong nay va mo lai ung dung.");
+            }
+
             return new AppErrorDescriptor(
                 AppErrorCode.InvalidOperation,
                 fallbackUserMessage ?? "Trang thai du lieu khong hop le de thuc hien thao tac.");

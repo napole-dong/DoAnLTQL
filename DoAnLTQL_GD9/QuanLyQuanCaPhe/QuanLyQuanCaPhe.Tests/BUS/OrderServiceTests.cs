@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Audit;
@@ -109,6 +110,35 @@ public class OrderServiceTests
     }
 
     [Fact]
+    public void CancelOrder_LegacyInvoiceWithoutRecipe_StillVoidsSuccessfully()
+    {
+        using var scope = new SqliteTestScope();
+        using var context = scope.CreateContext();
+
+        var admin = TestDataSeeder.CreateUser(context, "order_cancel_legacy", "123", RoleEnum.Admin);
+        TestDataSeeder.SetCurrentUser(admin);
+
+        var ban = TestDataSeeder.CreateBan(context, "Ban Cancel Legacy", 1);
+        var loai = TestDataSeeder.CreateLoaiMon(context, "Cafe Legacy");
+        var mon = TestDataSeeder.CreateMon(context, loai.ID, "Legacy Drink", 25000m, 1);
+        var hoaDon = TestDataSeeder.CreateHoaDon(context, ban.ID, admin.NhanVienId, trangThai: (int)HoaDonTrangThai.Open, tongTien: 50000m);
+
+        TestDataSeeder.CreateHoaDonChiTiet(context, hoaDon.ID, mon.ID, soLuong: 2, donGia: 25000m);
+
+        var sut = new OrderService();
+
+        var cancelResult = sut.CancelOrder(hoaDon.ID);
+
+        cancelResult.ThanhCong.Should().BeTrue();
+        cancelResult.ThongBao.Should().Contain("Hủy hóa đơn thành công");
+
+        using var verifyContext = scope.CreateContext();
+        verifyContext.HoaDon.First(x => x.ID == hoaDon.ID).TrangThai.Should().Be((int)HoaDonTrangThai.Voided);
+        verifyContext.Ban.First(x => x.ID == ban.ID).TrangThai.Should().Be(0);
+        verifyContext.PhieuNhapKho.Count().Should().Be(0);
+    }
+
+    [Fact]
     public void Checkout_EmptyInvoice_ReturnsFailure()
     {
         using var scope = new SqliteTestScope();
@@ -184,6 +214,88 @@ public class OrderServiceTests
     }
 
     [Fact]
+    public void AddItemsByTableAtomic_InsufficientStock_RollsBackWithoutCreatingInvoice()
+    {
+        using var scope = new SqliteTestScope();
+        using var context = scope.CreateContext();
+
+        var admin = TestDataSeeder.CreateUser(context, "order_atomic_rollback", "123", RoleEnum.Admin);
+        TestDataSeeder.SetCurrentUser(admin);
+
+        var ban = TestDataSeeder.CreateBan(context, "Ban Atomic Rollback", 0);
+        var loai = TestDataSeeder.CreateLoaiMon(context, "Cafe Atomic Rollback");
+        var mon = TestDataSeeder.CreateMon(context, loai.ID, "Atomic Drink", 30000m, 1);
+        var nguyenLieu = TestDataSeeder.CreateNguyenLieu(context, "Atomic NL", soLuongTon: 2m);
+        TestDataSeeder.CreateCongThuc(context, mon.ID, nguyenLieu.ID, 3m);
+
+        var sut = new OrderService();
+
+        var ketQua = sut.AddItemsByTableAtomic(
+            ban.ID,
+            new[]
+            {
+                new BanHangThemMonDTO
+                {
+                    MonID = mon.ID,
+                    SoLuong = 1
+                }
+            });
+
+        ketQua.ThanhCong.Should().BeFalse();
+
+        using var verifyContext = scope.CreateContext();
+        verifyContext.HoaDon.Any(x => x.BanID == ban.ID).Should().BeFalse();
+        verifyContext.Ban.First(x => x.ID == ban.ID).TrangThai.Should().Be(0);
+        verifyContext.NguyenLieu.First(x => x.ID == nguyenLieu.ID).SoLuongTon.Should().Be(2m);
+        verifyContext.PhieuXuatKho.Count().Should().Be(0);
+        verifyContext.AuditLog.Any(x => x.Action == AuditActions.AddItem).Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddItemsByTableAtomic_DuplicateItems_AggregatesQuantityAndWritesAudit()
+    {
+        using var scope = new SqliteTestScope();
+        using var context = scope.CreateContext();
+
+        var admin = TestDataSeeder.CreateUser(context, "order_atomic_merge", "123", RoleEnum.Admin);
+        TestDataSeeder.SetCurrentUser(admin);
+
+        var ban = TestDataSeeder.CreateBan(context, "Ban Atomic Merge", 0);
+        var loai = TestDataSeeder.CreateLoaiMon(context, "Cafe Atomic Merge");
+        var mon = TestDataSeeder.CreateMon(context, loai.ID, "Atomic Latte", 20000m, 1);
+        var nguyenLieu = TestDataSeeder.CreateNguyenLieu(context, "Atomic Milk", soLuongTon: 100m);
+        TestDataSeeder.CreateCongThuc(context, mon.ID, nguyenLieu.ID, 2m);
+
+        var sut = new OrderService();
+
+        var ketQua = sut.AddItemsByTableAtomic(
+            ban.ID,
+            new[]
+            {
+                new BanHangThemMonDTO { MonID = mon.ID, SoLuong = 1 },
+                new BanHangThemMonDTO { MonID = mon.ID, SoLuong = 2 }
+            });
+
+        ketQua.ThanhCong.Should().BeTrue();
+
+        using var verifyContext = scope.CreateContext();
+        var hoaDon = verifyContext.HoaDon
+            .Include(x => x.HoaDon_ChiTiet)
+            .First(x => x.BanID == ban.ID);
+
+        hoaDon.TrangThai.Should().Be((int)HoaDonTrangThai.Draft);
+        hoaDon.TongTien.Should().Be(60000m);
+        hoaDon.HoaDon_ChiTiet.Should().ContainSingle();
+        hoaDon.HoaDon_ChiTiet.First().SoLuongBan.Should().Be(3);
+
+        verifyContext.NguyenLieu.First(x => x.ID == nguyenLieu.ID).SoLuongTon.Should().Be(94m);
+        verifyContext.AuditLog
+            .Any(x => x.Action == AuditActions.AddItem && x.EntityName == "Invoice")
+            .Should()
+            .BeTrue();
+    }
+
+    [Fact]
     public void Checkout_StaleRowVersion_RollsBackAndKeepsState()
     {
         using var scope = new SqliteTestScope();
@@ -216,5 +328,73 @@ public class OrderServiceTests
             .Where(x => x.EntityName == "Invoice" && x.EntityId == hoaDon.ID.ToString() && x.Action == AuditActions.PayInvoice)
             .Should()
             .BeEmpty();
+    }
+
+    [Fact]
+    public async Task Checkout_RaceCondition_OnlyOneRequestSucceeds()
+    {
+        using var scope = new SqliteTestScope();
+        using var context = scope.CreateContext();
+
+        var admin = TestDataSeeder.CreateUser(context, "order_checkout_race", "123", RoleEnum.Admin);
+        TestDataSeeder.SetCurrentUser(admin);
+
+        var ban = TestDataSeeder.CreateBan(context, "Ban Checkout Race", 0);
+        var loai = TestDataSeeder.CreateLoaiMon(context, "Cafe Race");
+        var mon = TestDataSeeder.CreateMon(context, loai.ID, "Race Drink", 40000m, 1);
+        var nguyenLieu = TestDataSeeder.CreateNguyenLieu(context, "Race Nguyen Lieu", soLuongTon: 100m);
+        TestDataSeeder.CreateCongThuc(context, mon.ID, nguyenLieu.ID, 1m);
+        var hoaDon = TestDataSeeder.CreateHoaDon(context, ban.ID, admin.NhanVienId, trangThai: 0);
+
+        var sut = new OrderService();
+        sut.AddItemToOrder(hoaDon.ID, mon.ID, 1).ThanhCong.Should().BeTrue();
+
+        var rowVersion = context.HoaDon
+            .AsNoTracking()
+            .Where(x => x.ID == hoaDon.ID)
+            .Select(x => x.RowVersion)
+            .Single()
+            .ToArray();
+
+        using var startGate = new ManualResetEventSlim(false);
+
+        var raceTasks = new[]
+        {
+            Task.Run(() =>
+            {
+                startGate.Wait();
+                return sut.Checkout(hoaDon.ID, expectedRowVersion: rowVersion.ToArray());
+            }),
+            Task.Run(() =>
+            {
+                startGate.Wait();
+                return sut.Checkout(hoaDon.ID, expectedRowVersion: rowVersion.ToArray());
+            })
+        };
+
+        startGate.Set();
+        var raceResults = await Task.WhenAll(raceTasks);
+
+        raceResults.Count(x => x.ThanhCong).Should().Be(1);
+        raceResults.Count(x => !x.ThanhCong).Should().Be(1);
+
+        var thongBaoThatBai = raceResults.Single(x => !x.ThanhCong).ThongBao ?? string.Empty;
+        (thongBaoThatBai.Contains("Vui lòng tải lại", StringComparison.OrdinalIgnoreCase)
+            || thongBaoThatBai.Contains("chờ thanh toán", StringComparison.OrdinalIgnoreCase))
+            .Should()
+            .BeTrue();
+
+        using var verifyContext = scope.CreateContext();
+        verifyContext.HoaDon
+            .AsNoTracking()
+            .Single(x => x.ID == hoaDon.ID)
+            .TrangThai
+            .Should()
+            .Be((int)HoaDonTrangThai.Paid);
+
+        verifyContext.AuditLog
+            .Count(x => x.EntityName == "Invoice" && x.EntityId == hoaDon.ID.ToString() && x.Action == AuditActions.PayInvoice)
+            .Should()
+            .Be(1);
     }
 }

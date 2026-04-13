@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -16,6 +16,9 @@
     <Compile Remove="QuanLyQuanCaPhe.Tests\**" />
     <EmbeddedResource Remove="QuanLyQuanCaPhe.Tests\**" />
     <None Remove="QuanLyQuanCaPhe.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
   </ItemGroup>
 
   <ItemGroup>

@@ -105,13 +105,11 @@ public class NguyenLieuBUS : INguyenLieuService
             return (false, "Vui lòng chọn nguyên liệu cần xóa.");
         }
 
-        var daXoa = _nguyenLieuDAL.XoaNguyenLieu(maNguyenLieu);
-        return daXoa
-            ? (true, "Xóa nguyên liệu thành công.")
-            : (false, "Không tìm thấy nguyên liệu để xóa.");
+        var ketQua = _nguyenLieuDAL.XoaNguyenLieu(maNguyenLieu);
+        return (ketQua.ThanhCong, ketQua.ThongBao);
     }
 
-    public (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu)
+    public (bool ThanhCong, string ThongBao) NhapKhoNhieuNguyenLieu(IEnumerable<NhapKhoChiTietDTO> dsChiTiet, string? ghiChu)
     {
         try
         {
@@ -122,23 +120,66 @@ public class NguyenLieuBUS : INguyenLieuService
             return (false, ex.Message);
         }
 
-        if (maNguyenLieu <= 0)
+        if (dsChiTiet == null)
         {
-            return (false, "Vui lòng chọn nguyên liệu để nhập kho.");
+            return (false, "Danh sách chi tiết nhập kho không hợp lệ.");
         }
 
-        if (soLuongNhap <= 0)
+        var dsChiTietHopLe = dsChiTiet
+            .Where(x => x != null)
+            .Select(x => new NhapKhoChiTietDTO
+            {
+                NguyenLieuID = x.NguyenLieuID,
+                SoLuong = x.SoLuong,
+                DonGiaNhap = x.DonGiaNhap
+            })
+            .ToList();
+
+        if (dsChiTietHopLe.Count == 0)
+        {
+            return (false, "Phiếu nhập kho phải có ít nhất 1 nguyên liệu.");
+        }
+
+        if (dsChiTietHopLe.Any(x => x.NguyenLieuID <= 0))
+        {
+            return (false, "Có nguyên liệu không hợp lệ trong phiếu nhập kho.");
+        }
+
+        if (dsChiTietHopLe.Any(x => x.SoLuong <= 0))
         {
             return (false, "Số lượng nhập phải lớn hơn 0.");
         }
 
-        if (giaNhap < 0)
+        if (dsChiTietHopLe.Any(x => x.DonGiaNhap < 0))
         {
             return (false, "Giá nhập không hợp lệ.");
         }
 
+        var coNguyenLieuTrung = dsChiTietHopLe
+            .GroupBy(x => x.NguyenLieuID)
+            .Any(g => g.Count() > 1);
+        if (coNguyenLieuTrung)
+        {
+            return (false, "Một nguyên liệu chỉ được xuất hiện 1 lần trong cùng phiếu nhập.");
+        }
+
         var ghiChuDaChuanHoa = BusInputHelper.NormalizeNullableText(ghiChu);
-        return _nguyenLieuDAL.NhapKho(maNguyenLieu, soLuongNhap, giaNhap, ghiChuDaChuanHoa);
+        return _nguyenLieuDAL.NhapKhoNhieuNguyenLieu(dsChiTietHopLe, ghiChuDaChuanHoa);
+    }
+
+    public (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu)
+    {
+        return NhapKhoNhieuNguyenLieu(
+            new[]
+            {
+                new NhapKhoChiTietDTO
+                {
+                    NguyenLieuID = maNguyenLieu,
+                    SoLuong = soLuongNhap,
+                    DonGiaNhap = giaNhap
+                }
+            },
+            ghiChu);
     }
 
     private static (bool HopLe, string ThongBaoLoi) KiemTraThongTin(NguyenLieuDTO nguyenLieuDTO)

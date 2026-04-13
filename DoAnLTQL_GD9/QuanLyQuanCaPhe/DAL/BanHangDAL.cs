@@ -8,12 +8,10 @@ namespace QuanLyQuanCaPhe.DAL;
 public class BanHangDAL : IBanHangRepository
 {
     private readonly IOrderService _orderService;
-    private readonly IHoaDonRepository _hoaDonDAL;
 
-    public BanHangDAL(IOrderService? orderService = null, IHoaDonRepository? hoaDonDAL = null)
+    public BanHangDAL(IOrderService? orderService = null)
     {
         _orderService = orderService ?? new OrderService();
-        _hoaDonDAL = hoaDonDAL ?? new HoaDonDAL();
     }
 
     public BanHangPhieuDTO GetPhieuTheoBan(int banId)
@@ -36,69 +34,13 @@ public class BanHangDAL : IBanHangRepository
 
     public BanActionResultDTO GoiMon(int banId, IEnumerable<BanHangThemMonDTO> dsMonThem)
     {
-        if (banId <= 0)
+        if (dsMonThem == null)
         {
-            return new BanActionResultDTO
-            {
-                ThanhCong = false,
-                ThongBao = "Vui lòng chọn bàn trước khi gọi món."
-            };
+            throw new ArgumentNullException(nameof(dsMonThem));
         }
 
-        using var context = new CaPheDbContext();
-
-        var banTonTai = context.Ban
-            .AsNoTracking()
-            .Any(x => x.ID == banId);
-        if (!banTonTai)
-        {
-            return new BanActionResultDTO
-            {
-                ThanhCong = false,
-                ThongBao = "Không tìm thấy bàn để gọi món."
-            };
-        }
-
-        var hoaDonDangHoatDong = QueryHoaDonDangHoatDongSnapshot(context, banId);
-        if (hoaDonDangHoatDong == null)
-        {
-            var ketQuaTaoHoaDon = _hoaDonDAL.ThemHoaDon(new HoaDonSaveRequestDTO
-            {
-                BanID = banId,
-                NgayLap = DateTime.Now,
-                TrangThai = (int)HoaDonTrangThai.Draft
-            });
-
-            if (!ketQuaTaoHoaDon.ThanhCong)
-            {
-                return new BanActionResultDTO
-                {
-                    ThanhCong = false,
-                    ThongBao = ketQuaTaoHoaDon.ThongBao
-                };
-            }
-
-            hoaDonDangHoatDong = new HoaDonDangHoatDongSnapshotReadModel
-            {
-                ID = ketQuaTaoHoaDon.HoaDonId,
-                RowVersion = null
-            };
-        }
-
-        if (hoaDonDangHoatDong.TrangThaiHoaDon == (int)HoaDonTrangThai.Paid)
-        {
-            return new BanActionResultDTO
-            {
-                ThanhCong = false,
-                ThongBao = "Bàn đã thanh toán, vui lòng dọn bàn trước khi gọi món mới."
-            };
-        }
-
-        return _orderService.AddItemsToOrder(
-            hoaDonDangHoatDong.ID,
-            dsMonThem,
-            successMessage: "Gọi món thành công.",
-            expectedRowVersion: hoaDonDangHoatDong.RowVersion);
+        var ketQua = _orderService.AddItemsByTableAtomic(banId, dsMonThem);
+        return BusMessageCatalog.CreateActionResult(ketQua.ThanhCong, ketQua.ThongBao);
     }
 
     public BanActionResultDTO ThanhToan(int banId)

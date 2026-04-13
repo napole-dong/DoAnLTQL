@@ -1,9 +1,12 @@
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Audit;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Diagnostics;
 
 namespace QuanLyQuanCaPhe.BUS;
 
@@ -13,6 +16,10 @@ public class OrderService : IOrderService
     private const string ConcurrencyErrorMessage = "Dữ liệu đã bị thay đổi bởi nhân viên khác. Vui lòng tải lại!";
     private const string InvoiceEntityName = "Invoice";
     private const string TakeAwayTableName = "Mang đi";
+    private static readonly JsonSerializerOptions AuditJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
     private readonly IActivityLogWriter _activityLogWriter;
 
     public OrderService(IActivityLogWriter? activityLogWriter = null)
@@ -36,6 +43,138 @@ public class OrderService : IOrderService
             expectedRowVersion: expectedRowVersion);
     }
 
+    public OperationResult AddItemsByTableAtomic(int banId, IEnumerable<BanHangThemMonDTO> dsMonThem, int? khachHangId = null)
+    {
+        if (banId <= 0)
+        {
+            return ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Vui lòng chọn bàn trước khi gọi món."));
+        }
+
+        if (dsMonThem == null)
+        {
+            throw new ArgumentNullException(nameof(dsMonThem));
+        }
+
+        var dsMonHopLe = TongHopMonThemHopLe(dsMonThem);
+        if (dsMonHopLe.Count == 0)
+        {
+            return ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Danh sách món gọi không hợp lệ."));
+        }
+
+        using var strategyContext = new CaPheDbContext();
+        var strategy = strategyContext.Database.CreateExecutionStrategy();
+        var ketQua = OperationResult.Failure(GenericSystemErrorMessage);
+
+        strategy.Execute(() =>
+        {
+            using var context = new CaPheDbContext();
+            using var transaction = context.Database.BeginTransaction(System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                var ban = context.Ban.FirstOrDefault(x => x.ID == banId);
+                if (ban == null)
+                {
+                    ketQua = ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Không tìm thấy bàn để gọi món."));
+                    transaction.Rollback();
+                    return;
+                }
+
+                var hoaDon = context.HoaDon
+                    .Include(x => x.HoaDon_ChiTiet)
+                    .Where(x => x.BanID == banId
+                        && x.TrangThai != (int)HoaDonTrangThai.Closed
+                        && x.TrangThai != (int)HoaDonTrangThai.Cancelled)
+                    .OrderByDescending(x => x.NgayLap)
+                    .ThenByDescending(x => x.ID)
+                    .FirstOrDefault();
+
+                if (hoaDon == null)
+                {
+                    if (!TryLayNhanVienDangNhapHopLe(context, out var nhanVienId, out var thongBaoNhanVien))
+                    {
+                        ketQua = ToOperationResult(BusMessageCatalog.CreateActionResult(false, thongBaoNhanVien));
+                        transaction.Rollback();
+                        return;
+                    }
+
+                    var khachHangIdHopLe = khachHangId.HasValue && khachHangId.Value > 0
+                        ? khachHangId.Value
+                        : (int?)null;
+
+                    var tenKhachHang = "Khách lẻ";
+                    if (khachHangIdHopLe.HasValue)
+                    {
+                        var khachHang = context.KhachHang
+                            .AsNoTracking()
+                            .Where(x => x.ID == khachHangIdHopLe.Value)
+                            .Select(x => new
+                            {
+                                x.ID,
+                                x.HoVaTen
+                            })
+                            .FirstOrDefault();
+
+                        if (khachHang == null)
+                        {
+                            ketQua = ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Khách hàng đã chọn không tồn tại hoặc đã bị xóa."));
+                            transaction.Rollback();
+                            return;
+                        }
+
+                        khachHangIdHopLe = khachHang.ID;
+                        tenKhachHang = string.IsNullOrWhiteSpace(khachHang.HoVaTen)
+                            ? "Khách lẻ"
+                            : khachHang.HoVaTen;
+                    }
+
+                    hoaDon = new dtaHoadon
+                    {
+                        BanID = banId,
+                        NhanVienID = nhanVienId,
+                        KhachHangID = khachHangIdHopLe,
+                        CustomerName = tenKhachHang,
+                        NgayLap = DateTime.Now,
+                        TrangThai = (int)HoaDonTrangThai.Open,
+                        TongTien = 0m,
+                        GhiChuHoaDon = string.Empty
+                    };
+
+                    context.HoaDon.Add(hoaDon);
+                }
+
+                var pendingAuditLogsInTransaction = new List<PendingActivityLog>();
+                var ketQuaThemMon = ProcessAddItemsToDraftInvoice(
+                    context,
+                    hoaDon,
+                    dsMonHopLe,
+                    pendingAuditLogsInTransaction,
+                    successMessage: "Gọi món thành công.");
+
+                if (!ketQuaThemMon.ThanhCong)
+                {
+                    ketQua = ToOperationResult(ketQuaThemMon);
+                    transaction.Rollback();
+                    return;
+                }
+
+                AppendPendingAuditLogsToContext(context, pendingAuditLogsInTransaction);
+                context.SaveChanges();
+                transaction.Commit();
+
+                ketQua = ToOperationResult(ketQuaThemMon);
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                AppLogger.Error(ex, $"AddItemsByTableAtomic failed. BanID={banId}.", nameof(OrderService));
+                throw;
+            }
+        });
+
+        return ketQua;
+    }
+
     public BanActionResultDTO AddItemsToOrder(
         int orderId,
         IEnumerable<BanHangThemMonDTO> dsMonThem,
@@ -54,75 +193,155 @@ public class OrderService : IOrderService
         }
 
         return ExecuteTransactional(orderId, expectedRowVersion, (context, hoaDon, pendingAuditLogs) =>
+            ProcessAddItemsToDraftInvoice(context, hoaDon, dsMonHopLe, pendingAuditLogs, successMessage));
+    }
+
+    private static BanActionResultDTO ProcessAddItemsToDraftInvoice(
+        CaPheDbContext context,
+        dtaHoadon hoaDon,
+        IReadOnlyCollection<BanHangThemMonDTO> dsMonHopLe,
+        ICollection<PendingActivityLog> pendingAuditLogs,
+        string successMessage)
+    {
+        if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
         {
-            if (hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
+            return BusMessageCatalog.CreateActionResult(false, "Chỉ thêm món cho hóa đơn Open.");
+        }
+
+        var snapshotCu = TaoSnapshotHoaDon(hoaDon);
+
+        var dsMonId = dsMonHopLe
+            .Select(x => x.MonID)
+            .Distinct()
+            .ToArray();
+
+        var dsMonDb = context.Mon
+            .Where(x => dsMonId.Contains(x.ID))
+            .ToDictionary(x => x.ID);
+
+        if (dsMonDb.Count != dsMonId.Length)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Có món không tồn tại trong hệ thống.");
+        }
+
+        if (dsMonDb.Values.Any(x => x.TrangThai != 1))
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Có món đang ngừng bán, vui lòng tải lại danh sách món.");
+        }
+
+        var dsCongThuc = QueryCongThucMonRows(context, dsMonId);
+        var loiCongThuc = KiemTraDayDuCongThuc(dsMonId, dsCongThuc);
+        if (loiCongThuc != null)
+        {
+            return loiCongThuc;
+        }
+
+        var dsNhuCauNguyenLieu = TinhNhuCauNguyenLieu(dsMonHopLe, dsCongThuc);
+        var dsNguyenLieuId = dsNhuCauNguyenLieu
+            .Select(x => x.NguyenLieuID)
+            .Distinct()
+            .ToArray();
+
+        var dsNguyenLieuDb = context.NguyenLieu
+            .Where(x => dsNguyenLieuId.Contains(x.ID))
+            .ToDictionary(x => x.ID);
+
+        if (dsNguyenLieuDb.Count != dsNguyenLieuId.Length)
+        {
+            return BusMessageCatalog.CreateActionResult(false, "Công thức món tham chiếu nguyên liệu không tồn tại.");
+        }
+
+        var loiTonKho = KiemTraTonKho(dsNhuCauNguyenLieu, dsNguyenLieuDb);
+        if (loiTonKho != null)
+        {
+            return loiTonKho;
+        }
+
+        ThemHoacCapNhatChiTietHoaDon(hoaDon, dsMonHopLe, dsMonDb);
+        TinhLaiTongTienHoaDon(hoaDon);
+        TruTonKhoNguyenLieu(context, hoaDon.ID, hoaDon.BanID, hoaDon.NhanVienID, dsNhuCauNguyenLieu, dsNguyenLieuDb);
+        CapNhatTrangThaiBan(context, hoaDon.BanID, trangThaiMoi: 1);
+        ThemPendingAuditLog(
+            pendingAuditLogs,
+            AuditActionConstants.AddItem,
+            hoaDon.ID,
+            TaoMoTaThemMonVaoHoaDon(hoaDon.ID, dsMonHopLe, dsMonDb),
+            snapshotCu,
+            TaoSnapshotHoaDon(hoaDon));
+
+        return BusMessageCatalog.CreateActionResult(true, successMessage);
+    }
+
+    private static bool TryLayNhanVienDangNhapHopLe(
+        CaPheDbContext context,
+        out int nhanVienId,
+        out string thongBao)
+    {
+        nhanVienId = 0;
+        thongBao = "Không xác định được nhân viên đang thao tác. Vui lòng đăng nhập lại.";
+
+        var nguoiDungDangNhap = NguoiDungHienTaiService.LayNguoiDungDangNhap();
+        if (nguoiDungDangNhap == null || nguoiDungDangNhap.NhanVienId <= 0)
+        {
+            return false;
+        }
+
+        var nhanVienTonTai = context.NhanVien
+            .AsNoTracking()
+            .Any(x => x.ID == nguoiDungDangNhap.NhanVienId);
+        if (!nhanVienTonTai)
+        {
+            thongBao = "Tài khoản đăng nhập không liên kết nhân viên hợp lệ. Vui lòng liên hệ quản trị viên.";
+            return false;
+        }
+
+        nhanVienId = nguoiDungDangNhap.NhanVienId;
+        thongBao = string.Empty;
+        return true;
+    }
+
+    private static void AppendPendingAuditLogsToContext(CaPheDbContext context, IEnumerable<PendingActivityLog> pendingLogs)
+    {
+        foreach (var log in pendingLogs)
+        {
+            context.AuditLog.Add(new dtaAuditLog
             {
-                return BusMessageCatalog.CreateActionResult(false, "Chỉ thêm món cho hóa đơn chưa thanh toán.");
-            }
+                Action = string.IsNullOrWhiteSpace(log.Action) ? AuditActionConstants.UpdateInvoice : log.Action,
+                EntityName = string.IsNullOrWhiteSpace(log.EntityName) ? InvoiceEntityName : log.EntityName,
+                EntityId = string.IsNullOrWhiteSpace(log.EntityId) ? "-" : log.EntityId,
+                OldValue = SerializeAuditPayload(log.OldValue),
+                NewValue = SerializeAuditPayload(log.NewValue),
+                PerformedBy = string.IsNullOrWhiteSpace(log.PerformedBy) ? "system" : log.PerformedBy!,
+                CreatedAt = DateTime.Now
+            });
+        }
+    }
 
-            var snapshotCu = TaoSnapshotHoaDon(hoaDon);
+    private static string? SerializeAuditPayload(object? payload)
+    {
+        if (payload == null)
+        {
+            return null;
+        }
 
-            var dsMonId = dsMonHopLe
-                .Select(x => x.MonID)
-                .Distinct()
-                .ToArray();
+        try
+        {
+            return JsonSerializer.Serialize(payload, AuditJsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
-            var dsMonDb = context.Mon
-                .Where(x => dsMonId.Contains(x.ID))
-                .ToDictionary(x => x.ID);
-
-            if (dsMonDb.Count != dsMonId.Length)
-            {
-                return BusMessageCatalog.CreateActionResult(false, "Có món không tồn tại trong hệ thống.");
-            }
-
-            if (dsMonDb.Values.Any(x => x.TrangThai != 1))
-            {
-                return BusMessageCatalog.CreateActionResult(false, "Có món đang ngừng bán, vui lòng tải lại danh sách món.");
-            }
-
-            var dsCongThuc = QueryCongThucMonRows(context, dsMonId);
-            var loiCongThuc = KiemTraDayDuCongThuc(dsMonId, dsCongThuc);
-            if (loiCongThuc != null)
-            {
-                return loiCongThuc;
-            }
-
-            var dsNhuCauNguyenLieu = TinhNhuCauNguyenLieu(dsMonHopLe, dsCongThuc);
-            var dsNguyenLieuId = dsNhuCauNguyenLieu
-                .Select(x => x.NguyenLieuID)
-                .Distinct()
-                .ToArray();
-
-            var dsNguyenLieuDb = context.NguyenLieu
-                .Where(x => dsNguyenLieuId.Contains(x.ID))
-                .ToDictionary(x => x.ID);
-
-            if (dsNguyenLieuDb.Count != dsNguyenLieuId.Length)
-            {
-                return BusMessageCatalog.CreateActionResult(false, "Công thức món tham chiếu nguyên liệu không tồn tại.");
-            }
-
-            var loiTonKho = KiemTraTonKho(dsNhuCauNguyenLieu, dsNguyenLieuDb);
-            if (loiTonKho != null)
-            {
-                return loiTonKho;
-            }
-
-            ThemHoacCapNhatChiTietHoaDon(hoaDon, dsMonHopLe, dsMonDb);
-            TinhLaiTongTienHoaDon(hoaDon);
-            TruTonKhoNguyenLieu(context, hoaDon.ID, hoaDon.BanID, dsNhuCauNguyenLieu, dsNguyenLieuDb);
-            CapNhatTrangThaiBan(context, hoaDon.BanID, trangThaiMoi: 1);
-            ThemPendingAuditLog(
-                pendingAuditLogs,
-                AuditActions.AddItem,
-                hoaDon.ID,
-                TaoMoTaThemMonVaoHoaDon(hoaDon.ID, dsMonHopLe, dsMonDb),
-                snapshotCu,
-                TaoSnapshotHoaDon(hoaDon));
-
-            return BusMessageCatalog.CreateActionResult(true, successMessage);
-        });
+    private static OperationResult ToOperationResult(BanActionResultDTO result)
+    {
+        return new OperationResult
+        {
+            ThanhCong = result.ThanhCong,
+            MaThongBao = result.MaThongBao,
+            ThongBao = result.ThongBao
+        };
     }
 
     public BanActionResultDTO RemoveItemFromOrder(int orderId, int productId, short quantity, byte[]? expectedRowVersion = null)
@@ -144,9 +363,9 @@ public class OrderService : IOrderService
 
         return ExecuteTransactional(orderId, expectedRowVersion, (context, hoaDon, pendingAuditLogs) =>
         {
-            if (hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
+            if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
             {
-                return BusMessageCatalog.CreateActionResult(false, "Chỉ thêm món cho hóa đơn chưa thanh toán.");
+                return BusMessageCatalog.CreateActionResult(false, "Chỉ xóa món cho hóa đơn Open.");
             }
 
             var snapshotCu = TaoSnapshotHoaDon(hoaDon);
@@ -219,6 +438,7 @@ public class OrderService : IOrderService
 
             HoanTonKhoNguyenLieu(
                 context,
+                hoaDon.NhanVienID,
                 dsNhuCauHoanTon,
                 dsNguyenLieuDb,
                 ghiChuNhapKho: TaoGhiChuNhapKhoTuXoaMon(hoaDon.ID, productId));
@@ -308,9 +528,9 @@ public class OrderService : IOrderService
 
         return ExecuteTransactional(orderId, expectedRowVersion, (context, hoaDon, pendingAuditLogs) =>
         {
-            if (hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
+            if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
             {
-                return BusMessageCatalog.CreateActionResult(false, "Chỉ sửa món cho hóa đơn chưa thanh toán.");
+                return BusMessageCatalog.CreateActionResult(false, "Chỉ sửa món cho hóa đơn Open.");
             }
 
             var snapshotCu = TaoSnapshotHoaDon(hoaDon);
@@ -426,7 +646,7 @@ public class OrderService : IOrderService
                     [newProductId] = monMoi
                 });
 
-            ApDungBienDongTonKhoDoiMon(context, hoaDon.ID, currentProductId, newProductId, dsBienDongTonKho, dsNguyenLieuDb);
+            ApDungBienDongTonKhoDoiMon(context, hoaDon.ID, hoaDon.NhanVienID, currentProductId, newProductId, dsBienDongTonKho, dsNguyenLieuDb);
 
             TinhLaiTongTienHoaDon(hoaDon);
             CapNhatTrangThaiBan(context, hoaDon.BanID, trangThaiMoi: 1);
@@ -445,10 +665,10 @@ public class OrderService : IOrderService
     public BanActionResultDTO CancelOrder(int orderId, byte[]? expectedRowVersion = null)
     {
         var nguoiDung = NguoiDungHienTaiService.LayNguoiDungDangNhap()?.TenDangNhap ?? "system";
-        return CancelInvoice(orderId, "Hủy hóa đơn", nguoiDung, expectedRowVersion);
+        return VoidInvoice(orderId, "Hủy hóa đơn", nguoiDung, expectedRowVersion);
     }
 
-    public BanActionResultDTO CancelInvoice(int orderId, string reason, string user, byte[]? expectedRowVersion = null)
+    public BanActionResultDTO VoidInvoice(int orderId, string reason, string user, byte[]? expectedRowVersion = null)
     {
         if (orderId <= 0)
         {
@@ -460,9 +680,9 @@ public class OrderService : IOrderService
 
         return ExecuteTransactional(orderId, expectedRowVersion, (context, hoaDon, pendingAuditLogs) =>
         {
-            if (hoaDon.TrangThai != (int)HoaDonTrangThai.Draft)
+            if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
             {
-                return BusMessageCatalog.CreateActionResult(false, "Chỉ được hủy hóa đơn Draft.");
+                return BusMessageCatalog.CreateActionResult(false, "Chỉ được Void hóa đơn Open.");
             }
 
             var snapshotCu = TaoSnapshotHoaDon(hoaDon);
@@ -488,42 +708,44 @@ public class OrderService : IOrderService
                     .ToArray();
 
                 var dsCongThuc = QueryCongThucMonRows(context, dsMonId);
-                var loiCongThuc = KiemTraDayDuCongThuc(dsMonId, dsCongThuc);
-                if (loiCongThuc != null)
-                {
-                    return loiCongThuc;
-                }
-
-                var dsNhuCauHoanTon = TinhNhuCauNguyenLieu(dsMonTongHop, dsCongThuc);
-                var dsNguyenLieuId = dsNhuCauHoanTon
-                    .Select(x => x.NguyenLieuID)
+                var dsMonCoCongThuc = dsCongThuc
+                    .Select(x => x.MonID)
                     .Distinct()
-                    .ToArray();
+                    .ToHashSet();
 
-                var dsNguyenLieuDb = context.NguyenLieu
-                    .Where(x => dsNguyenLieuId.Contains(x.ID))
-                    .ToDictionary(x => x.ID);
+                var dsMonCoTheHoanTon = dsMonTongHop
+                    .Where(x => dsMonCoCongThuc.Contains(x.MonID))
+                    .ToList();
 
-                if (dsNguyenLieuDb.Count != dsNguyenLieuId.Length)
+                if (dsMonCoTheHoanTon.Count > 0)
                 {
-                    return BusMessageCatalog.CreateActionResult(false, "Công thức món tham chiếu nguyên liệu không tồn tại.");
-                }
+                    var dsNhuCauHoanTon = TinhNhuCauNguyenLieu(dsMonCoTheHoanTon, dsCongThuc);
+                    var dsNguyenLieuId = dsNhuCauHoanTon
+                        .Select(x => x.NguyenLieuID)
+                        .Distinct()
+                        .ToArray();
 
-                HoanTonKhoNguyenLieu(
-                    context,
-                    dsNhuCauHoanTon,
-                    dsNguyenLieuDb,
-                    ghiChuNhapKho: TaoGhiChuNhapKhoTuHuyHoaDon(hoaDon.ID));
+                    var dsNguyenLieuDb = context.NguyenLieu
+                        .Where(x => dsNguyenLieuId.Contains(x.ID))
+                        .ToDictionary(x => x.ID);
+
+                    HoanTonKhoNguyenLieu(
+                        context,
+                        hoaDon.NhanVienID,
+                        dsNhuCauHoanTon,
+                        dsNguyenLieuDb,
+                        ghiChuNhapKho: TaoGhiChuNhapKhoTuHuyHoaDon(hoaDon.ID));
+                }
             }
 
-            hoaDon.TrangThai = (int)HoaDonTrangThai.Cancelled;
+            hoaDon.TrangThai = (int)HoaDonTrangThai.Voided;
             hoaDon.GhiChuHoaDon = $"[Hủy {DateTime.Now:dd/MM/yyyy HH:mm}] {lyDoHuy}. {hoaDon.GhiChuHoaDon}".Trim();
 
             CapNhatTrangThaiBan(context, hoaDon.BanID, 0);
             TinhLaiTongTienHoaDon(hoaDon);
             ThemPendingAuditLog(
                 pendingAuditLogs,
-                AuditActions.DeleteInvoice,
+                AuditActionConstants.VoidInvoice,
                 hoaDon.ID,
                 $"Đã hủy hóa đơn HD{hoaDon.ID:D5}. Lý do: {lyDoHuy}.",
                 snapshotCu,
@@ -539,6 +761,11 @@ public class OrderService : IOrderService
         });
     }
 
+    public BanActionResultDTO CancelInvoice(int orderId, string reason, string user, byte[]? expectedRowVersion = null)
+    {
+        return VoidInvoice(orderId, reason, user, expectedRowVersion);
+    }
+
     public BanActionResultDTO Checkout(int orderId, byte[]? expectedRowVersion = null)
     {
         if (orderId <= 0)
@@ -548,9 +775,9 @@ public class OrderService : IOrderService
 
         return ExecuteTransactional(orderId, expectedRowVersion, (context, hoaDon, pendingAuditLogs) =>
         {
-            if (hoaDon.TrangThai != (int)HoaDonTrangThai.ChuaThanhToan)
+            if (!HoaDonStateMachine.IsOpen(hoaDon.TrangThai))
             {
-                return BusMessageCatalog.CreateActionResult(false, "Hóa đơn không ở trạng thái chờ thanh toán.");
+                return BusMessageCatalog.CreateActionResult(false, "Hóa đơn không ở trạng thái Open (chờ thanh toán).");
             }
 
             var snapshotCu = TaoSnapshotHoaDon(hoaDon);
@@ -559,6 +786,11 @@ public class OrderService : IOrderService
             if (hoaDon.TongTien <= 0)
             {
                 return BusMessageCatalog.CreateActionResult(false, "Hóa đơn chưa có món, không thể thu tiền.");
+            }
+
+            if (!HoaDonStateMachine.CanTransition(hoaDon.TrangThai, (int)HoaDonTrangThai.Paid))
+            {
+                return BusMessageCatalog.CreateActionResult(false, "Không thể chuyển trạng thái hóa đơn theo luồng POS.");
             }
 
             hoaDon.TrangThai = (int)HoaDonTrangThai.Paid;
@@ -977,11 +1209,13 @@ public class OrderService : IOrderService
         CaPheDbContext context,
         int hoaDonId,
         int banId,
+        int nhanVienId,
         IEnumerable<NhuCauNguyenLieuReadModel> dsNhuCauNguyenLieu,
         IReadOnlyDictionary<int, dtaNguyenLieu> dsNguyenLieuDb)
     {
         var thoiDiemXuat = DateTime.Now;
         var lyDoXuat = TaoLyDoXuatKhoTuThemMon(hoaDonId, banId);
+        var dsChiTietPhieuXuat = new List<dtaChiTietPhieuXuat>();
 
         foreach (var nhuCau in dsNhuCauNguyenLieu)
         {
@@ -990,27 +1224,53 @@ public class OrderService : IOrderService
                 continue;
             }
 
-            nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - nhuCau.SoLuongCan);
+            var soLuongXuat = decimal.Round(nhuCau.SoLuongCan, 3, MidpointRounding.AwayFromZero);
+            if (soLuongXuat <= 0)
+            {
+                continue;
+            }
+
+            nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - soLuongXuat);
             nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
             nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
 
-            context.PhieuXuatKho.Add(new dtaPhieuXuatKho
+            dsChiTietPhieuXuat.Add(new dtaChiTietPhieuXuat
             {
                 NguyenLieuID = nhuCau.NguyenLieuID,
-                SoLuongXuat = nhuCau.SoLuongCan,
-                NgayXuat = thoiDiemXuat,
-                LyDo = lyDoXuat
+                SoLuong = soLuongXuat
             });
         }
+
+        if (dsChiTietPhieuXuat.Count == 0)
+        {
+            return;
+        }
+
+        var phieuXuat = new dtaPhieuXuatKho
+        {
+            NgayXuat = thoiDiemXuat,
+            LyDo = lyDoXuat,
+            NhanVienID = nhanVienId
+        };
+
+        foreach (var chiTiet in dsChiTietPhieuXuat)
+        {
+            chiTiet.PhieuXuat = phieuXuat;
+        }
+
+        context.PhieuXuatKho.Add(phieuXuat);
+        context.ChiTietPhieuXuat.AddRange(dsChiTietPhieuXuat);
     }
 
     private static void HoanTonKhoNguyenLieu(
         CaPheDbContext context,
+        int nhanVienId,
         IEnumerable<NhuCauNguyenLieuReadModel> dsNhuCauNguyenLieu,
         IReadOnlyDictionary<int, dtaNguyenLieu> dsNguyenLieuDb,
         string ghiChuNhapKho)
     {
         var thoiDiemNhap = DateTime.Now;
+        var dsChiTietPhieuNhap = new List<dtaChiTietPhieuNhap>();
 
         foreach (var nhuCau in dsNhuCauNguyenLieu)
         {
@@ -1019,24 +1279,52 @@ public class OrderService : IOrderService
                 continue;
             }
 
-            nguyenLieu.SoLuongTon += nhuCau.SoLuongCan;
+            var soLuongNhap = decimal.Round(Math.Abs(nhuCau.SoLuongCan), 3, MidpointRounding.AwayFromZero);
+            if (soLuongNhap <= 0)
+            {
+                continue;
+            }
+
+            var donGiaNhap = decimal.Round(nguyenLieu.GiaNhapGanNhat, 2, MidpointRounding.AwayFromZero);
+
+            nguyenLieu.SoLuongTon += soLuongNhap;
             nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
             nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
 
-            context.PhieuNhapKho.Add(new dtaPhieuNhapKho
+            dsChiTietPhieuNhap.Add(new dtaChiTietPhieuNhap
             {
                 NguyenLieuID = nhuCau.NguyenLieuID,
-                SoLuongNhap = nhuCau.SoLuongCan,
-                GiaNhap = nguyenLieu.GiaNhapGanNhat,
-                NgayNhap = thoiDiemNhap,
-                GhiChu = ghiChuNhapKho
+                SoLuong = soLuongNhap,
+                DonGiaNhap = donGiaNhap,
+                ThanhTien = decimal.Round(soLuongNhap * donGiaNhap, 2, MidpointRounding.AwayFromZero)
             });
         }
+
+        if (dsChiTietPhieuNhap.Count == 0)
+        {
+            return;
+        }
+
+        var phieuNhap = new dtaPhieuNhapKho
+        {
+            NgayNhap = thoiDiemNhap,
+            GhiChu = ghiChuNhapKho,
+            NhanVienID = nhanVienId
+        };
+
+        foreach (var chiTiet in dsChiTietPhieuNhap)
+        {
+            chiTiet.PhieuNhap = phieuNhap;
+        }
+
+        context.PhieuNhapKho.Add(phieuNhap);
+        context.ChiTietPhieuNhap.AddRange(dsChiTietPhieuNhap);
     }
 
     private static void ApDungBienDongTonKhoDoiMon(
         CaPheDbContext context,
         int hoaDonId,
+        int nhanVienId,
         int monCuId,
         int monMoiId,
         IEnumerable<NhuCauNguyenLieuReadModel> dsBienDongTonKho,
@@ -1045,6 +1333,8 @@ public class OrderService : IOrderService
         var thoiDiem = DateTime.Now;
         var lyDoXuat = TaoLyDoXuatKhoTuDoiMon(hoaDonId, monCuId, monMoiId);
         var ghiChuNhap = TaoGhiChuNhapKhoTuDoiMon(hoaDonId, monCuId, monMoiId);
+        var dsChiTietPhieuXuat = new List<dtaChiTietPhieuXuat>();
+        var dsChiTietPhieuNhap = new List<dtaChiTietPhieuNhap>();
 
         foreach (var bienDong in dsBienDongTonKho)
         {
@@ -1055,31 +1345,77 @@ public class OrderService : IOrderService
 
             if (bienDong.SoLuongCan > 0)
             {
-                nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - bienDong.SoLuongCan);
-                context.PhieuXuatKho.Add(new dtaPhieuXuatKho
+                var soLuongXuat = decimal.Round(bienDong.SoLuongCan, 3, MidpointRounding.AwayFromZero);
+                if (soLuongXuat <= 0)
+                {
+                    continue;
+                }
+
+                nguyenLieu.SoLuongTon = Math.Max(0, nguyenLieu.SoLuongTon - soLuongXuat);
+                dsChiTietPhieuXuat.Add(new dtaChiTietPhieuXuat
                 {
                     NguyenLieuID = bienDong.NguyenLieuID,
-                    SoLuongXuat = bienDong.SoLuongCan,
-                    NgayXuat = thoiDiem,
-                    LyDo = lyDoXuat
+                    SoLuong = soLuongXuat
                 });
             }
             else
             {
-                var soLuongNhap = Math.Abs(bienDong.SoLuongCan);
+                var soLuongNhap = decimal.Round(Math.Abs(bienDong.SoLuongCan), 3, MidpointRounding.AwayFromZero);
+                if (soLuongNhap <= 0)
+                {
+                    continue;
+                }
+
+                var donGiaNhap = decimal.Round(nguyenLieu.GiaNhapGanNhat, 2, MidpointRounding.AwayFromZero);
+
                 nguyenLieu.SoLuongTon += soLuongNhap;
-                context.PhieuNhapKho.Add(new dtaPhieuNhapKho
+                dsChiTietPhieuNhap.Add(new dtaChiTietPhieuNhap
                 {
                     NguyenLieuID = bienDong.NguyenLieuID,
-                    SoLuongNhap = soLuongNhap,
-                    GiaNhap = nguyenLieu.GiaNhapGanNhat,
-                    NgayNhap = thoiDiem,
-                    GhiChu = ghiChuNhap
+                    SoLuong = soLuongNhap,
+                    DonGiaNhap = donGiaNhap,
+                    ThanhTien = decimal.Round(soLuongNhap * donGiaNhap, 2, MidpointRounding.AwayFromZero)
                 });
             }
 
             nguyenLieu.TrangThai = TinhTrangThaiNguyenLieu(nguyenLieu.SoLuongTon, nguyenLieu.MucCanhBao, nguyenLieu.TrangThai);
             nguyenLieu.TrangThaiTextLegacy = ChuyenTrangThaiNguyenLieuTextLegacy(nguyenLieu.TrangThai, nguyenLieu.SoLuongTon);
+        }
+
+        if (dsChiTietPhieuXuat.Count > 0)
+        {
+            var phieuXuat = new dtaPhieuXuatKho
+            {
+                NgayXuat = thoiDiem,
+                LyDo = lyDoXuat,
+                NhanVienID = nhanVienId
+            };
+
+            foreach (var chiTiet in dsChiTietPhieuXuat)
+            {
+                chiTiet.PhieuXuat = phieuXuat;
+            }
+
+            context.PhieuXuatKho.Add(phieuXuat);
+            context.ChiTietPhieuXuat.AddRange(dsChiTietPhieuXuat);
+        }
+
+        if (dsChiTietPhieuNhap.Count > 0)
+        {
+            var phieuNhap = new dtaPhieuNhapKho
+            {
+                NgayNhap = thoiDiem,
+                GhiChu = ghiChuNhap,
+                NhanVienID = nhanVienId
+            };
+
+            foreach (var chiTiet in dsChiTietPhieuNhap)
+            {
+                chiTiet.PhieuNhap = phieuNhap;
+            }
+
+            context.PhieuNhapKho.Add(phieuNhap);
+            context.ChiTietPhieuNhap.AddRange(dsChiTietPhieuNhap);
         }
     }
 

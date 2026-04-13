@@ -23,17 +23,19 @@ public class ActivityLogService : IActivityLogWriter
         object? newValue = null,
         string? performedBy = null)
     {
-        try
+        _ = Task.Run(async () =>
         {
-            LogAsync(userId, action, entity, entityId, description, oldValue, newValue, performedBy)
-                .ConfigureAwait(false)
-                .GetAwaiter()
-                .GetResult();
-        }
-        catch
-        {
-            // Never allow logging failures to interrupt business flows.
-        }
+            try
+            {
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await LogAsync(userId, action, entity, entityId, description, oldValue, newValue, performedBy, timeoutCts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                // Never allow logging failures to interrupt business flows.
+            }
+        });
     }
 
     public async Task LogAsync(

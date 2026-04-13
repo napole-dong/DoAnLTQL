@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.ComponentModel;
+using System.Linq;
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
@@ -17,6 +18,32 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
         private readonly Button _btnAuditLogSidebar;
+        private readonly BindingList<NhapKhoDongTamViewModel> _phieuNhapTam = new();
+        private Panel? _panelNhapKhoNhieuDong;
+        private ComboBox? _cboNhapNguyenLieu;
+        private TextBox? _txtNhapSoLuong;
+        private TextBox? _txtDonGiaNhap;
+        private TextBox? _txtGhiChuNhapKho;
+        private DataGridView? _dgvChiTietNhapKhoTam;
+        private Button? _btnThemDongNhap;
+        private Button? _btnXoaDongNhap;
+        private Button? _btnLuuPhieuNhap;
+        private Label? _lblTongTienPhieuNhap;
+
+        private sealed class NhapKhoDongTamViewModel
+        {
+            public int NguyenLieuID { get; init; }
+            public string TenNguyenLieu { get; init; } = string.Empty;
+            public decimal SoLuong { get; init; }
+            public decimal DonGiaNhap { get; init; }
+            public decimal ThanhTien => SoLuong * DonGiaNhap;
+        }
+
+        private sealed class NguyenLieuNhapOption
+        {
+            public int NguyenLieuID { get; init; }
+            public string HienThi { get; init; } = string.Empty;
+        }
 
         public frmQuanLiKho(
             INguyenLieuService? nguyenLieuBUS = null,
@@ -62,6 +89,9 @@ namespace QuanLyQuanCaPhe.Forms
             btnHoaDon.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.HoaDon, () => new frmHoaDon(isEmbedded: true), onCurrentFormReactivated: LoadDanhSachKho, skipNavigation: _isEmbedded);
             btnThongKe.Click += (_, _) => FormNavigationService.Navigate(this, _permissionBUS, PermissionFeatures.ThongKe, () => new frmThongKe(isEmbedded: true), onCurrentFormReactivated: LoadDanhSachKho, skipNavigation: _isEmbedded);
             btnDangXuat.Click += (_, _) => DangXuatDieuHuongService.DangXuatVaQuayVeDangNhap();
+
+            KhoiTaoKhuVucNhapKhoNhieuDong();
+            DatLaiPhieuNhapTam(xoaChiTiet: false);
         }
 
         private void frmQuanLiKho_Load(object? sender, EventArgs e)
@@ -114,15 +144,15 @@ namespace QuanLyQuanCaPhe.Forms
                 btnThemNguyenLieu.Visible = true;
                 btnCapNhatNguyenLieu.Visible = true;
                 btnXoaNguyenLieu.Visible = true;
-                btnNhapKho.Visible = false;
-                btnXuatKho.Visible = false;
                 btnThemNguyenLieu.Enabled = true;
                 btnCapNhatNguyenLieu.Enabled = true;
                 btnXoaNguyenLieu.Enabled = true;
-                btnNhapKho.Enabled = false;
-                btnXuatKho.Enabled = false;
                 txtTimNguyenLieu.Enabled = true;
                 dgvDanhSachKho.Enabled = true;
+                if (_panelNhapKhoNhieuDong != null)
+                {
+                    _panelNhapKhoNhieuDong.Visible = true;
+                }
 
                 SidebarUiHelper.ApplySidebarVisibility(
                     _permissionBUS,
@@ -157,18 +187,19 @@ namespace QuanLyQuanCaPhe.Forms
             var coQuyenKhoThem = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Create);
             var coQuyenKhoCapNhat = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Update);
             var coQuyenKhoXoa = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.Delete);
+            var coQuyenKhoNhap = _permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.NhapKho);
 
             btnThemNguyenLieu.Visible = coQuyenKhoThem;
             btnCapNhatNguyenLieu.Visible = coQuyenKhoCapNhat;
             btnXoaNguyenLieu.Visible = coQuyenKhoXoa;
-            btnNhapKho.Visible = false;
-            btnXuatKho.Visible = false;
 
             btnThemNguyenLieu.Enabled = btnThemNguyenLieu.Visible;
             btnCapNhatNguyenLieu.Enabled = btnCapNhatNguyenLieu.Visible;
             btnXoaNguyenLieu.Enabled = btnXoaNguyenLieu.Visible;
-            btnNhapKho.Enabled = false;
-            btnXuatKho.Enabled = false;
+            if (_panelNhapKhoNhieuDong != null)
+            {
+                _panelNhapKhoNhieuDong.Visible = coQuyenKhoNhap;
+            }
 
             txtTimNguyenLieu.Enabled = coQuyenKhoXem;
             dgvDanhSachKho.Enabled = coQuyenKhoXem;
@@ -208,6 +239,8 @@ namespace QuanLyQuanCaPhe.Forms
         private void LoadDanhSachKho(bool khoiPhucLuaChon, int viTriUuTien)
         {
             var dsNguyenLieu = _nguyenLieuBUS.LayDanhSachNguyenLieu(txtTimNguyenLieu.Text);
+            var dsNguonNhapKho = _nguyenLieuBUS.LayDanhSachNguyenLieu(null);
+            CapNhatNguonNguyenLieuNhapKho(dsNguonNhapKho);
             DataGridViewSelectionHelper.RebindData(dgvDanhSachKho, dsNguyenLieu);
 
             if (khoiPhucLuaChon)
@@ -368,6 +401,7 @@ namespace QuanLyQuanCaPhe.Forms
                 txtTimNguyenLieu.Clear();
                 LoadDanhSachKho();
                 ResetForm();
+                DatLaiPhieuNhapTam(xoaChiTiet: true);
             }
             finally
             {
@@ -388,9 +422,8 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void DatTrangThaiDangXuLyKho(bool dangXuLy)
         {
-            UiLoadingStateHelper.Apply(
-                this,
-                dangXuLy,
+            var controlsCanToggle = new List<Control>
+            {
                 btnThemNguyenLieu,
                 btnCapNhatNguyenLieu,
                 btnXoaNguyenLieu,
@@ -402,12 +435,457 @@ namespace QuanLyQuanCaPhe.Forms
                 txtMucCanhBao,
                 txtGiaNhapGanNhat,
                 cboDonViTinh,
-                cboTrangThai);
+                cboTrangThai
+            };
+
+            if (_panelNhapKhoNhieuDong?.Visible == true)
+            {
+                if (_cboNhapNguyenLieu != null)
+                {
+                    controlsCanToggle.Add(_cboNhapNguyenLieu);
+                }
+
+                if (_txtNhapSoLuong != null)
+                {
+                    controlsCanToggle.Add(_txtNhapSoLuong);
+                }
+
+                if (_txtDonGiaNhap != null)
+                {
+                    controlsCanToggle.Add(_txtDonGiaNhap);
+                }
+
+                if (_txtGhiChuNhapKho != null)
+                {
+                    controlsCanToggle.Add(_txtGhiChuNhapKho);
+                }
+
+                if (_dgvChiTietNhapKhoTam != null)
+                {
+                    controlsCanToggle.Add(_dgvChiTietNhapKhoTam);
+                }
+
+                if (_btnThemDongNhap != null)
+                {
+                    controlsCanToggle.Add(_btnThemDongNhap);
+                }
+
+                if (_btnXoaDongNhap != null)
+                {
+                    controlsCanToggle.Add(_btnXoaDongNhap);
+                }
+
+                if (_btnLuuPhieuNhap != null)
+                {
+                    controlsCanToggle.Add(_btnLuuPhieuNhap);
+                }
+            }
+
+            UiLoadingStateHelper.Apply(
+                this,
+                dangXuLy,
+                controlsCanToggle.ToArray());
 
             if (!dangXuLy)
             {
                 ApDungPhanQuyenLenUI();
             }
+        }
+
+        private void KhoiTaoKhuVucNhapKhoNhieuDong()
+        {
+            _panelNhapKhoNhieuDong = new Panel
+            {
+                BackColor = Color.FromArgb(252, 249, 245),
+                Dock = DockStyle.Top,
+                Height = 250,
+                Padding = new Padding(10, 10, 10, 10)
+            };
+
+            var lblTieuDe = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(62, 45, 36),
+                Location = new Point(12, 10),
+                Text = "Phiếu nhập kho nhiều dòng"
+            };
+
+            var lblNguyenLieu = new Label
+            {
+                AutoSize = true,
+                ForeColor = Color.FromArgb(88, 72, 62),
+                Location = new Point(12, 42),
+                Text = "Nguyên liệu"
+            };
+
+            _cboNhapNguyenLieu = new ComboBox
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(12, 62),
+                Size = new Size(255, 28)
+            };
+
+            var lblSoLuongNhap = new Label
+            {
+                AutoSize = true,
+                ForeColor = Color.FromArgb(88, 72, 62),
+                Location = new Point(275, 42),
+                Text = "Số lượng"
+            };
+
+            _txtNhapSoLuong = new TextBox
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(275, 62),
+                Size = new Size(105, 27)
+            };
+
+            var lblDonGiaNhap = new Label
+            {
+                AutoSize = true,
+                ForeColor = Color.FromArgb(88, 72, 62),
+                Location = new Point(388, 42),
+                Text = "Đơn giá"
+            };
+
+            _txtDonGiaNhap = new TextBox
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(388, 62),
+                Size = new Size(130, 27)
+            };
+
+            _btnThemDongNhap = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(25, 135, 84),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Location = new Point(526, 60),
+                Size = new Size(92, 31),
+                Text = "Thêm dòng",
+                UseVisualStyleBackColor = false
+            };
+            _btnThemDongNhap.FlatAppearance.BorderSize = 0;
+            _btnThemDongNhap.Click += btnThemDongNhap_Click;
+
+            _btnXoaDongNhap = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(220, 53, 69),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Location = new Point(626, 60),
+                Size = new Size(92, 31),
+                Text = "Xóa dòng",
+                UseVisualStyleBackColor = false
+            };
+            _btnXoaDongNhap.FlatAppearance.BorderSize = 0;
+            _btnXoaDongNhap.Click += btnXoaDongNhap_Click;
+
+            _dgvChiTietNhapKhoTam = new DataGridView
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoGenerateColumns = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(12, 98),
+                MultiSelect = false,
+                ReadOnly = true,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                Size = new Size(706, 96)
+            };
+
+            _dgvChiTietNhapKhoTam.Columns.AddRange(
+                new DataGridViewTextBoxColumn
+                {
+                    DataPropertyName = nameof(NhapKhoDongTamViewModel.NguyenLieuID),
+                    HeaderText = "Mã NL",
+                    FillWeight = 18,
+                    ReadOnly = true
+                },
+                new DataGridViewTextBoxColumn
+                {
+                    DataPropertyName = nameof(NhapKhoDongTamViewModel.TenNguyenLieu),
+                    HeaderText = "Tên nguyên liệu",
+                    FillWeight = 37,
+                    ReadOnly = true
+                },
+                new DataGridViewTextBoxColumn
+                {
+                    DataPropertyName = nameof(NhapKhoDongTamViewModel.SoLuong),
+                    HeaderText = "Số lượng",
+                    FillWeight = 15,
+                    ReadOnly = true,
+                    DefaultCellStyle = new DataGridViewCellStyle { Format = "N2" }
+                },
+                new DataGridViewTextBoxColumn
+                {
+                    DataPropertyName = nameof(NhapKhoDongTamViewModel.DonGiaNhap),
+                    HeaderText = "Đơn giá",
+                    FillWeight = 15,
+                    ReadOnly = true,
+                    DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
+                },
+                new DataGridViewTextBoxColumn
+                {
+                    DataPropertyName = nameof(NhapKhoDongTamViewModel.ThanhTien),
+                    HeaderText = "Thành tiền",
+                    FillWeight = 15,
+                    ReadOnly = true,
+                    DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
+                });
+            _dgvChiTietNhapKhoTam.DataSource = _phieuNhapTam;
+
+            var lblGhiChu = new Label
+            {
+                AutoSize = true,
+                ForeColor = Color.FromArgb(88, 72, 62),
+                Location = new Point(12, 203),
+                Text = "Ghi chú"
+            };
+
+            _txtGhiChuNhapKho = new TextBox
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(67, 200),
+                Size = new Size(260, 27)
+            };
+
+            _lblTongTienPhieuNhap = new Label
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                AutoSize = true,
+                ForeColor = Color.FromArgb(88, 72, 62),
+                Location = new Point(334, 203),
+                Text = "Tổng: 0"
+            };
+
+            _btnLuuPhieuNhap = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                BackColor = Color.FromArgb(13, 110, 253),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Location = new Point(594, 198),
+                Size = new Size(124, 33),
+                Text = "Lưu phiếu nhập",
+                UseVisualStyleBackColor = false
+            };
+            _btnLuuPhieuNhap.FlatAppearance.BorderSize = 0;
+            _btnLuuPhieuNhap.Click += btnLuuPhieuNhap_Click;
+
+            _panelNhapKhoNhieuDong.Controls.Add(lblTieuDe);
+            _panelNhapKhoNhieuDong.Controls.Add(lblNguyenLieu);
+            _panelNhapKhoNhieuDong.Controls.Add(_cboNhapNguyenLieu);
+            _panelNhapKhoNhieuDong.Controls.Add(lblSoLuongNhap);
+            _panelNhapKhoNhieuDong.Controls.Add(_txtNhapSoLuong);
+            _panelNhapKhoNhieuDong.Controls.Add(lblDonGiaNhap);
+            _panelNhapKhoNhieuDong.Controls.Add(_txtDonGiaNhap);
+            _panelNhapKhoNhieuDong.Controls.Add(_btnThemDongNhap);
+            _panelNhapKhoNhieuDong.Controls.Add(_btnXoaDongNhap);
+            _panelNhapKhoNhieuDong.Controls.Add(_dgvChiTietNhapKhoTam);
+            _panelNhapKhoNhieuDong.Controls.Add(lblGhiChu);
+            _panelNhapKhoNhieuDong.Controls.Add(_txtGhiChuNhapKho);
+            _panelNhapKhoNhieuDong.Controls.Add(_lblTongTienPhieuNhap);
+            _panelNhapKhoNhieuDong.Controls.Add(_btnLuuPhieuNhap);
+
+            panelDanhSachKho.Controls.Add(_panelNhapKhoNhieuDong);
+            panelDanhSachKho.Controls.SetChildIndex(panelDanhSachHeader, 0);
+            panelDanhSachKho.Controls.SetChildIndex(_panelNhapKhoNhieuDong, 1);
+            panelDanhSachKho.Controls.SetChildIndex(dgvDanhSachKho, 2);
+        }
+
+        private void CapNhatNguonNguyenLieuNhapKho(IEnumerable<NguyenLieuDTO> dsNguyenLieu)
+        {
+            if (_cboNhapNguyenLieu == null)
+            {
+                return;
+            }
+
+            var luaChonHienTai = _cboNhapNguyenLieu.SelectedItem as NguyenLieuNhapOption;
+            var nguonNhap = dsNguyenLieu
+                .Where(x => x.TrangThai != 0)
+                .OrderBy(x => x.TenNguyenLieu)
+                .Select(x => new NguyenLieuNhapOption
+                {
+                    NguyenLieuID = x.MaNguyenLieu,
+                    HienThi = $"{x.TenNguyenLieu} ({x.DonViTinh})"
+                })
+                .ToList();
+
+            _cboNhapNguyenLieu.DataSource = null;
+            _cboNhapNguyenLieu.DisplayMember = nameof(NguyenLieuNhapOption.HienThi);
+            _cboNhapNguyenLieu.ValueMember = nameof(NguyenLieuNhapOption.NguyenLieuID);
+            _cboNhapNguyenLieu.DataSource = nguonNhap;
+
+            if (nguonNhap.Count == 0)
+            {
+                return;
+            }
+
+            if (luaChonHienTai != null)
+            {
+                var match = nguonNhap.FirstOrDefault(x => x.NguyenLieuID == luaChonHienTai.NguyenLieuID);
+                if (match != null)
+                {
+                    _cboNhapNguyenLieu.SelectedItem = match;
+                    return;
+                }
+            }
+
+            _cboNhapNguyenLieu.SelectedIndex = 0;
+        }
+
+        private void btnThemDongNhap_Click(object? sender, EventArgs e)
+        {
+            if (_isSaving || _cboNhapNguyenLieu == null || _txtNhapSoLuong == null || _txtDonGiaNhap == null)
+            {
+                return;
+            }
+
+            if (_cboNhapNguyenLieu.SelectedItem is not NguyenLieuNhapOption nguyenLieuChon)
+            {
+                MessageBox.Show("Vui lòng chọn nguyên liệu để thêm vào phiếu.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!decimal.TryParse(_txtNhapSoLuong.Text.Trim(), out var soLuongNhap) || soLuongNhap <= 0)
+            {
+                MessageBox.Show("Số lượng nhập phải lớn hơn 0.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _txtNhapSoLuong.Focus();
+                return;
+            }
+
+            if (!decimal.TryParse(_txtDonGiaNhap.Text.Trim(), out var donGiaNhap) || donGiaNhap < 0)
+            {
+                MessageBox.Show("Đơn giá nhập không hợp lệ.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _txtDonGiaNhap.Focus();
+                return;
+            }
+
+            if (_phieuNhapTam.Any(x => x.NguyenLieuID == nguyenLieuChon.NguyenLieuID))
+            {
+                MessageBox.Show("Nguyên liệu này đã có trong phiếu nhập. Vui lòng xóa dòng cũ nếu muốn nhập lại.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _phieuNhapTam.Add(new NhapKhoDongTamViewModel
+            {
+                NguyenLieuID = nguyenLieuChon.NguyenLieuID,
+                TenNguyenLieu = nguyenLieuChon.HienThi,
+                SoLuong = soLuongNhap,
+                DonGiaNhap = donGiaNhap
+            });
+
+            CapNhatTongTienPhieuNhap();
+            _txtNhapSoLuong.Text = "0";
+            _txtDonGiaNhap.Text = "0";
+            _txtNhapSoLuong.Focus();
+        }
+
+        private void btnXoaDongNhap_Click(object? sender, EventArgs e)
+        {
+            if (_isSaving || _dgvChiTietNhapKhoTam?.CurrentRow?.DataBoundItem is not NhapKhoDongTamViewModel dongNhap)
+            {
+                return;
+            }
+
+            _phieuNhapTam.Remove(dongNhap);
+            CapNhatTongTienPhieuNhap();
+        }
+
+        private void btnLuuPhieuNhap_Click(object? sender, EventArgs e)
+        {
+            if (_isSaving)
+            {
+                return;
+            }
+
+            if (_phieuNhapTam.Count == 0)
+            {
+                MessageBox.Show("Phiếu nhập kho chưa có dòng chi tiết nào.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _isSaving = true;
+            DatTrangThaiDangXuLyKho(true);
+
+            try
+            {
+                var dsChiTiet = _phieuNhapTam
+                    .Select(x => new NhapKhoChiTietDTO
+                    {
+                        NguyenLieuID = x.NguyenLieuID,
+                        SoLuong = x.SoLuong,
+                        DonGiaNhap = x.DonGiaNhap
+                    })
+                    .ToList();
+
+                var ketQua = _nguyenLieuBUS.NhapKhoNhieuNguyenLieu(dsChiTiet, _txtGhiChuNhapKho?.Text);
+                if (!ketQua.ThanhCong)
+                {
+                    MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                DatLaiPhieuNhapTam(xoaChiTiet: true);
+                LoadDanhSachKho();
+                MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            finally
+            {
+                _isSaving = false;
+                DatTrangThaiDangXuLyKho(false);
+            }
+        }
+
+        private void DatLaiPhieuNhapTam(bool xoaChiTiet)
+        {
+            if (xoaChiTiet)
+            {
+                _phieuNhapTam.Clear();
+            }
+
+            if (_txtNhapSoLuong != null)
+            {
+                _txtNhapSoLuong.Text = "0";
+            }
+
+            if (_txtDonGiaNhap != null)
+            {
+                _txtDonGiaNhap.Text = "0";
+            }
+
+            if (_txtGhiChuNhapKho != null)
+            {
+                _txtGhiChuNhapKho.Clear();
+            }
+
+            CapNhatTongTienPhieuNhap();
+        }
+
+        private void CapNhatTongTienPhieuNhap()
+        {
+            if (_lblTongTienPhieuNhap == null)
+            {
+                return;
+            }
+
+            var tongTien = _phieuNhapTam.Sum(x => x.ThanhTien);
+            _lblTongTienPhieuNhap.Text = $"Tổng: {tongTien:N0}";
         }
 
         private void dgvDanhSachKho_SelectionChanged(object? sender, EventArgs e)

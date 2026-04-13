@@ -59,6 +59,7 @@ public interface IDangNhapService
 public interface IHoaDonService
 {
     List<HoaDonDTO> LayDanhSachHoaDon(HoaDonFilterDTO boLoc);
+    Task<List<HoaDonDTO>> LayDanhSachHoaDonAsync(HoaDonFilterDTO boLoc, CancellationToken cancellationToken = default);
     HoaDonDTO? LayHoaDonTheoId(int hoaDonId);
     int LayMaHoaDonTiepTheo();
     List<HoaDonBanKhachItemDTO> LayDanhSachBanKhach();
@@ -118,6 +119,7 @@ public interface INguyenLieuService
     (bool ThanhCong, string ThongBao, NguyenLieuDTO? NguyenLieuMoi) ThemNguyenLieu(NguyenLieuDTO nguyenLieuDTO);
     (bool ThanhCong, string ThongBao) CapNhatNguyenLieu(NguyenLieuDTO nguyenLieuDTO);
     (bool ThanhCong, string ThongBao) XoaNguyenLieu(int maNguyenLieu);
+    (bool ThanhCong, string ThongBao) NhapKhoNhieuNguyenLieu(IEnumerable<NhapKhoChiTietDTO> dsChiTiet, string? ghiChu);
     (bool ThanhCong, string ThongBao) NhapKho(int maNguyenLieu, decimal soLuongNhap, decimal giaNhap, string? ghiChu);
 }
 
@@ -135,12 +137,14 @@ public interface INhanVienService
 
 public interface IOrderService
 {
+    OperationResult AddItemsByTableAtomic(int banId, IEnumerable<BanHangThemMonDTO> dsMonThem, int? khachHangId = null);
     BanActionResultDTO AddItemToOrder(int orderId, int productId, short quantity, byte[]? expectedRowVersion = null);
     BanActionResultDTO AddItemsToOrder(int orderId, IEnumerable<BanHangThemMonDTO> dsMonThem, string successMessage = "Gọi món thành công.", byte[]? expectedRowVersion = null);
     BanActionResultDTO RemoveItemFromOrder(int orderId, int productId, short quantity, byte[]? expectedRowVersion = null);
     BanActionResultDTO UpdateItemQuantity(int orderId, int productId, short quantity, byte[]? expectedRowVersion = null);
     BanActionResultDTO ReplaceItemInOrder(int orderId, int currentProductId, int replacementProductId, short quantity, byte[]? expectedRowVersion = null);
     BanActionResultDTO CancelOrder(int orderId, byte[]? expectedRowVersion = null);
+    BanActionResultDTO VoidInvoice(int orderId, string reason, string user, byte[]? expectedRowVersion = null);
     BanActionResultDTO CancelInvoice(int orderId, string reason, string user, byte[]? expectedRowVersion = null);
     BanActionResultDTO Checkout(int orderId, byte[]? expectedRowVersion = null);
 }
