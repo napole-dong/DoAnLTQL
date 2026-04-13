@@ -12,7 +12,7 @@ namespace QuanLyQuanCaPhe.Services.Reporting
             if (hoaDon == null)
                 throw new ArgumentNullException(nameof(hoaDon));
 
-            var ds = new DataSet(ReportService.DataSetName);
+            var ds = new DataSet(ReportService.GetDataSetName());
 
             // Header table
             var hdTable = new DataTable("HoaDon");

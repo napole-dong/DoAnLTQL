@@ -3,7 +3,6 @@ namespace QuanLyQuanCaPhe.Services.Auth;
 public static class MatKhauService
 {
     private const int WorkFactor = 12;
-    private const int MinPasswordLength = 3;
 
     public static string BamMatKhau(string matKhau)
     {

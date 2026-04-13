@@ -1,14 +1,13 @@
 # DoAnLTQL_GD9 - QuanLyQuanCaPhe
 
-Cap nhat lan cuoi: 2026-04-13
+Cap nhat lan cuoi: 2026-04-14
 
 ## 1) Tong quan
-GD9 tap trung vao hardening he thong QuanLyQuanCaPhe theo huong on dinh van hanh, giam loi runtime, va de test/deploy:
+GD9 la giai doan hardening cua he thong QuanLyQuanCaPhe theo huong on dinh van hanh, giam loi runtime va de deploy:
 - WinForms + EF Core + SQL Server, mau 3 lop BUS/DAL/Data.
-- Chuan hoa transaction retry-safe cho cac luong ghi phuc tap.
+- Chuan hoa transaction retry-safe cho cac luong ghi du lieu.
 - Tang cuong soft-delete va toan ven du lieu khi xoa/doi trang thai.
-- Chuan hoa giao dien sidebar theo role tren cac form chinh.
-- Bo sung test BUS va integration test cho mot so nghiep vu quan trong.
+- Chuan hoa luong phan quyen va dieu huong UI qua presenter/service.
 
 ## 2) Cong nghe chinh
 - .NET 10.0 (WinForms)
@@ -16,48 +15,46 @@ GD9 tap trung vao hardening he thong QuanLyQuanCaPhe theo huong on dinh van hanh
 - Serilog (structured logging)
 - BCrypt.Net-Next (hash mat khau)
 - ClosedXML + QuestPDF (xuat Excel/PDF)
-- xUnit + FluentAssertions + Moq + AutoFixture (test)
+- Microsoft.ReportViewer.WinForms (in hoa don/bao cao)
 
-## 3) Cau truc thu muc chinh
-- `QuanLyQuanCaPhe/Data`: Entity, `CaPheDbContext`, mapping, query filter
-- `QuanLyQuanCaPhe/DAL`: Truy cap du lieu, transaction runner, repository
-- `QuanLyQuanCaPhe/BUS`: Nghiep vu
-- `QuanLyQuanCaPhe/DTO`: Data transfer objects
-- `QuanLyQuanCaPhe/Forms`: WinForms UI
-- `QuanLyQuanCaPhe/Presenters`: Tach phu thuoc form
-- `QuanLyQuanCaPhe/Services`: Auth, Navigation, UI helper, Diagnostics, Config
-- `QuanLyQuanCaPhe/Migrations`: Lich su migration EF
-- `QuanLyQuanCaPhe/QuanLyQuanCaPhe.Tests`: Unit + integration tests
-- `QuanLyQuanCaPhe/docs`: Tai lieu ky thuat
+## 3) Cau truc repo hien tai
 
-## 4) Diem moi va hardening trong GD9
+### 3.1) Thu muc goc GD9
+- `README.md`
+- `QuanLyQuanCaPhe/`
+
+### 3.2) Thu muc chinh trong `QuanLyQuanCaPhe`
+- `App.config`, `Program.cs`, `QuanLyQuanCaPhe.csproj`, `QuanLyQuanCaPhe.slnx`
+- `BUS/`: Business logic
+- `DAL/`: Data access, transaction handling
+- `Data/`: Entity + DbContext + mapping
+- `DTO/`: Data transfer objects
+- `Forms/`: WinForms UI
+- `Presenters/`: Presenters tach logic khoi form
+- `Services/`: Auth, Permission, Navigation, Diagnostics, Security, UI...
+- `Reporting/`, `Reports/`: Thanh phan va template bao cao/in
+- `Migrations/`: EF Core migrations
+- `scripts/`: script ho tro local
+- `.vs/`, `bin/`, `obj/`, `artifacts/`: output/build cache
+
+### 3.3) Luu y ve thanh phan da thay doi
+- Thu muc test `QuanLyQuanCaPhe.Tests` khong con trong source tree hien tai cua GD9.
+- Thu muc `docs` khong con trong source tree hien tai cua GD9.
+
+## 4) Hardening dang co trong code
 
 ### 4.1) Transaction retry-safe
 - Da su dung helper chung `DAL/ExecutionStrategyTransactionRunner.cs` cho transaction + retry strategy.
-- Pattern nay giup tranh xung dot khi `EnableRetryOnFailure` dang bat trong EF Core.
+- Pattern nay tranh xung dot khi `EnableRetryOnFailure` dang bat trong EF Core.
 
 ### 4.2) Soft-delete va toan ven du lieu
 - `CaPheDbContext` ap dung query filter cho cac entity implement `ISoftDelete`.
-- Intercept `SaveChanges/SaveChangesAsync` de chuyen thao tac delete thanh soft-delete (set `IsDeleted`, `DeletedAt`, `DeletedBy`).
-- Migration `20260412180556_SoftDeleteLoaiMonAndStopSellingDelete` bo sung hardening cho luong xoa loai mon.
-- `LoaiMonDAL.XoaLoai` da xu ly theo huong:
-  1. Chuyen cac mon active trong loai sang ngung ban (`TrangThai=0`, `DonGia=0`, `TrangThaiTextLegacy='Ngung ban'`).
-  2. Soft-delete `LoaiMon` de tranh vo FK.
+- Intercept `SaveChanges/SaveChangesAsync` de chuyen thao tac delete thanh soft-delete.
+- Migration `20260412180556_SoftDeleteLoaiMonAndStopSellingDelete` hardening luong xoa loai mon.
 
-### 4.3) UI role consistency (sidebar)
-- Da thong nhat menu sidebar runtime qua `Services/UI/SidebarUiHelper.cs` tren 9 form menu chinh.
-- Co tai lieu manual check role/sidebar tai `QuanLyQuanCaPhe/docs/gd9-sidebar-role-manual-checklist-2026-04-12.md`.
-
-### 4.4) Startup va bootstrap
+### 4.3) Startup va bootstrap
 - Startup trong `Program.cs` giu vong lap dang nhap -> vao `frmBanHang` -> dang xuat quay lai dang nhap.
-- Khi khoi dong:
-  - Dam bao tai khoan mac dinh ton tai (`admin`, `manager`, `staff`).
-  - Dong bo permission template mac dinh.
-
-### 4.5) Kiem thu
-Test project da co cac nhom chinh:
-- BUS tests: `BanHangFlowIntegrationTests`, `HoaDonBUSTests`, `OrderServiceTests`, `PermissionBUSTests`, `MonBUSTests`, ...
-- DAL integration tests: transaction tests + `LoaiMonDalDeleteIntegrationTests`.
+- Khi khoi dong, he thong dam bao tai khoan mac dinh ton tai va dong bo permission template.
 
 ## 5) Huong dan chay nhanh
 
@@ -78,67 +75,37 @@ Thu tu xac dinh environment:
 3. `ASPNETCORE_ENVIRONMENT`
 4. `App.config` key `CaPheEnvironment`
 
-Mac dinh local trong `App.config` dang tro toi:
-- `Server=localhost\SQLEXPRESS;Database=QuanLyQuanCaPhe;...`
-
-### 5.2.1) Cau hinh password bootstrap tai khoan mac dinh
-- Chi bat buoc o lan khoi tao dau tien, khi database chua co tai khoan admin.
-- Neu database da co tai khoan admin, ung dung van khoi dong duoc khi khong dat bien nay.
-- Neu can dong bo lai mat khau tai khoan mac dinh (`admin`, `manager`, `staff`), dat lai bien nay va khoi dong lai ung dung 1 lan.
+### 5.3) Cau hinh password bootstrap tai khoan mac dinh
+- Chi bat buoc o lan khoi tao dau tien khi database chua co tai khoan admin.
 - Dat bien cho user hien tai (PowerShell):
 
 ```powershell
 [Environment]::SetEnvironmentVariable("CAPHE_BOOTSTRAP_PASSWORD", "123", "User")
 ```
 
-### 5.3) Build
+### 5.4) Build va chay
 Chay trong thu muc `DoAnLTQL_GD9/QuanLyQuanCaPhe`:
 
 ```powershell
 dotnet restore
 dotnet build -p:EnableLocalDevCodeSigning=false
-```
-
-### 5.4) Chay ung dung
-
-```powershell
 dotnet run --project .\QuanLyQuanCaPhe.csproj
 ```
 
-### 5.5) Chay test
-
-```powershell
-dotnet test .\QuanLyQuanCaPhe.Tests\QuanLyQuanCaPhe.Tests.csproj -p:EnableLocalDevCodeSigning=false
-```
-
-## 6) Migration va deploy
-- Tao migration moi:
-
+### 5.5) Migration
 ```powershell
 dotnet ef migrations add <TenMigration>
-```
-
-- Apply migration:
-
-```powershell
 dotnet ef database update
 ```
 
-- Quy trinh staging -> production tham khao:
-  - `QuanLyQuanCaPhe/docs/migration-strategy-staging-prod.md`
-
-## 7) Tai khoan bootstrap (dev)
+## 6) Tai khoan bootstrap (dev)
 - admin / <gia tri CAPHE_BOOTSTRAP_PASSWORD luc bootstrap>
 - manager / <gia tri CAPHE_BOOTSTRAP_PASSWORD luc bootstrap>
 - staff / <gia tri CAPHE_BOOTSTRAP_PASSWORD luc bootstrap>
 
 Khuyen nghi: doi mat khau ngay sau khi setup moi truong.
 
-## 8) Tai lieu lien quan
-- `QuanLyQuanCaPhe/docs/migration-strategy-staging-prod.md`
-- `QuanLyQuanCaPhe/docs/gd9-sidebar-role-manual-checklist-2026-04-12.md`
-
-## 9) Viec uu tien tiep theo
-1. Tang do phu integration test cho cac use-case P0 (checkout/cancel/concurrency).
-2. Chuan hoa them smoke test UI theo role matrix.
-3. Tiep tuc ra soat code-behind lon de tach them qua presenters/services.
+## 7) Viec uu tien tiep theo
+1. Khoi phuc/bo sung lai bo test tu dong cho GD9 theo muc tieu release.
+2. Tang do phu test cho cac use-case P0 (checkout/cancel/concurrency).
+3. Tiep tuc tach code-behind lon qua presenters/services.

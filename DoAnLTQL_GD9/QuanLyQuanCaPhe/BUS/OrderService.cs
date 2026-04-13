@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using QuanLyQuanCaPhe.Data;
+using QuanLyQuanCaPhe.DAL;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Audit;
 using QuanLyQuanCaPhe.Services.Auth;
@@ -15,7 +16,6 @@ public class OrderService : IOrderService
     private const string GenericSystemErrorMessage = "Không thể xử lý hóa đơn do lỗi hệ thống.";
     private const string ConcurrencyErrorMessage = "Dữ liệu đã bị thay đổi bởi nhân viên khác. Vui lòng tải lại!";
     private const string InvoiceEntityName = "Invoice";
-    private const string TakeAwayTableName = "Mang đi";
     private static readonly JsonSerializerOptions AuditJsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -61,23 +61,17 @@ public class OrderService : IOrderService
             return ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Danh sách món gọi không hợp lệ."));
         }
 
-        using var strategyContext = new CaPheDbContext();
-        var strategy = strategyContext.Database.CreateExecutionStrategy();
-        var ketQua = OperationResult.Failure(GenericSystemErrorMessage);
-
-        strategy.Execute(() =>
+        try
         {
-            using var context = new CaPheDbContext();
-            using var transaction = context.Database.BeginTransaction(System.Data.IsolationLevel.Serializable);
-
-            try
-            {
-                var ban = context.Ban.FirstOrDefault(x => x.ID == banId);
+            return ExecutionStrategyTransactionRunner.Execute(
+                context =>
+                {
+                var ban = context.Ban
+                    .AsNoTracking()
+                    .FirstOrDefault(x => x.ID == banId);
                 if (ban == null)
                 {
-                    ketQua = ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Không tìm thấy bàn để gọi món."));
-                    transaction.Rollback();
-                    return;
+                    return ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Không tìm thấy bàn để gọi món."));
                 }
 
                 var hoaDon = context.HoaDon
@@ -93,9 +87,7 @@ public class OrderService : IOrderService
                 {
                     if (!TryLayNhanVienDangNhapHopLe(context, out var nhanVienId, out var thongBaoNhanVien))
                     {
-                        ketQua = ToOperationResult(BusMessageCatalog.CreateActionResult(false, thongBaoNhanVien));
-                        transaction.Rollback();
-                        return;
+                        return ToOperationResult(BusMessageCatalog.CreateActionResult(false, thongBaoNhanVien));
                     }
 
                     var khachHangIdHopLe = khachHangId.HasValue && khachHangId.Value > 0
@@ -117,9 +109,7 @@ public class OrderService : IOrderService
 
                         if (khachHang == null)
                         {
-                            ketQua = ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Khách hàng đã chọn không tồn tại hoặc đã bị xóa."));
-                            transaction.Rollback();
-                            return;
+                            return ToOperationResult(BusMessageCatalog.CreateActionResult(false, "Khách hàng đã chọn không tồn tại hoặc đã bị xóa."));
                         }
 
                         khachHangIdHopLe = khachHang.ID;
@@ -153,26 +143,22 @@ public class OrderService : IOrderService
 
                 if (!ketQuaThemMon.ThanhCong)
                 {
-                    ketQua = ToOperationResult(ketQuaThemMon);
-                    transaction.Rollback();
-                    return;
+                    return ToOperationResult(ketQuaThemMon);
                 }
 
                 AppendPendingAuditLogsToContext(context, pendingAuditLogsInTransaction);
                 context.SaveChanges();
-                transaction.Commit();
 
-                ketQua = ToOperationResult(ketQuaThemMon);
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                AppLogger.Error(ex, $"AddItemsByTableAtomic failed. BanID={banId}.", nameof(OrderService));
-                throw;
-            }
-        });
-
-        return ketQua;
+                return ToOperationResult(ketQuaThemMon);
+            },
+            shouldCommit: result => result.ThanhCong,
+            isolationLevel: System.Data.IsolationLevel.Serializable);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error(ex, $"AddItemsByTableAtomic failed. BanID={banId}.", nameof(OrderService));
+            throw;
+        }
     }
 
     public BanActionResultDTO AddItemsToOrder(
@@ -216,6 +202,7 @@ public class OrderService : IOrderService
             .ToArray();
 
         var dsMonDb = context.Mon
+            .AsNoTracking()
             .Where(x => dsMonId.Contains(x.ID))
             .ToDictionary(x => x.ID);
 
@@ -328,8 +315,9 @@ public class OrderService : IOrderService
         {
             return JsonSerializer.Serialize(payload, AuditJsonOptions);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Warning($"Failed to serialize audit payload: {ex.GetType().Name}.", nameof(OrderService));
             return null;
         }
     }
@@ -551,7 +539,9 @@ public class OrderService : IOrderService
                 return BusMessageCatalog.CreateActionResult(false, "Số lượng đổi món vượt quá số lượng hiện có.");
             }
 
-            var monMoi = context.Mon.FirstOrDefault(x => x.ID == newProductId);
+            var monMoi = context.Mon
+                .AsNoTracking()
+                .FirstOrDefault(x => x.ID == newProductId);
             if (monMoi == null)
             {
                 return BusMessageCatalog.CreateActionResult(false, "Món mới không tồn tại trong hệ thống.");
@@ -850,60 +840,53 @@ public class OrderService : IOrderService
     {
         try
         {
-            using var strategyContext = new CaPheDbContext();
-            var strategy = strategyContext.Database.CreateExecutionStrategy();
-
-            var ketQua = BusMessageCatalog.CreateActionResult(false, GenericSystemErrorMessage);
             List<PendingActivityLog> pendingAuditLogs = new();
 
-            strategy.ExecuteAsync(async () =>
-            {
-                await using var context = new CaPheDbContext();
-                await using var transaction = await context.Database
-                    .BeginTransactionAsync(System.Data.IsolationLevel.Serializable)
-                    .ConfigureAwait(false);
-
-                var pendingAuditLogsInTransaction = new List<PendingActivityLog>();
-
-                var hoaDon = await context.HoaDon
-                    .Include(x => x.HoaDon_ChiTiet)
-                    .FirstOrDefaultAsync(x => x.ID == orderId)
-                    .ConfigureAwait(false);
-
-                if (hoaDon == null)
+            var ketQua = ExecutionStrategyTransactionRunner.ExecuteAsync(
+                async context =>
                 {
-                    ketQua = BusMessageCatalog.CreateActionResult(false, "Không tìm thấy hóa đơn cần xử lý.");
-                    await transaction.RollbackAsync().ConfigureAwait(false);
-                    return;
-                }
+                    var pendingAuditLogsInTransaction = new List<PendingActivityLog>();
 
-                if (expectedRowVersion is { Length: > 0 })
-                {
-                    context.Entry(hoaDon)
-                        .Property(x => x.RowVersion)
-                        .OriginalValue = expectedRowVersion;
-                }
+                    var hoaDon = await context.HoaDon
+                        .Include(x => x.HoaDon_ChiTiet)
+                        .FirstOrDefaultAsync(x => x.ID == orderId)
+                        .ConfigureAwait(false);
 
-                ketQua = processOrder(context, hoaDon, pendingAuditLogsInTransaction);
-                if (!ketQua.ThanhCong)
-                {
-                    await transaction.RollbackAsync().ConfigureAwait(false);
-                    return;
-                }
+                    if (hoaDon == null)
+                    {
+                        return BusMessageCatalog.CreateActionResult(false, "Không tìm thấy hóa đơn cần xử lý.");
+                    }
 
-                try
-                {
-                    await context.SaveChangesAsync().ConfigureAwait(false);
-                    await transaction.CommitAsync().ConfigureAwait(false);
-                    pendingAuditLogs = pendingAuditLogsInTransaction;
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    ketQua = BusMessageCatalog.CreateActionResult(false, ConcurrencyErrorMessage);
-                    await transaction.RollbackAsync().ConfigureAwait(false);
-                    await TaiLaiHoaDonMoiNhat(orderId).ConfigureAwait(false);
-                }
-            }).ConfigureAwait(false).GetAwaiter().GetResult();
+                    if (expectedRowVersion is { Length: > 0 })
+                    {
+                        context.Entry(hoaDon)
+                            .Property(x => x.RowVersion)
+                            .OriginalValue = expectedRowVersion;
+                    }
+
+                    var ketQuaXuLy = processOrder(context, hoaDon, pendingAuditLogsInTransaction);
+                    if (!ketQuaXuLy.ThanhCong)
+                    {
+                        return ketQuaXuLy;
+                    }
+
+                    try
+                    {
+                        await context.SaveChangesAsync().ConfigureAwait(false);
+                        pendingAuditLogs = pendingAuditLogsInTransaction;
+                        return ketQuaXuLy;
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        await TaiLaiHoaDonMoiNhat(orderId).ConfigureAwait(false);
+                        return BusMessageCatalog.CreateActionResult(false, ConcurrencyErrorMessage);
+                    }
+                },
+                shouldCommit: result => result.ThanhCong,
+                isolationLevel: System.Data.IsolationLevel.Serializable)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
 
             if (ketQua.ThanhCong)
             {
@@ -914,10 +897,12 @@ public class OrderService : IOrderService
         }
         catch (DbUpdateConcurrencyException)
         {
+            AppLogger.Warning($"ExecuteTransactional concurrency conflict on OrderID={orderId}.", nameof(OrderService));
             return BusMessageCatalog.CreateActionResult(false, ConcurrencyErrorMessage);
         }
-        catch
+        catch (Exception ex)
         {
+            AppLogger.Error(ex, $"ExecuteTransactional failed. OrderID={orderId}.", nameof(OrderService));
             return BusMessageCatalog.CreateActionResult(false, GenericSystemErrorMessage);
         }
     }
@@ -1061,6 +1046,7 @@ public class OrderService : IOrderService
         }
 
         return context.CongThucMon
+            .AsNoTracking()
             .Where(x => dsMonId.Contains(x.MonID))
             .Select(x => new CongThucMonReadModel
             {
@@ -1433,18 +1419,6 @@ public class OrderService : IOrderService
         }
 
         ban.TrangThai = trangThaiMoi;
-    }
-
-    private static bool LaBanMangDi(CaPheDbContext context, int banId)
-    {
-        if (banId <= 0)
-        {
-            return false;
-        }
-
-        return context.Ban
-            .AsNoTracking()
-            .Any(x => x.ID == banId && x.TenBan == TakeAwayTableName);
     }
 
     private static string TaoLyDoXuatKhoTuThemMon(int hoaDonId, int banId)

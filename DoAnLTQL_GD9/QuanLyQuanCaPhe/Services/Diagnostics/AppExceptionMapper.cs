@@ -42,7 +42,7 @@ public static class AppExceptionMapper
             {
                 return new AppErrorDescriptor(
                     AppErrorCode.InvalidOperation,
-                    fallbackUserMessage ?? "Thieu CAPHE_BOOTSTRAP_PASSWORD de khoi tao tai khoan mac dinh lan dau. Vui long cau hinh bien moi truong nay va mo lai ung dung.");
+                    fallbackUserMessage ?? "Khong the khoi tao du lieu he thong. Vui long lien he quan tri vien.");
             }
 
             return new AppErrorDescriptor(

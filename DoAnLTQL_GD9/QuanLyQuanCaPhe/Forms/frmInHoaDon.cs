@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Reporting.WinForms;
+using QuanLyQuanCaPhe.Services.Diagnostics;
 using QuanLyQuanCaPhe.Services.Reporting;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -20,13 +21,28 @@ namespace QuanLyQuanCaPhe.Forms
         {
             try
             {
+                if (ds == null)
+                {
+                    MessageBox.Show(
+                        "Khong co du lieu de in hoa don.",
+                        "Bao cao",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
                 reportViewer1.Reset();
                 reportViewer1.ProcessingMode = ProcessingMode.Local;
                 reportViewer1.LocalReport.DataSources.Clear();
 
                 if (!File.Exists(rdlcFullPath))
                 {
-                    MessageBox.Show($"Report file not found: {rdlcFullPath}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AppLogger.Warning($"Report template not found at path: {rdlcFullPath}", nameof(frmInHoaDon));
+                    MessageBox.Show(
+                        "Khong tim thay mau in hoa don. Vui long kiem tra cau hinh report.",
+                        "Bao cao",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
                     return;
                 }
 
@@ -57,7 +73,12 @@ namespace QuanLyQuanCaPhe.Forms
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Warning: failed to set some report parameters: {ex.Message}", "Báo cáo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        AppLogger.Error(ex, "Failed to apply one or more report parameters.", nameof(frmInHoaDon));
+                        MessageBox.Show(
+                            "Mot so tham so in hoa don khong hop le. He thong se tiep tuc voi tham so mac dinh.",
+                            "Bao cao",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
                     }
                 }
 
@@ -65,7 +86,12 @@ namespace QuanLyQuanCaPhe.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Lỗi khi tải báo cáo: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AppLogger.Error(ex, "LoadReport failed.", nameof(frmInHoaDon));
+                MessageBox.Show(
+                    AppExceptionHandler.CreateUserMessage("Khong the tai bao cao hoa don.", ex),
+                    "Bao cao",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
     }

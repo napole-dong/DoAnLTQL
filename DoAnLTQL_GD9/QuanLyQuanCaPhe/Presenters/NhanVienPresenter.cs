@@ -1,4 +1,5 @@
 using QuanLyQuanCaPhe.DTO;
+using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.UI;
 
 namespace QuanLyQuanCaPhe.Presenters;
@@ -109,9 +110,7 @@ public sealed class NhanVienPresenter
 
     private static bool LaVaiTroQuanLy(NhanVienDTO nhanVien)
     {
-        var quyen = nhanVien.QuyenHan?.Trim() ?? string.Empty;
-        return quyen.Equals("Quản lý", StringComparison.OrdinalIgnoreCase)
-            || quyen.Equals("Quan ly", StringComparison.OrdinalIgnoreCase)
-            || quyen.Equals("Manager", StringComparison.OrdinalIgnoreCase);
+        return RoleMapper.TryParseRoleEnum(nhanVien.QuyenHan, out var role)
+            && role == RoleEnum.Manager;
     }
 }

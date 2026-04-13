@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
@@ -13,12 +14,36 @@ namespace QuanLyQuanCaPhe.Services.Reporting
         public const string DataSetName = "QLBHDataSet";
         public const string ReportFileRelative = "Reports\\rptInHoaDon.rdlc";
 
-        public static string GetDataSourceName(string tableName) => $"{DataSetName}_{tableName}";
+        private const string DataSetNameAppSettingKey = "Reporting.DataSetName";
+        private const string ReportPathAppSettingKey = "Reporting.InvoiceRdlcPath";
+
+        public static string GetDataSetName()
+        {
+            var fromConfig = ConfigurationManager.AppSettings[DataSetNameAppSettingKey];
+            return string.IsNullOrWhiteSpace(fromConfig) ? DataSetName : fromConfig.Trim();
+        }
+
+        public static string GetDataSourceName(string tableName) => $"{GetDataSetName()}_{tableName}";
+
+        public static string ResolveReportPath(string? rdlcFullPath = null)
+        {
+            var configuredPath = string.IsNullOrWhiteSpace(rdlcFullPath)
+                ? ConfigurationManager.AppSettings[ReportPathAppSettingKey]
+                : rdlcFullPath;
+
+            var reportPath = string.IsNullOrWhiteSpace(configuredPath)
+                ? ReportFileRelative
+                : configuredPath.Trim();
+
+            return Path.IsPathRooted(reportPath)
+                ? reportPath
+                : Path.Combine(Application.StartupPath, reportPath);
+        }
 
         public void ShowReportPreview(Form owner, DataSet ds, string? rdlcFullPath = null, Dictionary<string, object>? parameters = null)
         {
             using var f = new Forms.frmInHoaDon();
-            var path = rdlcFullPath ?? Path.Combine(Application.StartupPath, ReportFileRelative);
+            var path = ResolveReportPath(rdlcFullPath);
             f.LoadReport(ds, path, parameters);
             f.ShowDialog(owner);
         }
@@ -28,7 +53,7 @@ namespace QuanLyQuanCaPhe.Services.Reporting
         {
             if (ds == null) throw new ArgumentNullException(nameof(ds));
 
-            var path = rdlcFullPath ?? Path.Combine(Application.StartupPath, ReportFileRelative);
+            var path = ResolveReportPath(rdlcFullPath);
             if (!File.Exists(path)) throw new FileNotFoundException("RDLC file not found", path);
 
             using var localReport = new LocalReport { ReportPath = path };
