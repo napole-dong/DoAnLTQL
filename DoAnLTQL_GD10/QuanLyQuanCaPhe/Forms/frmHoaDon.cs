@@ -937,6 +937,12 @@ namespace QuanLyQuanCaPhe.Forms
                     return;
                 }
 
+                if (!HoaDonStateMachine.IsPaid(hoaDon.TrangThai))
+                {
+                    MessageBox.Show("Chỉ được in hóa đơn đã thanh toán.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 var printDataService = new QuanLyQuanCaPhe.Services.Reporting.HoaDonPrintService();
                 var dto = await printDataService.GetHoaDonPrintDtoAsync(hoaDon.ID);
                 if (dto == null)
@@ -998,6 +1004,7 @@ namespace QuanLyQuanCaPhe.Forms
             var choPhepXoaMon = trangThai.ChoPhepXoaMon && coQuyenChinhSuaChiTietHoaDon && !khoaToanBoUiDoDaThanhToan;
             var choPhepThanhToan = trangThai.ChoPhepThuTien && coQuyenThuTien && !khoaToanBoUiDoDaThanhToan;
             var choPhepVoid = trangThai.ChoPhepHuy && coQuyenVoid && !khoaToanBoUiDoDaThanhToan;
+            var choPhepInHoaDon = hoaDon != null && HoaDonStateMachine.IsPaid(hoaDon.TrangThai);
 
             cboBanKhach.Enabled = false;
             dtpNgayTao.Enabled = false;
@@ -1018,6 +1025,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnXacNhanThuTien.Enabled = btnXacNhanThuTien.Visible && choPhepThanhToan;
             txtTienKhachDua.Enabled = choPhepThanhToan;
             btnXoaHuy.Enabled = btnXoaHuy.Visible && choPhepVoid;
+            btnInHoaDon.Enabled = coQuyenXem && choPhepInHoaDon;
 
             dgvChiTietHoaDon.Enabled = coQuyenXem && !khoaToanBoUiDoDaThanhToan;
             dgvChiTietHoaDon.ReadOnly = true;
