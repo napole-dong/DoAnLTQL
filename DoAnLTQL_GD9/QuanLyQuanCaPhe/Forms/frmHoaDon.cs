@@ -926,7 +926,7 @@ namespace QuanLyQuanCaPhe.Forms
             MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void btnInHoaDon_Click(object? sender, EventArgs e)
+        private async void btnInHoaDon_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -937,30 +937,25 @@ namespace QuanLyQuanCaPhe.Forms
                     return;
                 }
 
-                var svc = new HoaDonService();
-                var entity = svc.GetHoaDonWithDetails(hoaDon.ID);
-                if (entity == null)
+                var printDataService = new QuanLyQuanCaPhe.Services.Reporting.HoaDonPrintService();
+                var dto = await printDataService.GetHoaDonPrintDtoAsync(hoaDon.ID);
+                if (dto == null)
                 {
                     MessageBox.Show("Không tìm thấy hóa đơn cần in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                if (entity.HoaDon_ChiTiet == null || entity.HoaDon_ChiTiet.Count == 0)
+                if (dto.Items.Count == 0)
                 {
                     MessageBox.Show("Hóa đơn chưa có chi tiết, không thể in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                var ds = HoaDonMapper.ToDataSet(entity);
-                var reportService = new ReportService();
-                var rdlcPath = Path.Combine(Application.StartupPath, "Reports", "rptInHoaDon.rdlc");
-                var parameters = new Dictionary<string, object>
-                {
-                    { "VAT", 0 },
-                    { "Discount", 0 }
-                };
+                var tienKhachDua = _hoaDonTienService.ChuyenTextTienThanhSo(txtTienKhachDua.Text);
+                dto.CashReceived = tienKhachDua > 0 ? tienKhachDua : dto.GrandTotal;
 
-                reportService.ShowReportPreview(this, ds, rdlcPath, parameters);
+                var thermalPrintService = new Thermal80InvoicePrintService();
+                thermalPrintService.PrintWithDialog(this, dto);
             }
             catch (Exception ex)
             {

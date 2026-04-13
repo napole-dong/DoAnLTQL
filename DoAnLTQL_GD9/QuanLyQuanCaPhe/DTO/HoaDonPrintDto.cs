@@ -15,12 +15,15 @@ namespace QuanLyQuanCaPhe.DTO
         public DateTime InvoiceDate { get; set; }
         public string CashierName { get; set; } = string.Empty;
         public string TableName { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string CustomerPhone { get; set; } = string.Empty;
 
         // Financials
         public decimal Subtotal { get; set; }
         public decimal Discount { get; set; }
         public decimal Vat { get; set; }
         public decimal GrandTotal { get; set; }
+        public decimal CashReceived { get; set; }
 
         // Line items
         public List<HoaDonPrintLineItem> Items { get; set; } = new();

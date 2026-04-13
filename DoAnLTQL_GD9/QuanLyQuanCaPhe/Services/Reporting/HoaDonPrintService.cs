@@ -28,15 +28,26 @@ namespace QuanLyQuanCaPhe.Services.Reporting
 
                 if (q == null) return null;
 
+                var rawCustomerName = string.IsNullOrWhiteSpace(q.CustomerName)
+                    ? q.KhachHang?.HoVaTen ?? string.Empty
+                    : q.CustomerName;
+                var customerName = string.Equals(rawCustomerName.Trim(), "Khách lẻ", StringComparison.OrdinalIgnoreCase)
+                    ? string.Empty
+                    : rawCustomerName;
+                var customerPhone = q.KhachHang?.DienThoai ?? string.Empty;
+
                 var dto = new HoaDonPrintDto
                 {
                     InvoiceNo = $"HD{q.ID:D5}",
                     InvoiceDate = q.NgayLap,
                     CashierName = q.NhanVien?.HoVaTen ?? string.Empty,
                     TableName = q.Ban?.TenBan ?? string.Empty,
-                    StoreName = "CA PHE NAPOLE",
-                    StoreAddress = "188 Le Loi, Quan 1, TP.HCM",
-                    StorePhone = "0123456789"
+                    CustomerName = customerName,
+                    CustomerPhone = customerPhone,
+                    StoreName = "CÀ PHÊ PRO",
+                    StoreAddress = "Long Xuyên, An Giang",
+                    StorePhone = "0971742428",
+                    CashReceived = 0m
                 };
 
                 // map items
