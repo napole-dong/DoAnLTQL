@@ -1,4 +1,4 @@
-# DoAnLTQL_GD9 - QuanLyQuanCaPhe
+# DoAnLTQL_GD10 - QuanLyQuanCaPhe
 
 Cap nhat lan cuoi: 2026-04-14
 
