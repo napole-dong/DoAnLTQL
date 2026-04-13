@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<xs:schema id="QLBHDataSet" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="QLBHDataSet">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="HoaDon" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ID" type="xs:int" />
+              <xs:element name="NgayLap" type="xs:dateTime" />
+              <xs:element name="TenKhachHang" type="xs:string" minOccurs="0" />
+              <xs:element name="MaHoaDon" type="xs:string" minOccurs="0" />
+              <xs:element name="TongTien" type="xs:decimal" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="HoaDon_ChiTiet" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ID" type="xs:int" />
+              <xs:element name="HoaDonID" type="xs:int" />
+              <xs:element name="TenSanPham" type="xs:string" minOccurs="0" />
+              <xs:element name="SoLuong" type="xs:int" />
+              <xs:element name="DonGia" type="xs:decimal" />
+              <xs:element name="ThanhTien" type="xs:decimal" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
