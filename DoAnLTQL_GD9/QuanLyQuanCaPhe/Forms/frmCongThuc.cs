@@ -4,6 +4,7 @@ using QuanLyQuanCaPhe.Presenters;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 using System.Globalization;
 
@@ -14,8 +15,10 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly IPermissionService _permissionBUS;
         private readonly ICongThucService _congThucBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
         private readonly CongThucPresenter _congThucPresenter;
         private readonly SearchDebounceHelper _timKiemDebounce;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmCongThuc), UserRole.Staff);
         private bool _dangNapDuLieu;
         private bool _dangXuLyCongThuc;
         private readonly Button _btnKhachHangSidebar;
@@ -116,6 +119,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmCongThuc), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Ban khong co quyen truy cap chuc nang cong thuc."))
+            {
+                Close();
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.Menu, PermissionActions.View, "Ban khong co quyen truy cap chuc nang cong thuc.");
@@ -133,6 +144,7 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             ApDungPhanQuyenDieuHuong();
+            this.ApplyPermission(_formPermission);
             TaiThongKeMacDinh();
             TaiDanhMucMonVaNguyenLieu();
             TaiDanhSachCongThuc(giuDongDangChon: false);
@@ -140,10 +152,14 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungPhanQuyenDieuHuong()
         {
-            var coQuyenMenu = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
-            var coQuyenThemCongThuc = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create);
-            var coQuyenCapNhatCongThuc = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update);
-            var coQuyenXoaCongThuc = _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Delete);
+            var coQuyenMenu = _formPermission.CanView
+                             && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
+            var coQuyenThemCongThuc = _formPermission.CanAdd
+                                      && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create);
+            var coQuyenCapNhatCongThuc = _formPermission.CanEdit
+                                         && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Update);
+            var coQuyenXoaCongThuc = _formPermission.CanDelete
+                                     && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Delete);
 
             SidebarUiHelper.ApplySidebarVisibility(
                 _permissionBUS,
@@ -437,6 +453,12 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            if (!_formPermission.CanAdd)
+            {
+                MessageBox.Show("Bạn không có quyền thêm công thức.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             _dangXuLyCongThuc = true;
             DatTrangThaiDangXuLyCongThuc(true);
 
@@ -482,6 +504,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_dangXuLyCongThuc)
             {
+                return;
+            }
+
+            if (!_formPermission.CanEdit)
+            {
+                MessageBox.Show("Bạn không có quyền cập nhật công thức.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -535,6 +563,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_dangXuLyCongThuc)
             {
+                return;
+            }
+
+            if (!_formPermission.CanDelete)
+            {
+                MessageBox.Show("Bạn không có quyền xóa công thức.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

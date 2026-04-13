@@ -1,15 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using QuanLyQuanCaPhe.BUS;
+using QuanLyQuanCaPhe.Data;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
 using QuanLyQuanCaPhe.Services.Mon;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -20,11 +23,14 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly IMonService _monBUS;
         private readonly ILoaiMonService _loaiMonBUS;
         private readonly IPermissionService _permissionBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
         private readonly MonInputValidator _monInputValidator;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmQuanLiMon), UserRole.Staff);
         private bool _isSaving;
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
         private readonly Button _btnAuditLogSidebar;
+        private readonly CaPheDbContext db = new CaPheDbContext();
 
         public frmQuanLiMon(
             IMonService? monBUS = null,
@@ -101,6 +107,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmQuanLiMon), currentRole);
+            if (!this.EnsureCanView(_formPermission))
+            {
+                Close();
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.Menu, PermissionActions.View, "Bạn không có quyền truy cập chức năng Quản lý món.");
@@ -119,6 +133,8 @@ namespace QuanLyQuanCaPhe.Forms
 
             HienThiNguoiDungDangNhap();
             ApDungPhanQuyenUI();
+            this.ApplyPermission(_formPermission);
+
             ApplyRoundedUi();
             LoadLoaiMonComboBox();
             RefreshAllData();
@@ -884,6 +900,7 @@ namespace QuanLyQuanCaPhe.Forms
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            db.Dispose();
             base.OnFormClosed(e);
         }
     }

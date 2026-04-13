@@ -8,6 +8,7 @@ using QuanLyQuanCaPhe.Presenters;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -17,8 +18,10 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly INhanVienService _nhanVienBUS;
         private readonly IPermissionService _permissionBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
         private readonly NhanVienPresenter _nhanVienPresenter;
         private readonly SearchDebounceHelper _timKiemDebounce;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmNhanVien), UserRole.Staff);
         private bool _dangXuLyTacVuNhanVien;
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
@@ -81,6 +84,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmNhanVien), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Bạn không có quyền truy cập chức năng Nhân viên."))
+            {
+                Close();
+                return;
+            }
+
             if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View))
             {
                 MessageBox.Show("Bạn không có quyền truy cập chức năng Nhân viên.", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -96,6 +107,7 @@ namespace QuanLyQuanCaPhe.Forms
             HienThiNguoiDungDangNhap();
             TaiDanhSachVaiTroTheoQuyen();
             ApDungPhanQuyenLenUI();
+            this.ApplyPermission(_formPermission);
 
             await LoadDanhSachNhanVienAsync(false, -1);
         }
@@ -122,10 +134,14 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungPhanQuyenLenUI()
         {
-            var coQuyenXemNhanVien = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
-            var coQuyenThemNhanVien = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create);
-            var coQuyenCapNhatNhanVien = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update);
-            var coQuyenXoaNhanVien = _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Delete);
+            var coQuyenXemNhanVien = _formPermission.CanView
+                                     && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
+            var coQuyenThemNhanVien = _formPermission.CanAdd
+                                      && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create);
+            var coQuyenCapNhatNhanVien = _formPermission.CanEdit
+                                         && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update);
+            var coQuyenXoaNhanVien = _formPermission.CanDelete
+                                     && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Delete);
 
             btnThemNhanVien.Visible = coQuyenThemNhanVien;
             btnCapNhatNhanVien.Visible = coQuyenCapNhatNhanVien;
@@ -142,8 +158,14 @@ namespace QuanLyQuanCaPhe.Forms
             btnTimNhanVien.Enabled = btnTimNhanVien.Visible;
 
             txtTimNhanVien.Enabled = coQuyenXemNhanVien;
-            cboQuyenHan.Enabled = coQuyenThemNhanVien || coQuyenCapNhatNhanVien;
-            txtMatKhau.Enabled = coQuyenThemNhanVien || coQuyenCapNhatNhanVien;
+
+            var coTheSuaRoleVaMatKhau = !_formPermission.HasLimitedEdit;
+            cboQuyenHan.Enabled = coTheSuaRoleVaMatKhau && (coQuyenThemNhanVien || coQuyenCapNhatNhanVien);
+            txtMatKhau.Enabled = coTheSuaRoleVaMatKhau && (coQuyenThemNhanVien || coQuyenCapNhatNhanVien);
+            if (_formPermission.HasLimitedEdit)
+            {
+                txtMatKhau.Clear();
+            }
 
             SidebarUiHelper.ApplySidebarVisibility(
                 _permissionBUS,
@@ -219,6 +241,12 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            if (!_formPermission.CanAdd)
+            {
+                MessageBox.Show("Bạn không có quyền thêm nhân viên.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (!ValidateInput(out var nhanVienDTO, false))
             {
                 return;
@@ -277,6 +305,12 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            if (!_formPermission.CanEdit)
+            {
+                MessageBox.Show("Bạn không có quyền cập nhật nhân viên.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (!int.TryParse(txtMaNhanVien.Text, out var nhanVienId))
             {
                 MessageBox.Show("Vui lòng chọn nhân viên cần cập nhật.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -286,6 +320,14 @@ namespace QuanLyQuanCaPhe.Forms
             if (!ValidateInput(out var nhanVienDTO, true))
             {
                 return;
+            }
+
+            if (_formPermission.HasLimitedEdit
+                && DataGridViewSelectionHelper.TryGetCurrentOrSelectedItem<NhanVienDTO>(dgvDanhSachNhanVien, out var nhanVienDangChon, out _)
+                && nhanVienDangChon != null)
+            {
+                nhanVienDTO.QuyenHan = nhanVienDangChon.QuyenHan;
+                nhanVienDTO.MatKhau = null;
             }
 
             nhanVienDTO.ID = nhanVienId;
@@ -320,6 +362,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_dangXuLyTacVuNhanVien)
             {
+                return;
+            }
+
+            if (!_formPermission.CanDelete)
+            {
+                MessageBox.Show("Bạn không có quyền ngừng hoạt động nhân viên.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

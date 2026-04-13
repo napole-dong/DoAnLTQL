@@ -4,6 +4,7 @@ using QuanLyQuanCaPhe.Presenters;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 using System.Reflection;
 
@@ -18,8 +19,10 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly IBanHangService _banHangBUS;
         private readonly IKhachHangService _khachHangBUS;
         private readonly IPermissionService _permissionBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
         private readonly BanHangPresenter _banHangPresenter;
         private readonly SearchDebounceHelper _timKiemDebounce;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmBanHang), UserRole.Staff);
         private readonly Dictionary<int, int?> _khachHangChonTheoBan = new();
         private int? _banDangChonId;
         private string? _boLocLoaiMon;
@@ -265,6 +268,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmBanHang), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Bạn không có quyền truy cập chức năng Bán hàng."))
+            {
+                Close();
+                return;
+            }
+
             if (!_isEmbedded)
             {
                 WindowState = FormWindowState.Maximized;
@@ -288,6 +299,7 @@ namespace QuanLyQuanCaPhe.Forms
 
             HienThiNguoiDungDangNhap();
             ApplyPermissionUI();
+            this.ApplyPermission(_formPermission);
             CapNhatNutMenuDangChon(btnBanHang);
             TaiDanhSachKhachHang();
 
@@ -439,8 +451,9 @@ namespace QuanLyQuanCaPhe.Forms
                 btnQuanLyKho: _btnQuanLyKhoSidebar,
                 btnAuditLog: _btnAuditLogSidebar);
 
-            var coQuyenBanHang = _permissionBUS.CanSell();
-            var coQuyenCapNhatBanHang = _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
+            var coQuyenBanHang = _formPermission.CanView && _permissionBUS.CanSell();
+            var coQuyenCapNhatBanHang = _formPermission.CanEdit
+                                        && _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
             btnTamTinh.Visible = coQuyenBanHang;
             btnThanhToan.Visible = coQuyenBanHang;
             btnChuyenBan.Visible = coQuyenBanHang && coQuyenCapNhatBanHang;
@@ -587,8 +600,27 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             var childForm = childFormFactory();
+
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            var formPermission = PermissionService.Shared.GetPermission(childForm.GetType().Name, currentRole);
+            if (!formPermission.CanView)
+            {
+                childForm.Dispose();
+                MessageBox.Show("Bạn không có quyền truy cập", "Từ chối truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                HienThiManHinhBanHangInternal(dongFormConDangMo: false);
+                return;
+            }
+
             OpenChildForm(childForm);
-            lblPageTitle.Text = _childFormDangMo?.Text ?? childForm.Text;
+
+            // Child form may immediately close itself on Load when form-role permission denies access.
+            if (_childFormDangMo == null || _childFormDangMo.IsDisposed)
+            {
+                HienThiManHinhBanHangInternal(dongFormConDangMo: false);
+                return;
+            }
+
+            lblPageTitle.Text = _childFormDangMo.Text;
             txtSearch.Visible = false;
             btnLamMoi.Visible = false;
             CapNhatNutMenuDangChon(nutMenu);
@@ -622,8 +654,42 @@ namespace QuanLyQuanCaPhe.Forms
             panelContent.Tag = childForm;
             _childFormDangMo = childForm;
 
-            childForm.BringToFront();
-            childForm.Visible = true;
+            try
+            {
+                childForm.BringToFront();
+                childForm.Visible = true;
+            }
+            catch (ObjectDisposedException)
+            {
+                if (ReferenceEquals(_childFormDangMo, childForm))
+                {
+                    _childFormDangMo = null;
+                }
+
+                if (panelContent.Controls.Contains(childForm))
+                {
+                    panelContent.Controls.Remove(childForm);
+                }
+
+                panelContent.Tag = null;
+                HienThiManHinhBanHangInternal(dongFormConDangMo: false);
+                return;
+            }
+
+            if (childForm.IsDisposed)
+            {
+                if (ReferenceEquals(_childFormDangMo, childForm))
+                {
+                    _childFormDangMo = null;
+                }
+
+                if (panelContent.Controls.Contains(childForm))
+                {
+                    panelContent.Controls.Remove(childForm);
+                }
+
+                panelContent.Tag = null;
+            }
         }
 
         public void HienThiManHinhBanHang()
@@ -1436,6 +1502,16 @@ namespace QuanLyQuanCaPhe.Forms
 
         private async void ThucHienChuyenHoacGopBan(bool laChuyenBan)
         {
+            if (!_formPermission.CanEdit)
+            {
+                MessageBox.Show(
+                    laChuyenBan ? "Bạn không có quyền chuyển bàn." : "Bạn không có quyền gộp bàn.",
+                    "Thông báo",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
             if (!_permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update))
             {
                 MessageBox.Show(

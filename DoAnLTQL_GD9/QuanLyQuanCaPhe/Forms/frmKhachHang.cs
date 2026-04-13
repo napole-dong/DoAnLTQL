@@ -10,6 +10,7 @@ using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -19,6 +20,8 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly IKhachHangService _khachHangBUS;
         private readonly IPermissionService _permissionBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmKhachHang), UserRole.Staff);
         private bool _isSaving;
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
@@ -75,6 +78,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmKhachHang), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Bạn không có quyền truy cập chức năng Khách hàng."))
+            {
+                Close();
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.KhachHang, PermissionActions.View, "Bạn không có quyền truy cập chức năng Khách hàng.");
@@ -93,6 +104,7 @@ namespace QuanLyQuanCaPhe.Forms
 
             HienThiNguoiDungDangNhap();
             ApDungPhanQuyenSidebar();
+            this.ApplyPermission(_formPermission);
 
             LoadDanhSachKhach();
         }
@@ -103,6 +115,15 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungPhanQuyenSidebar()
         {
+            var coQuyenXemKhachHang = _formPermission.CanView
+                                     && _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.View);
+            var coQuyenThemKhachHang = _formPermission.CanAdd
+                                      && _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.Create);
+            var coQuyenCapNhatKhachHang = _formPermission.CanEdit
+                                         && _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.Update);
+            var coQuyenXoaKhachHang = _formPermission.CanDelete
+                                     && _permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.Delete);
+
             SidebarUiHelper.ApplySidebarVisibility(
                 _permissionBUS,
                 btnBanHang,
@@ -128,6 +149,17 @@ namespace QuanLyQuanCaPhe.Forms
                 btnNhanVien,
                 btnThongKe,
                 _btnAuditLogSidebar);
+
+            btnThemKhach.Visible = coQuyenThemKhachHang;
+            btnCapNhatKhach.Visible = coQuyenCapNhatKhachHang;
+            btnXoaKhach.Visible = coQuyenXoaKhachHang;
+
+            btnThemKhach.Enabled = btnThemKhach.Visible;
+            btnCapNhatKhach.Enabled = btnCapNhatKhach.Visible;
+            btnXoaKhach.Enabled = btnXoaKhach.Visible;
+            btnTimKhach.Enabled = coQuyenXemKhachHang;
+            txtTimKhach.Enabled = coQuyenXemKhachHang;
+            dgvDanhSachKhach.Enabled = coQuyenXemKhachHang;
 
             btnNhapKhach.Visible = false;
             btnXuatKhach.Visible = false;
@@ -169,6 +201,12 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            if (!_formPermission.CanAdd)
+            {
+                MessageBox.Show("Bạn không có quyền thêm khách hàng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             _isSaving = true;
             DatTrangThaiDangXuLyKhachHang(true);
 
@@ -203,6 +241,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_isSaving)
             {
+                return;
+            }
+
+            if (!_formPermission.CanEdit)
+            {
+                MessageBox.Show("Bạn không có quyền cập nhật khách hàng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -245,6 +289,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_isSaving)
             {
+                return;
+            }
+
+            if (!_formPermission.CanDelete)
+            {
+                MessageBox.Show("Bạn không có quyền ngừng hoạt động khách hàng.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

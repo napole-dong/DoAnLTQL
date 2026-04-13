@@ -79,6 +79,7 @@ namespace QuanLyQuanCaPhe.Forms
             panelActions = new Panel();
             flowActionNghiepVu = new FlowLayoutPanel();
             btnXacNhanThuTien = new Button();
+            btnInHoaDon = new Button();
             lblNhomNghiepVu = new Label();
             flowActionDuLieu = new FlowLayoutPanel();
             lblNhomDuLieu = new Label();
@@ -718,6 +719,7 @@ namespace QuanLyQuanCaPhe.Forms
             // 
             flowActionNghiepVu.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             flowActionNghiepVu.Controls.Add(btnXacNhanThuTien);
+            flowActionNghiepVu.Controls.Add(btnInHoaDon);
             flowActionNghiepVu.Location = new Point(0, 88);
             flowActionNghiepVu.Name = "flowActionNghiepVu";
             flowActionNghiepVu.Size = new Size(456, 38);
@@ -738,6 +740,21 @@ namespace QuanLyQuanCaPhe.Forms
             btnXacNhanThuTien.TabIndex = 1;
             btnXacNhanThuTien.Text = "Thanh toán";
             btnXacNhanThuTien.UseVisualStyleBackColor = false;
+            // 
+            // btnInHoaDon
+            // 
+            btnInHoaDon.BackColor = Color.FromArgb(240, 240, 240);
+            btnInHoaDon.FlatAppearance.BorderSize = 0;
+            btnInHoaDon.FlatStyle = FlatStyle.Flat;
+            btnInHoaDon.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            btnInHoaDon.ForeColor = Color.FromArgb(56, 56, 56);
+            btnInHoaDon.Location = new Point(224, 0);
+            btnInHoaDon.Margin = new Padding(0);
+            btnInHoaDon.Name = "btnInHoaDon";
+            btnInHoaDon.Size = new Size(120, 36);
+            btnInHoaDon.TabIndex = 2;
+            btnInHoaDon.Text = "In hóa đơn";
+            btnInHoaDon.UseVisualStyleBackColor = false;
             // 
             // lblNhomNghiepVu
             // 
@@ -1409,6 +1426,7 @@ namespace QuanLyQuanCaPhe.Forms
         private Panel panelActions;
         private FlowLayoutPanel flowActionNghiepVu;
         private Button btnXacNhanThuTien;
+        private Button btnInHoaDon;
         private Label lblNhomNghiepVu;
         private FlowLayoutPanel flowActionDuLieu;
         private Label lblNhomDuLieu;

@@ -5,6 +5,7 @@ using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -16,6 +17,8 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly IPermissionService _permissionBUS;
         private readonly IThongKeService _thongKeBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmThongKe), UserRole.Staff);
         private List<ThongKeHoaDonDTO> _duLieuHoaDonDangHienThi = new();
         private List<ThongKeTopMonDTO> _duLieuTopMonDangHienThi = new();
         private bool _dangTaiDuLieu;
@@ -260,6 +263,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmThongKe), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Ban khong co quyen truy cap chuc nang Thong ke."))
+            {
+                Close();
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.ThongKe, PermissionActions.View, "Ban khong co quyen truy cap chuc nang Thong ke.");
@@ -277,6 +288,7 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             ApDungPhanQuyenDieuHuong();
+            this.ApplyPermission(_formPermission);
             KhoiTaoBoLocMacDinh();
             TaiDuLieuThongKe();
         }
@@ -598,6 +610,11 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             UiLoadingStateHelper.Apply(this, dangXuLy, controls.ToArray());
+
+            if (!dangXuLy)
+            {
+                ApDungPhanQuyenDieuHuong();
+            }
         }
 
         private static DateTime ClampDate(DateTime value, DateTime min, DateTime max)
@@ -983,7 +1000,8 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungPhanQuyenDieuHuong()
         {
-            var coQuyenThongKeXem = _permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View);
+            var coQuyenThongKeXem = _formPermission.CanView
+                                    && _permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View);
 
             SidebarUiHelper.ApplySidebarVisibility(
                 _permissionBUS,
@@ -1015,7 +1033,21 @@ namespace QuanLyQuanCaPhe.Forms
             btnNhap.Enabled = false;
             btnXuat.Visible = false;
             btnXuat.Enabled = false;
+
+            btnApDung.Enabled = coQuyenThongKeXem && !_dangTaiDuLieu;
+            btnLamMoi.Enabled = coQuyenThongKeXem && !_dangTaiDuLieu;
             txtSearch.Enabled = coQuyenThongKeXem;
+            cboKieuThongKe.Enabled = coQuyenThongKeXem && !_dangTaiDuLieu;
+            dtTuNgay.Enabled = coQuyenThongKeXem && !_dangTaiDuLieu;
+            dtDenNgay.Enabled = coQuyenThongKeXem && !_dangTaiDuLieu;
+
+            if (_cboPresetNhanh != null)
+            {
+                _cboPresetNhanh.Enabled = coQuyenThongKeXem && !_dangTaiDuLieu;
+            }
+
+            dgvTopMon.Enabled = coQuyenThongKeXem;
+            panelBieuDoPlaceholder.Enabled = coQuyenThongKeXem;
         }
     }
 }

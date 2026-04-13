@@ -4,6 +4,7 @@ using QuanLyQuanCaPhe.Services.Audit;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 using System.Text.Json;
 
@@ -14,6 +15,8 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly IAuditLogService _auditLogBUS;
         private readonly IPermissionService _permissionBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmAuditLog), UserRole.Staff);
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
         private readonly Button _btnAuditLogSidebar;
@@ -94,12 +97,17 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmAuditLog), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Ban khong co quyen truy cap chuc nang Audit log."))
+            {
+                Close();
+                return;
+            }
+
             try
             {
-                if (!_permissionBUS.IsAdmin())
-                {
-                    throw new UnauthorizedAccessException("Ban khong co quyen truy cap chuc nang Audit log.");
-                }
+                _permissionBUS.EnsurePermission(PermissionFeatures.ThongKe, PermissionActions.View, "Ban khong co quyen truy cap chuc nang Audit log.");
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -115,6 +123,7 @@ namespace QuanLyQuanCaPhe.Forms
 
             HienThiNguoiDungDangNhap();
             ApDungPhanQuyenDieuHuong();
+            this.ApplyPermission(_formPermission);
             KhoiTaoBoLocMacDinh();
             NapDanhMucBoLoc();
             TaiDanhSachAuditLog();
@@ -126,6 +135,8 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungPhanQuyenDieuHuong()
         {
+            var coQuyenAuditXem = _formPermission.CanView;
+
             SidebarUiHelper.ApplySidebarVisibility(
                 _permissionBUS,
                 btnBanHang,
@@ -154,6 +165,17 @@ namespace QuanLyQuanCaPhe.Forms
 
             btnXuatExcel.Visible = false;
             btnXuatExcel.Enabled = false;
+
+            btnApDung.Enabled = coQuyenAuditXem && !_dangTaiDuLieu;
+            btnLamMoi.Enabled = coQuyenAuditXem && !_dangTaiDuLieu;
+            txtNguoiDung.Enabled = coQuyenAuditXem;
+            txtTimKiem.Enabled = coQuyenAuditXem;
+            dtTuNgay.Enabled = coQuyenAuditXem;
+            dtDenNgay.Enabled = coQuyenAuditXem;
+            cboMucDo.Enabled = coQuyenAuditXem;
+            cboHanhDong.Enabled = coQuyenAuditXem;
+            cboBang.Enabled = coQuyenAuditXem;
+            dgvAuditLog.Enabled = coQuyenAuditXem;
         }
 
         private void KhoiTaoBoLocMacDinh()
@@ -449,8 +471,14 @@ namespace QuanLyQuanCaPhe.Forms
         private void DatTrangThaiDangTaiDuLieu(bool dangTai)
         {
             UseWaitCursor = dangTai;
-            btnApDung.Enabled = !dangTai;
-            btnLamMoi.Enabled = !dangTai;
+            if (dangTai)
+            {
+                btnApDung.Enabled = false;
+                btnLamMoi.Enabled = false;
+                return;
+            }
+
+            ApDungPhanQuyenDieuHuong();
         }
     }
 }

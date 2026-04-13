@@ -1,5 +1,6 @@
 using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Permission;
 
 namespace QuanLyQuanCaPhe.Services.UI;
 
@@ -155,20 +156,31 @@ internal static class SidebarUiHelper
     {
         ArgumentNullException.ThrowIfNull(permissionBUS);
 
+        var currentRole = PermissionExtensions.GetCurrentUserRole();
+
         var isAdmin = permissionBUS.IsAdmin();
-        var coQuyenBanHang = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View);
+        var coQuyenBanHang = (isAdmin || permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.View))
+                             && PermissionService.Shared.CanAccessForm("frmBanHang", currentRole);
         var coQuyenMenu = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
-        var coQuyenHoaDon = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
-        var coQuyenKho = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.View);
-        var coQuyenKhachHang = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.View);
-        var coQuyenNhanVien = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
-        var coQuyenThongKe = isAdmin || permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View);
-        var coQuyenAuditLog = isAdmin;
+        var coQuyenQuanLyBan = coQuyenMenu && PermissionService.Shared.CanAccessForm("frmQuanLiBan", currentRole);
+        var coQuyenQuanLyMon = coQuyenMenu && PermissionService.Shared.CanAccessForm("frmQuanLiMon", currentRole);
+        var coQuyenCongThuc = coQuyenMenu && PermissionService.Shared.CanAccessForm("frmCongThuc", currentRole);
+        var coQuyenHoaDon = (isAdmin || permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View))
+                            && PermissionService.Shared.CanAccessForm("frmHoaDon", currentRole);
+        var coQuyenKho = (isAdmin || permissionBUS.CheckPermission(PermissionFeatures.NguyenLieu, PermissionActions.View))
+                         && PermissionService.Shared.CanAccessForm("frmQuanLiKho", currentRole);
+        var coQuyenKhachHang = (isAdmin || permissionBUS.CheckPermission(PermissionFeatures.KhachHang, PermissionActions.View))
+                               && PermissionService.Shared.CanAccessForm("frmKhachHang", currentRole);
+        var coQuyenNhanVien = (isAdmin || permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View))
+                              && PermissionService.Shared.CanAccessForm("frmNhanVien", currentRole);
+        var coQuyenThongKe = (isAdmin || permissionBUS.CheckPermission(PermissionFeatures.ThongKe, PermissionActions.View))
+                             && PermissionService.Shared.CanAccessForm("frmThongKe", currentRole);
+        var coQuyenAuditLog = isAdmin && PermissionService.Shared.CanAccessForm("frmAuditLog", currentRole);
 
         SetSidebarButtonAvailability(btnBanHang, coQuyenBanHang);
-        SetSidebarButtonAvailability(btnQuanLyBan, coQuyenMenu);
-        SetSidebarButtonAvailability(btnQuanLyMon, coQuyenMenu);
-        SetSidebarButtonAvailability(btnCongThuc, coQuyenMenu);
+        SetSidebarButtonAvailability(btnQuanLyBan, coQuyenQuanLyBan);
+        SetSidebarButtonAvailability(btnQuanLyMon, coQuyenQuanLyMon);
+        SetSidebarButtonAvailability(btnCongThuc, coQuyenCongThuc);
         SetSidebarButtonAvailability(btnHoaDon, coQuyenHoaDon);
         SetSidebarButtonAvailability(btnNhanVien, coQuyenNhanVien);
         SetSidebarButtonAvailability(btnThongKe, coQuyenThongKe);

@@ -7,6 +7,7 @@ using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Services.Auth;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.Navigation;
+using QuanLyQuanCaPhe.Services.Permission;
 using QuanLyQuanCaPhe.Services.UI;
 
 namespace QuanLyQuanCaPhe.Forms
@@ -16,7 +17,9 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly bool _isEmbedded;
         private readonly IBanService _banBUS;
         private readonly IPermissionService _permissionBUS;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
         private int? _banDangChonId;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmQuanLiBan), UserRole.Staff);
         private bool _dangDongBoChonTrenGrid;
         private bool _dangXuLyQuanLiBan;
         private readonly Button _btnKhachHangSidebar;
@@ -88,6 +91,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmQuanLiBan), currentRole);
+            if (!this.EnsureCanView(_formPermission, "Bạn không có quyền truy cập chức năng Quản lý bàn."))
+            {
+                Close();
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.Menu, PermissionActions.View, "Bạn không có quyền truy cập chức năng Quản lý bàn.");
@@ -106,6 +117,8 @@ namespace QuanLyQuanCaPhe.Forms
 
             HienThiNguoiDungDangNhap();
             ApDungPhanQuyenDieuHuong();
+            this.ApplyPermission(_formPermission);
+            ApDungPhanQuyenTacVuBan();
 
             try
             {
@@ -288,6 +301,12 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            if (!_formPermission.CanAdd)
+            {
+                MessageBox.Show("Bạn không có quyền thêm bàn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             using var dialog = new Form
             {
                 Text = "Thêm bàn mới",
@@ -342,6 +361,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_dangXuLyQuanLiBan)
             {
+                return;
+            }
+
+            if (!CoQuyenChuyenHoacGopBan())
+            {
+                MessageBox.Show("Bạn không có quyền chuyển hoặc gộp bàn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -473,6 +498,12 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (_dangXuLyQuanLiBan)
             {
+                return;
+            }
+
+            if (!_formPermission.CanDelete)
+            {
+                MessageBox.Show("Bạn không có quyền xóa bàn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -669,10 +700,57 @@ namespace QuanLyQuanCaPhe.Forms
                 dgvDanhSachBan,
                 flowBanSoDo);
 
-            btnThemBan.Enabled = !dangXuLy;
-            btnGopBan.Enabled = !dangXuLy;
-            btnXoaBan.Enabled = !dangXuLy;
-            btnLamMoi.Enabled = !dangXuLy;
+            if (dangXuLy)
+            {
+                btnThemBan.Enabled = false;
+                btnGopBan.Enabled = false;
+                btnXoaBan.Enabled = false;
+                btnLamMoi.Enabled = false;
+                return;
+            }
+
+            ApDungPhanQuyenTacVuBan();
+        }
+
+        private void ApDungPhanQuyenTacVuBan()
+        {
+            var coQuyenXem = _formPermission.CanView
+                            && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.View);
+            var coQuyenThem = _formPermission.CanAdd
+                             && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Create);
+            var coQuyenXoa = _formPermission.CanDelete
+                            && _permissionBUS.CheckPermission(PermissionFeatures.Menu, PermissionActions.Delete);
+            var coQuyenChuyenGop = CoQuyenChuyenHoacGopBan();
+
+            btnThemBan.Visible = coQuyenThem;
+            btnXoaBan.Visible = coQuyenXoa;
+            btnGopBan.Visible = coQuyenChuyenGop;
+            btnLamMoi.Visible = coQuyenXem;
+
+            btnThemBan.Enabled = btnThemBan.Visible && !_dangXuLyQuanLiBan;
+            btnXoaBan.Enabled = btnXoaBan.Visible && !_dangXuLyQuanLiBan;
+            btnGopBan.Enabled = btnGopBan.Visible && !_dangXuLyQuanLiBan;
+            btnLamMoi.Enabled = btnLamMoi.Visible && !_dangXuLyQuanLiBan;
+
+            dgvDanhSachBan.Enabled = coQuyenXem && !_dangXuLyQuanLiBan;
+            flowBanSoDo.Enabled = coQuyenXem && !_dangXuLyQuanLiBan;
+            cboKhuVuc.Enabled = coQuyenXem && !_dangXuLyQuanLiBan;
+            cboTrangThai.Enabled = coQuyenXem && !_dangXuLyQuanLiBan;
+        }
+
+        private bool CoQuyenChuyenHoacGopBan()
+        {
+            if (_formPermission.IsFullAccess || _formPermission.HasLimitedAction)
+            {
+                return true;
+            }
+
+            if (!_formPermission.CanEdit)
+            {
+                return false;
+            }
+
+            return _permissionBUS.CanTransferTable() || _permissionBUS.CanMergeTable();
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

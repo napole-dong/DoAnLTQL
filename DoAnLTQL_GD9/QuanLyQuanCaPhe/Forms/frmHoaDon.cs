@@ -2,12 +2,22 @@ using QuanLyQuanCaPhe.BUS;
 using QuanLyQuanCaPhe.DTO;
 using QuanLyQuanCaPhe.Presenters;
 using QuanLyQuanCaPhe.Services.Auth;
+using QuanLyQuanCaPhe.Services.Permission;
+using System.Linq;
 using QuanLyQuanCaPhe.Services.DependencyInjection;
 using QuanLyQuanCaPhe.Services.HoaDon;
 using QuanLyQuanCaPhe.Services.Navigation;
 using QuanLyQuanCaPhe.Services.UI;
 using QuanLyQuanCaPhe.Services.Diagnostics;
+using QuanLyQuanCaPhe.Services.Reporting;
+using System.IO;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Text;
+using System.Windows.Forms;
+using QuanLyQuanCaPhe.Data;
 
 namespace QuanLyQuanCaPhe.Forms
 {
@@ -22,6 +32,7 @@ namespace QuanLyQuanCaPhe.Forms
         private readonly HoaDonTienService _hoaDonTienService;
         private readonly HoaDonFormStateService _hoaDonFormStateService;
         private readonly HoaDonPresenter _hoaDonPresenter;
+        private readonly PermissionService _formPermissionService = PermissionService.Shared;
         private readonly SearchDebounceHelper _timKiemDebounce;
 
         private bool _dangNapDuLieu;
@@ -31,11 +42,13 @@ namespace QuanLyQuanCaPhe.Forms
         private int? _hoaDonDangChonId;
         private byte[]? _hoaDonDangChonRowVersion;
         private decimal _tongTienDangChon;
+        private FormPermission _formPermission = FormPermission.Deny(nameof(frmHoaDon), UserRole.Staff);
         private BindingList<HoaDonChiTietDTO> _chiTietBindingList = new();
         private readonly ContextMenuStrip _menuChiTietHoaDon = new();
         private readonly Button _btnKhachHangSidebar;
         private readonly Button _btnQuanLyKhoSidebar;
         private readonly Button _btnAuditLogSidebar;
+        private readonly CaPheDbContext _db = new CaPheDbContext();
 
         private sealed class TrangThaiHoaDonOption
         {
@@ -121,6 +134,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnThemMonVaoHoaDon.Click += btnThemMonVaoHoaDon_Click;
             btnXoaMonKhoiHoaDon.Click += async (_, _) => await ThuXoaMonDangChonAsync();
             btnXacNhanThuTien.Click += btnXacNhanThuTien_Click;
+            btnInHoaDon.Click += btnInHoaDon_Click;
 
             txtTienKhachDua.TextChanged += txtTienKhachDua_TextChanged;
 
@@ -155,6 +169,14 @@ namespace QuanLyQuanCaPhe.Forms
                 return;
             }
 
+            var currentRole = PermissionExtensions.GetCurrentUserRole();
+            _formPermission = _formPermissionService.GetPermission(nameof(frmHoaDon), currentRole);
+            if (!this.EnsureCanView(_formPermission))
+            {
+                Close();
+                return;
+            }
+
             try
             {
                 _permissionBUS.EnsurePermission(PermissionFeatures.HoaDon, PermissionActions.View, "Ban khong co quyen truy cap chuc nang hoa don.");
@@ -173,6 +195,7 @@ namespace QuanLyQuanCaPhe.Forms
 
             HienThiNguoiDungDangNhap();
             ApDungPhanQuyenDieuHuong();
+            this.ApplyPermission(_formPermission);
             KhoiTaoComboTrangThaiLoc();
             KhoiTaoBoLocMacDinh();
             KhoiTaoComboTrangThai();
@@ -294,6 +317,7 @@ namespace QuanLyQuanCaPhe.Forms
             try
             {
                 dsHoaDon = await _hoaDonBUS.LayDanhSachHoaDonAsync(boLoc);
+                dsHoaDon = LocDanhSachHoaDonTheoFormPermission(dsHoaDon);
             }
             catch (Exception ex)
             {
@@ -329,6 +353,37 @@ namespace QuanLyQuanCaPhe.Forms
             }
 
             TaiChiTietTheoDongDangChon();
+        }
+
+        private List<HoaDonDTO> LocDanhSachHoaDonTheoFormPermission(List<HoaDonDTO> dsHoaDon)
+        {
+            if (!_formPermission.CanView)
+            {
+                return new List<HoaDonDTO>();
+            }
+
+            if (!_formPermission.CanViewOwn)
+            {
+                return dsHoaDon;
+            }
+
+            return dsHoaDon.Where(LaHoaDonThuocNguoiDungHienTai).ToList();
+        }
+
+        private bool LaHoaDonThuocNguoiDungHienTai(HoaDonDTO hoaDon)
+        {
+            if (!_formPermission.CanViewOwn)
+            {
+                return true;
+            }
+
+            var nhanVienId = NguoiDungHienTaiService.LayNguoiDungDangNhap()?.NhanVienId;
+            if (!nhanVienId.HasValue)
+            {
+                return false;
+            }
+
+            return hoaDon.NhanVienID == nhanVienId.Value;
         }
 
         private bool ChonDongHoaDon(int hoaDonId)
@@ -375,6 +430,13 @@ namespace QuanLyQuanCaPhe.Forms
         {
             if (!DataGridViewSelectionHelper.TryGetCurrentOrSelectedItem<HoaDonDTO>(dgvDanhSachHoaDon, out var hoaDonGrid, out _)
                 || hoaDonGrid == null)
+            {
+                _hoaDonDangChonId = null;
+                HienThiTrangThaiKhongCoHoaDon();
+                return;
+            }
+
+            if (!LaHoaDonThuocNguoiDungHienTai(hoaDonGrid))
             {
                 _hoaDonDangChonId = null;
                 HienThiTrangThaiKhongCoHoaDon();
@@ -765,10 +827,22 @@ namespace QuanLyQuanCaPhe.Forms
         {
             hoaDon = null!;
 
+            if (!_formPermission.CanEdit)
+            {
+                MessageBox.Show("Bạn không có quyền thao tác hóa đơn.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
             var hoaDonDangChon = LayHoaDonDangChon();
             if (hoaDonDangChon == null)
             {
                 MessageBox.Show("Vui lòng chọn hóa đơn trước khi thao tác.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!LaHoaDonThuocNguoiDungHienTai(hoaDonDangChon))
+            {
+                MessageBox.Show("Bạn chỉ được thao tác hóa đơn của chính mình.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -852,6 +926,49 @@ namespace QuanLyQuanCaPhe.Forms
             MessageBox.Show(ketQua.ThongBao, "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        private void btnInHoaDon_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                var hoaDon = LayHoaDonDangChon();
+                if (hoaDon == null)
+                {
+                    MessageBox.Show("Vui lòng chọn hóa đơn trước khi in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var svc = new HoaDonService();
+                var entity = svc.GetHoaDonWithDetails(hoaDon.ID);
+                if (entity == null)
+                {
+                    MessageBox.Show("Không tìm thấy hóa đơn cần in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (entity.HoaDon_ChiTiet == null || entity.HoaDon_ChiTiet.Count == 0)
+                {
+                    MessageBox.Show("Hóa đơn chưa có chi tiết, không thể in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var ds = HoaDonMapper.ToDataSet(entity);
+                var reportService = new ReportService();
+                var rdlcPath = Path.Combine(Application.StartupPath, "Reports", "rptInHoaDon.rdlc");
+                var parameters = new Dictionary<string, object>
+                {
+                    { "VAT", 0 },
+                    { "Discount", 0 }
+                };
+
+                reportService.ShowReportPreview(this, ds, rdlcPath, parameters);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error(ex, "In hóa đơn thất bại.", nameof(frmHoaDon));
+                MessageBox.Show($"Lỗi khi in hóa đơn: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void txtTienKhachDua_TextChanged(object? sender, EventArgs e)
         {
             if (_dangNapDuLieu)
@@ -871,14 +988,15 @@ namespace QuanLyQuanCaPhe.Forms
         {
             var trangThai = _hoaDonFormStateService.TaoTrangThai(HoaDonManHinhState.Xem, hoaDon);
             var isAdmin = _permissionBUS.IsAdmin();
-            var coQuyenXem = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View);
-            var coQuyenTao = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Create);
-            var coQuyenCapNhat = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update);
-            var coQuyenCapNhatBanHang = isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update);
+            var coQuyenXem = _formPermission.CanView && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.View));
+            var coQuyenTao = _formPermission.CanAdd && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Create));
+            var coQuyenCapNhat = _formPermission.CanEdit && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Update));
+            var coQuyenCapNhatBanHang = _formPermission.CanEdit && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.BanHang, PermissionActions.Update));
             var coTheChinhSuaHoaDon = NguoiDungHienTaiService.LayNguoiDungDangNhap() != null;
             var coQuyenChinhSuaChiTietHoaDon = coTheChinhSuaHoaDon && (coQuyenTao || coQuyenCapNhat || coQuyenCapNhatBanHang);
             var coQuyenThuTien = CoQuyenXuLyThanhToanHoaDon();
-            var coQuyenVoid = _permissionBUS.CanDeleteInvoice()
+            var coQuyenVoid = _formPermission.CanDelete
+                              && _permissionBUS.CanDeleteInvoice()
                               && (isAdmin || _permissionBUS.CheckPermission(PermissionFeatures.HoaDon, PermissionActions.Delete));
             var khoaToanBoUiDoDaThanhToan = trangThai.KhoaToanBoChiTietDoDaThanhToan;
             var choPhepSuaChiTiet = trangThai.ChoPhepThemMon && coQuyenChinhSuaChiTietHoaDon && !khoaToanBoUiDoDaThanhToan;
@@ -918,6 +1036,11 @@ namespace QuanLyQuanCaPhe.Forms
 
         private bool CoQuyenXuLyThanhToanHoaDon()
         {
+            if (!_formPermission.CanEdit)
+            {
+                return false;
+            }
+
             if (_permissionBUS.IsAdmin())
             {
                 return true;
@@ -974,5 +1097,84 @@ namespace QuanLyQuanCaPhe.Forms
             base.OnFormClosed(e);
         }
 
+        // Example async print handler. Wire this to your print button's Click event in the Designer.
+        private async void btnPrint_Click(object? sender, EventArgs e)
+        {
+            // Replace with actual selected invoice id from your UI
+            if (!TryGetSelectedHoaDonId(out var hoaDonId))
+            {
+                MessageBox.Show("Vui lòng chọn hóa đơn để in.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var service = new QuanLyQuanCaPhe.Services.Reporting.HoaDonPrintService();
+            var dto = await service.GetHoaDonPrintDtoAsync(hoaDonId);
+
+            if (dto == null)
+            {
+                MessageBox.Show("Không tìm thấy hóa đơn hoặc lỗi khi tải dữ liệu.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var ds = QuanLyQuanCaPhe.Services.Reporting.HoaDonPrintService.ToDataSet(dto);
+
+            try
+            {
+                // Preview
+                var rpt = new ReportService();
+                rpt.ShowReportPreview(this, ds);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi hiển thị báo cáo: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Example export to PDF action (can be wired to a different button)
+        private async void btnExportPdf_Click(object? sender, EventArgs e)
+        {
+            if (!TryGetSelectedHoaDonId(out var hoaDonId))
+            {
+                MessageBox.Show("Vui lòng chọn hóa đơn để xuất PDF.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var service = new QuanLyQuanCaPhe.Services.Reporting.HoaDonPrintService();
+            var dto = await service.GetHoaDonPrintDtoAsync(hoaDonId);
+            if (dto == null)
+            {
+                MessageBox.Show("Không tìm thấy hóa đơn.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var ds = QuanLyQuanCaPhe.Services.Reporting.HoaDonPrintService.ToDataSet(dto);
+            var rpt = new ReportService();
+
+            try
+            {
+                var bytes = rpt.RenderPdf(ds);
+                using var sfd = new SaveFileDialog { Filter = "PDF files (*.pdf)|*.pdf", FileName = dto.InvoiceNo + ".pdf" };
+                if (sfd.ShowDialog(this) == DialogResult.OK)
+                {
+                    System.IO.File.WriteAllBytes(sfd.FileName, bytes);
+                    MessageBox.Show("Xuất PDF thành công.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi xuất PDF: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Helper: replace with your actual selection logic
+        private bool TryGetSelectedHoaDonId(out int hoaDonId)
+        {
+            hoaDonId = 0;
+            // Example: if you have a selected row in a DataGridView named dgvHoaDon
+            // if (dgvHoaDon.CurrentRow?.DataBoundItem is dtaHoadon hd) { hoaDonId = hd.ID; return true; }
+
+            // For demo purposes return false — caller must implement selection extraction
+            return false;
+        }
     }
 }
