@@ -1,225 +1,116 @@
-# Review Đồ Án GD7 (Góc Nhìn Senior Developer)
+﻿# Review Module GD7 - .NET WinForms POS
 
-## 0) Findings Ưu Tiên (Sắp Theo Mức Độ Nghiêm Trọng)
+Phạm vi review: toàn bộ mã nguồn GD7 trong thư mục QuanLyQuanCaPhe.
+Ngày review: 14/04/2026.
 
-### CRITICAL
+## 1. ✅ ĐÃ ĐẠT ĐƯỢC
 
-1. **Mật khẩu mặc định `123456` xuất hiện ở nhiều luồng tạo/import nhân viên**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/DAL/NhanVienDAL.cs#L83](QuanLyQuanCaPhe/DAL/NhanVienDAL.cs#L83)
-	- [QuanLyQuanCaPhe/DAL/NhanVienDAL.cs#L132](QuanLyQuanCaPhe/DAL/NhanVienDAL.cs#L132)
-	- [QuanLyQuanCaPhe/DAL/NhanVienDAL.cs#L246](QuanLyQuanCaPhe/DAL/NhanVienDAL.cs#L246)
-	- [QuanLyQuanCaPhe/BUS/NhanVienBUS.cs#L221](QuanLyQuanCaPhe/BUS/NhanVienBUS.cs#L221)
-- Nhận xét thẳng: đây là lỗi bảo mật nghiêm trọng, không được phép tồn tại khi đi production.
-- Hậu quả: tài khoản mới/import có mật khẩu yếu dự đoán được, tăng rủi ro takeover hàng loạt.
+### Chức năng đã hoàn thành
+- Đăng nhập, phân vai trò cơ bản (Admin/Manager/Staff), điều hướng theo màn hình.
+- Quản lý bàn, gọi món, lưu món chờ, thanh toán, tạo/cập nhật/hủy hóa đơn.
+- Quản lý danh mục: món, loại món, nguyên liệu, khách hàng, nhân viên.
+- Import CSV cho món, loại món, khách hàng, nhân viên.
+- Tích hợp logging, correlation id, global exception handling.
+- Sử dụng EF Core migrations + ràng buộc dữ liệu ở DbContext.
 
-### HIGH
+### Mức độ hoàn thiện
+| Hạng mục | Mức độ | Nhận xét ngắn |
+|---|---:|---|
+| UI WinForms | 7/10 | Dùng được cho vận hành nội bộ, bố cục rõ, nhưng còn nhiều popup blocking và còn màn hình placeholder. |
+| Logic nghiệp vụ | 7/10 | Luồng chính chạy ổn, có kiểm tra điều kiện nghiệp vụ; tuy nhiên vẫn còn vài điểm side-effect và hard-code quyền. |
+| Database | 8/10 | Có check constraint, index, unique open invoice, decimal cho tiền; nền tảng tốt. |
+| Performance | 6.5/10 | Có AsNoTracking/projection ở nhiều query, nhưng còn nhiều luồng sync trên UI và transaction chưa thống nhất với retry strategy. |
 
-2. **Hàm kiểm tra quyền có side-effect ghi DB (read-path nhưng lại mutate state)**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L53](QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L53)
-	- [QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L81](QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L81)
-	- [QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L105](QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L105)
-	- [QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L243](QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L243)
-	- [QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L312](QuanLyQuanCaPhe/DAL/PermissionDAL.cs#L312)
-- Nhận xét thẳng: logic permission check phải **pure read**, không được âm thầm sửa dữ liệu mỗi lần check.
-- Hậu quả: khó audit, khó debug, khó scale, tăng lock/contention khi nhiều user online.
+### Điểm tốt
+- Chia lớp BUS/DAL/Forms rõ ràng, dễ đọc hơn các stage trước.
+- Nhiều truy vấn đã tối ưu hướng read-model và filter SQL.
+- Có tư duy logging và chuẩn hóa xử lý lỗi ở mức hệ thống.
+- Nghiệp vụ gọi món có kiểm tra tồn kho và rollback khi thiếu nguyên liệu.
 
-3. **Tạo hóa đơn/gọi món tự sinh “Nhân viên bán hàng” và “Khách lẻ” trong DAL**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L99](QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L99)
-	- [QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L631](QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L631)
-	- [QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L641](QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L641)
-	- [QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L95](QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L95)
-	- [QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L562](QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L562)
-	- [QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L575](QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L575)
-- Nhận xét thẳng: đây là sai chuẩn audit nghiệp vụ. Hóa đơn phải gắn user/session thực tế đang thao tác.
+## 2. ⚠️ CÒN THIẾU
 
-4. **Chiến lược retry của EF đang bật, nhưng vẫn dùng user transaction trực tiếp ở một số DAL**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L424](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L424)
-	- [QuanLyQuanCaPhe/DAL/NguyenLieuDAL.cs#L96](QuanLyQuanCaPhe/DAL/NguyenLieuDAL.cs#L96)
-- Nhận xét thẳng: pattern này dễ phát sinh lỗi runtime liên quan execution strategy nếu môi trường DB có retry thực sự.
+- Chưa có test tự động (unit/integration) cho các luồng rủi ro cao.
+- Chưa có cơ chế hiển thị thông tin user đăng nhập xuyên suốt UI (hàm có nhưng còn để trống).
+- Chưa tách riêng feature quyền cho Khách hàng, hiện còn dùng quyền Menu.
+- Chưa hoàn thiện module thống kê/hóa đơn ở một số điểm điều hướng (còn thông báo đang phát triển).
+- Chưa có chuẩn thống nhất response lỗi ở toàn bộ BUS (vẫn tồn tại API throw exception kiểu legacy).
+- Chưa đạt production-ready về bảo mật tài khoản và consistency authorization.
 
-5. **Phân quyền đang bị trộn role cứng + matrix quyền, dẫn đến khó mở rộng**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/Services/Auth/Permission.cs#L78](QuanLyQuanCaPhe/Services/Auth/Permission.cs#L78)
-	- [QuanLyQuanCaPhe/Services/Auth/Permission.cs#L80](QuanLyQuanCaPhe/Services/Auth/Permission.cs#L80)
-	- [QuanLyQuanCaPhe/Forms/frmBanHang.cs#L212](QuanLyQuanCaPhe/Forms/frmBanHang.cs#L212)
-	- [QuanLyQuanCaPhe/Forms/frmBanHang.cs#L753](QuanLyQuanCaPhe/Forms/frmBanHang.cs#L753)
-- Nhận xét thẳng: đã có matrix thì đừng chặn cứng theo role ở UI nữa. Hiện tại đang mâu thuẫn triết lý.
+## 3. 🐞 LỖI ĐÃ FIX
 
-### MEDIUM
+- Đã fix import quyền Create/Update tách biệt cho Mon/LoaiMon/KhachHang/NhanVien.
+  - Nguyên nhân cũ: có thể có 1 quyền nhưng thực hiện cả thêm và cập nhật.
+  - Hiện tại: đã kiểm soát theo từng action, ổn định.
 
-6. **CSV parser tự viết quá đơn giản, dễ lỗi dữ liệu thực tế**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/BUS/BusInputHelper.cs#L37](QuanLyQuanCaPhe/BUS/BusInputHelper.cs#L37)
-	- [QuanLyQuanCaPhe/BUS/BusInputHelper.cs#L45](QuanLyQuanCaPhe/BUS/BusInputHelper.cs#L45)
-	- [QuanLyQuanCaPhe/BUS/BusInputHelper.cs#L47](QuanLyQuanCaPhe/BUS/BusInputHelper.cs#L47)
-- Nhận xét thẳng: parser toggle quote kiểu này sẽ vỡ với escaped quote, dữ liệu import lớn sẽ lỗi âm thầm.
+- Đã fix chặn gán role trái phép khi import nhân viên.
+  - Nguyên nhân cũ: dễ phát sinh gán quyền vượt thẩm quyền.
+  - Hiện tại: role phải tồn tại và phải thuộc phạm vi có thể gán, ổn định.
 
-7. **Luồng chuyển/gộp bàn có nhiều bước cập nhật nhưng không mở transaction tường minh**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/DAL/BanDAL.cs#L157](QuanLyQuanCaPhe/DAL/BanDAL.cs#L157)
-	- [QuanLyQuanCaPhe/DAL/BanDAL.cs#L191](QuanLyQuanCaPhe/DAL/BanDAL.cs#L191)
-	- [QuanLyQuanCaPhe/DAL/BanDAL.cs#L233](QuanLyQuanCaPhe/DAL/BanDAL.cs#L233)
-- Nhận xét thẳng: luồng nhiều thao tác ghi phải transaction hóa rõ ràng để chống trạng thái dở dang.
+- Đã fix nền tảng diagnostics (log + correlation id + map mã lỗi).
+  - Nguyên nhân cũ: lỗi khó truy vết khi chạy thực tế.
+  - Hiện tại: có log theo ngữ cảnh và mã lỗi, ổn định tốt cho debug vận hành.
 
-8. **Quản lý khách hàng đang “mượn” quyền Menu thay vì feature riêng**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/BUS/KhachHangBUS.cs#L14](QuanLyQuanCaPhe/BUS/KhachHangBUS.cs#L14)
-	- [QuanLyQuanCaPhe/BUS/KhachHangBUS.cs#L24](QuanLyQuanCaPhe/BUS/KhachHangBUS.cs#L24)
-	- [QuanLyQuanCaPhe/BUS/KhachHangBUS.cs#L91](QuanLyQuanCaPhe/BUS/KhachHangBUS.cs#L91)
-- Nhận xét thẳng: domain khách hàng không nên phụ thuộc quyền Menu. Thiết kế quyền đang dính chùm.
+- Đã fix luồng đăng xuất quay lại đăng nhập.
+  - Nguyên nhân cũ: đăng xuất dễ rơi vào đóng app hoặc vòng đời form chưa chuẩn.
+  - Hiện tại: Program chạy vòng login-main, ổn định.
 
-9. **Nhiều tính năng điều hướng chỉ là placeholder “đang phát triển”**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/Forms/frmBanHang.cs#L798](QuanLyQuanCaPhe/Forms/frmBanHang.cs#L798)
-	- [QuanLyQuanCaPhe/Forms/frmHoaDon.cs#L671](QuanLyQuanCaPhe/Forms/frmHoaDon.cs#L671)
-	- [QuanLyQuanCaPhe/Forms/frmNhanVien.cs#L478](QuanLyQuanCaPhe/Forms/frmNhanVien.cs#L478)
-	- [QuanLyQuanCaPhe/Forms/frmQuanLiMon.cs#L779](QuanLyQuanCaPhe/Forms/frmQuanLiMon.cs#L779)
-- Nhận xét thẳng: demo đồ án ổn, nhưng chuẩn phần mềm vận hành thì đây là điểm trừ rất rõ.
+## 4. 🔧 CÁCH FIX THÀNH CÔNG
 
-10. **API tầng BUS chưa thống nhất style trả lỗi (vừa tuple, vừa throw Exception thô)**
-- Bằng chứng:
-	- [QuanLyQuanCaPhe/BUS/TaiKhoanBUS.cs#L11](QuanLyQuanCaPhe/BUS/TaiKhoanBUS.cs#L11)
-	- [QuanLyQuanCaPhe/BUS/TaiKhoanBUS.cs#L15](QuanLyQuanCaPhe/BUS/TaiKhoanBUS.cs#L15)
-	- [QuanLyQuanCaPhe/BUS/MonBUS.cs#L107](QuanLyQuanCaPhe/BUS/MonBUS.cs#L107)
-	- [QuanLyQuanCaPhe/BUS/HoaDonBUS.cs#L98](QuanLyQuanCaPhe/BUS/HoaDonBUS.cs#L98)
-- Nhận xét thẳng: codebase sẽ khó maintain nếu contract lỗi không thống nhất.
+- Tách kiểm tra quyền theo feature/action và áp gate ngay tại BUS.
+  - Giải pháp: chuẩn hóa PermissionFeatures + PermissionActions, BUS check trước DAL.
+  - Vì sao hiệu quả: giảm bypass quyền từ UI và kiểm soát nghiệp vụ tập trung.
 
-## Giả Định Và Câu Hỏi Mở
+- Siết import bằng cờ quyền cho phép thêm/cập nhật.
+  - Giải pháp: truyền coQuyenThemMoi/coQuyenCapNhat xuống DAL, record nào sai quyền thì bỏ qua.
+  - Vì sao hiệu quả: không còn tình trạng import vượt quyền.
 
-1. Giả định hệ thống đang hướng tới triển khai thực tế nội bộ, không chỉ demo môn học.
-2. Nếu chỉ phục vụ demo ngắn hạn, một số lỗi vận hành có thể chấp nhận tạm; nếu đi production thì không.
-3. Chưa thấy test project tự động trong repo GD7 (không có file test). Nếu có test ở repo khác, cần bổ sung link.
+- Bổ sung diagnostics cấp ứng dụng.
+  - Giải pháp: AppLogger, CorrelationContext, AppExceptionHandler, hook global exception.
+  - Vì sao hiệu quả: truy vết được lỗi theo correlation id, giảm thời gian khoanh vùng sự cố.
 
-## 1) Đánh Giá Tổng Thể
+- Nâng chất lượng transaction ở một số luồng trọng yếu.
+  - Giải pháp: áp transaction cho flow gọi món/thu tiền và ghi audit theo từng bước.
+  - Vì sao hiệu quả: giảm dữ liệu dở dang khi luồng nghiệp vụ thất bại giữa chừng.
 
-- **Mức độ**: **Khá** (nhưng chưa đạt chuẩn production).
-- **Nhận xét ngắn gọn kiểu giảng viên**: Làm được nhiều phần khó (3 lớp, EF migration, transaction ở vài luồng trọng yếu), nhưng vẫn còn lỗi kiến trúc và bảo mật không thể bỏ qua, đặc biệt là mật khẩu mặc định và permission check có side-effect ghi DB.
+## 5. ❗ LỖI TỒN ĐỘNG
 
-## 2) Phân Tích Chi Tiết
+| Lỗi còn lại | Mức độ | Ảnh hưởng |
+|---|---|---|
+| Fallback mật khẩu mặc định 123456 trong thêm/cập nhật/import nhân viên | High | Rủi ro bảo mật cao, dễ bị chiếm tài khoản mới tạo/import. |
+| PermissionDAL.CheckPermission có gọi đồng bộ dữ liệu quyền và SaveChanges (read-path có side-effect) | High | Khó audit, tăng lock/contention, hành vi khó dự đoán khi chỉ kiểm tra quyền. |
+| DAL hóa đơn/bán hàng tự sinh nhân viên mặc định và khách lẻ | High | Sai audit nghiệp vụ, không truy đúng người thao tác thực tế. |
+| Dùng BeginTransaction trực tiếp trong bối cảnh EnableRetryOnFailure | Medium | Tiềm ẩn lỗi runtime transaction strategy ở môi trường retry thực sự. |
+| Logic quyền bị trộn matrix + hard-code role trong UI (IsStaff, Admin bypass) | Medium | Dễ lệch hành vi quyền giữa các màn hình, khó mở rộng. |
+| Parser CSV tự viết còn đơn giản, chưa xử lý đầy đủ edge cases | Medium | Dễ sai lệch import khi dữ liệu thực tế có quote/escape phức tạp. |
+| Nhiều điều hướng còn thông báo đang phát triển | Low | Trải nghiệm chưa hoàn thiện cho người dùng cuối. |
 
-### ✅ Những gì đã làm tốt
+## 6. 🚀 ĐỀ XUẤT CẢI TIẾN
 
-1. Có tách lớp BUS/DAL/Forms tương đối rõ, dễ đọc hơn các bản GD trước.
-2. DbContext có ràng buộc dữ liệu tương đối tốt:
-	 - Check constraint trạng thái ở [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L37](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L37), [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L89](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L89), [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L150](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L150), [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L225](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L225).
-	 - Unique open-invoice index ở [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L166](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L166).
-	 - Cột tiền dùng decimal(18,2) ở nhiều điểm như [QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L99](QuanLyQuanCaPhe/Data/CaPheDbContext.cs#L99).
-3. Có logging và global exception handling khá bài bản ở [QuanLyQuanCaPhe/Program.cs#L19](QuanLyQuanCaPhe/Program.cs#L19), [QuanLyQuanCaPhe/Program.cs#L79](QuanLyQuanCaPhe/Program.cs#L79), [QuanLyQuanCaPhe/Program.cs#L95](QuanLyQuanCaPhe/Program.cs#L95).
-4. Có transaction serializable cho các luồng quan trọng ở [QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L32](QuanLyQuanCaPhe/DAL/BanHangDAL.cs#L32), [QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L77](QuanLyQuanCaPhe/DAL/HoaDonDAL.cs#L77).
-5. Build hiện tại sạch: `dotnet build -p:UseAppHost=false` thành công.
+### Refactor code
+- Tách read-path authorization khỏi bootstrap/sync dữ liệu quyền.
+- Chuẩn hóa hợp đồng lỗi BUS theo một kiểu duy nhất (Result pattern).
+- Loại bỏ hoàn toàn logic role hard-code ở UI, chỉ dùng permission matrix.
 
-### ⚠️ Những gì còn thiếu
+### Tối ưu performance
+- Chuyển các thao tác nặng sang async end-to-end (Form -> BUS -> DAL).
+- Chuẩn hóa pattern execution strategy + transaction cho mọi luồng ghi nhiều bước.
+- Bổ sung cache ngắn hạn cho danh mục ít đổi (loại món, cấu hình quyền).
 
-1. Chưa có test tự động (unit/integration) cho nghiệp vụ lõi: phân quyền, gọi món, thanh toán, nhập kho, import CSV.
-2. Chưa có module thống kê thật, còn placeholder ở nhiều form.
-3. Chưa có cơ chế chuẩn để hiển thị user đăng nhập hiện tại; các hàm đang để trống như [QuanLyQuanCaPhe/Forms/frmBanHang.cs#L204](QuanLyQuanCaPhe/Forms/frmBanHang.cs#L204), [QuanLyQuanCaPhe/Forms/frmHoaDon.cs#L134](QuanLyQuanCaPhe/Forms/frmHoaDon.cs#L134).
-4. Thiếu metadata audit theo người thao tác ở bảng kho/xuất kho (hiện entity chỉ có nguyên liệu, số lượng, thời gian, lý do).
+### Cải thiện UI/UX
+- Giảm MessageBox blocking, chuyển sang inline notification ở các tác vụ thường xuyên.
+- Ẩn hoặc khóa cứng các menu chưa hoàn thiện thay vì mở rồi báo đang phát triển.
+- Hiển thị rõ user đang đăng nhập và quyền hiện tại trên top bar.
 
-### ❌ Những điểm sai / thiết kế chưa chuẩn
+### Nâng cấp kiến trúc
+- Bổ sung test project cho các flow quan trọng: permission, order, payment, import.
+- Tách rõ Application Service cho use-case lớn để giảm logic dàn trải ở form.
+- Bổ sung audit field đầy đủ cho phiếu nhập/xuất kho theo user thao tác.
 
-1. Mật khẩu mặc định `123456` ở nhiều đường dữ liệu.
-2. Permission check tự sửa DB trong read-path.
-3. DAL tự sinh nhân viên/khách mặc định khi tạo hóa đơn, làm sai bản chất truy vết người thao tác.
-4. Quyền khách hàng bị dính vào feature Menu, không tách domain.
-5. Luồng chuyển/gộp bàn không transaction hóa rõ ràng.
-6. CSV parser tự viết không đủ robust cho dữ liệu thật.
-7. API BUS không đồng nhất style xử lý lỗi.
+## 7. 📊 ĐÁNH GIÁ TỔNG QUAN
 
-### 🚀 Những gì nên cải thiện ngay
-
-1. Xóa toàn bộ fallback mật khẩu `123456`, bắt buộc password policy (độ dài + complexity) hoặc random secret và reset bắt buộc lần đầu.
-2. Tách `PermissionBootstrapService` chạy lúc startup/migration; `CheckPermission` chỉ được đọc.
-3. Gắn `NhanVienID` theo session khi tạo hóa đơn/phiếu kho; cấm auto-create nhân viên mặc định trong DAL.
-4. Chuẩn hóa transaction cho mọi luồng cập nhật nhiều bảng (đặc biệt chuyển/gộp bàn).
-5. Thay CSV parser tự viết bằng thư viện chuẩn (ví dụ CsvHelper) + thêm validate cột bắt buộc.
-6. Bổ sung test project cho 5 luồng rủi ro cao: permission matrix, import CSV, gọi món trừ kho, thu tiền, chuyển/gộp bàn.
-
-## 3) Kiến Trúc
-
-### Có nên dùng 3-layer không?
-
-- **Có**. Với WinForms + nghiệp vụ CRUD nhiều, 3-layer là phù hợp và dễ dạy/dễ maintain.
-- Nhưng hiện tại mới là “3-layer cơ học”, chưa đạt “3-layer chuẩn production”.
-
-### Code hiện tại có vấn đề gì?
-
-1. Ranh giới trách nhiệm chưa sạch: DAL vẫn chứa quyết định nghiệp vụ (auto-create nhân viên/khách, tự seed quyền trong check).
-2. Permission logic bị lặp và trộn: vừa gate theo feature/action, vừa gate cứng theo role trong form.
-3. Có API BUS legacy throw exception thô, làm contract không đồng nhất với phần còn lại.
-
-### Cách refactor cụ thể
-
-1. Tạo `Application/UseCase` layer mỏng cho các flow lớn (`GoiMonUseCase`, `ThuTienUseCase`, `NhapKhoUseCase`).
-2. DAL chỉ còn query/command persistence thuần, không auto-sinh dữ liệu hệ thống.
-3. Tạo `PermissionPolicyService` tập trung; form gọi 1 chỗ duy nhất, tránh hard-code `IsStaff` rải rác.
-4. Chuẩn hóa response BUS theo `Result<T>` hoặc `OperationResult` thay vì trộn tuple + exception.
-5. Tách import thành service riêng + validator riêng + report lỗi theo dòng.
-
-## 4) Database
-
-### Thiết kế đã chuẩn chưa?
-
-- **Khá ổn ở mức nền tảng**: có FK, index, check-constraint, decimal cho tiền, unique open invoice.
-- **Chưa chuẩn production đầy đủ** ở mặt audit và consistency nghiệp vụ.
-
-### Có thiếu bảng / quan hệ không?
-
-1. Thiếu quan hệ theo người thao tác trong kho:
-	 - [QuanLyQuanCaPhe/Data/dtaPhieuNhapKho.cs](QuanLyQuanCaPhe/Data/dtaPhieuNhapKho.cs)
-	 - [QuanLyQuanCaPhe/Data/dtaPhieuXuatKho.cs](QuanLyQuanCaPhe/Data/dtaPhieuXuatKho.cs)
-	 -> nên thêm `NhanVienID` (hoặc `UserId`) để truy vết.
-2. Thiếu ràng buộc unique ở DB cho dữ liệu thường xuyên cần unique theo nghiệp vụ (ví dụ số điện thoại khách nếu business yêu cầu).
-3. Thiếu chiến lược soft-delete nhất quán trên các bảng master (hiện user soft delete, nhưng món/khách/bàn/nguyên liệu chủ yếu hard delete).
-
-## 5) Phân Quyền
-
-### Admin / Manager / Staff đã hợp lý chưa?
-
-- **Ý tưởng template quyền là đúng hướng**.
-- Nhưng implementation còn lỗi kiến trúc:
-	- Admin bypass toàn bộ matrix ở [QuanLyQuanCaPhe/Services/Auth/Permission.cs#L78](QuanLyQuanCaPhe/Services/Auth/Permission.cs#L78).
-	- UI vẫn chặn theo role cứng ở [QuanLyQuanCaPhe/Forms/frmBanHang.cs#L212](QuanLyQuanCaPhe/Forms/frmBanHang.cs#L212), [QuanLyQuanCaPhe/Forms/frmBanHang.cs#L753](QuanLyQuanCaPhe/Forms/frmBanHang.cs#L753).
-
-### Logic có lỗi gì không?
-
-1. `CheckPermission` gây side-effect ghi DB làm sai kỳ vọng hàm authorization.
-2. Feature phân quyền chưa “domain-driven” (Khách hàng đang dùng chung feature Menu).
-3. Một số form không gate quyền ngay từ lúc vào màn hình, UX thành “vào được nhưng thao tác không chạy”.
-
-## 6) UI/UX
-
-### Đánh giá trải nghiệm người dùng
-
-- Điểm cộng:
-	1. Form bán hàng có cải thiện bố cục, card món và filter động khá tốt.
-	2. Các luồng chính có thông báo rõ cho người dùng.
-
-- Điểm trừ:
-	1. Quá phụ thuộc `MessageBox` blocking ở hầu hết thao tác, gây mỏi thao tác và gián đoạn nhịp làm việc.
-	2. Nhiều entry trên menu điều hướng còn placeholder “đang phát triển”.
-	3. Thông tin user đăng nhập chưa hiển thị dù đã có hook hàm.
-
-### Cách cải thiện để giống phần mềm thực tế
-
-1. Chuyển dần lỗi/validation sang inline validation (ErrorProvider + status bar), giảm popup blocking.
-2. Hoàn thiện tối thiểu module thống kê hoặc tạm ẩn hẳn menu chưa xong trong bản release.
-3. Hiển thị rõ user hiện tại + role + chi nhánh/ca làm trên topbar.
-4. Thêm loading state và disable control theo tiến trình xử lý cho thao tác nặng.
-
-## 7) Kết Luận
-
-- **Điểm đề xuất (thang 10)**: **6.8/10**.
-- **Vì sao**:
-	1. Điểm cộng lớn ở nỗ lực kiến trúc 3 lớp, migration, ràng buộc dữ liệu, logging.
-	2. Nhưng trừ điểm nặng vì lỗi bảo mật mật khẩu mặc định, sai chuẩn permission check (read mà ghi DB), và một số thiết kế nghiệp vụ chưa đạt chuẩn vận hành thật.
-	3. Nếu fix triệt để nhóm lỗi CRITICAL/HIGH trong mục findings, đồ án có thể lên mức **7.8 - 8.2/10**.
-
----
-
-## Tóm Tắt Nghiêm Khắc
-
-Đây là đồ án có nền tảng tốt nhưng còn tư duy “chạy được là được” ở vài điểm trọng yếu. Nếu mục tiêu chỉ là demo môn học thì có thể qua. Nếu mục tiêu là code có thể bàn giao đi làm thật, bắt buộc phải xử lý ngay nhóm lỗi bảo mật và kiến trúc permission trước tiên.
+- Điểm tổng quan: 7.0/10.
+- Mức độ sẵn sàng deploy: Beta nội bộ (không phải Production).
+- Nhận xét reviewer thực tế:
+  - GD7 có nền tảng kỹ thuật khá tốt, chạy được luồng POS chính và có tư duy kiến trúc rõ hơn nhiều bản trước.
+  - Tuy nhiên còn 3 nhóm lỗi cần xử lý trước khi production: bảo mật mật khẩu mặc định, side-effect trong check quyền, và audit người thao tác hóa đơn.
+  - Sau khi xử lý triệt để nhóm High ở mục 5, có thể nâng lên mức production candidate.
