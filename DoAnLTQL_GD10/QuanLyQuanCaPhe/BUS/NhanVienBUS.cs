@@ -37,6 +37,11 @@ public class NhanVienBUS : INhanVienService
 
     public List<string> LayDanhSachVaiTroCoTheGan()
     {
+        if (_permissionBUS.IsManager())
+        {
+            return new List<string>();
+        }
+
         if (!_permissionBUS.CheckPermission(PermissionFeatures.TaiKhoan, PermissionActions.View))
         {
             return new List<string>();
@@ -47,6 +52,11 @@ public class NhanVienBUS : INhanVienService
 
     public async Task<(bool ThanhCong, string ThongBao, NhanVienDTO? NhanVienMoi)> ThemNhanVienAsync(NhanVienDTO nhanVienDTO)
     {
+        if (_permissionBUS.IsManager())
+        {
+            return (false, "Manager chỉ được xem thông tin nhân viên.", null);
+        }
+
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create))
         {
             return (false, "Bạn không có quyền thêm nhân viên.", null);
@@ -81,6 +91,11 @@ public class NhanVienBUS : INhanVienService
 
     public async Task<(bool ThanhCong, string ThongBao)> CapNhatNhanVienAsync(NhanVienDTO nhanVienDTO)
     {
+        if (_permissionBUS.IsManager())
+        {
+            return (false, "Manager chỉ được xem thông tin nhân viên.");
+        }
+
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update))
         {
             return (false, "Bạn không có quyền cập nhật nhân viên.");
@@ -122,6 +137,13 @@ public class NhanVienBUS : INhanVienService
 
     public (bool ThanhCong, string ThongBao) XoaNhanVien(int nhanVienId, bool softDelete = true)
     {
+        if (_permissionBUS.IsManager())
+        {
+            return softDelete
+                ? (false, "Manager không được phép ngừng hoạt động nhân viên.")
+                : (false, "Manager không được phép xóa nhân viên.");
+        }
+
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Delete))
         {
             return softDelete
@@ -142,6 +164,11 @@ public class NhanVienBUS : INhanVienService
 
     public (bool ThanhCong, string ThongBao) KhoiPhucNhanVien(int nhanVienId)
     {
+        if (_permissionBUS.IsManager())
+        {
+            return (false, "Manager không được phép khôi phục nhân viên.");
+        }
+
         if (!_permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update))
         {
             return (false, "Bạn không có quyền khôi phục nhân viên.");
@@ -160,6 +187,11 @@ public class NhanVienBUS : INhanVienService
 
     public (bool ThanhCong, string ThongBao) HardDeleteNhanVien(int nhanVienId)
     {
+        if (_permissionBUS.IsManager())
+        {
+            return (false, "Manager không được phép hard delete nhân viên.");
+        }
+
         if (!_permissionBUS.IsAdmin())
         {
             return (false, "Chỉ Admin mới được hard delete nhân viên.");

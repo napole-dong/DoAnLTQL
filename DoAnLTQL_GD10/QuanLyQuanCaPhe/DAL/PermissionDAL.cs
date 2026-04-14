@@ -20,7 +20,7 @@ public class PermissionDAL : IPermissionRepository
 
     private static readonly IReadOnlyDictionary<string, PermissionTemplate> ManagerPermissionTemplate = new Dictionary<string, PermissionTemplate>(StringComparer.OrdinalIgnoreCase)
     {
-        [PermissionFeatures.NhanVien] = new PermissionTemplate(canView: false, canCreate: false, canUpdate: false, canDelete: false),
+        [PermissionFeatures.NhanVien] = new PermissionTemplate(canView: true, canCreate: false, canUpdate: false, canDelete: false),
         [PermissionFeatures.BanHang] = new PermissionTemplate(canView: true, canCreate: true, canUpdate: true, canDelete: false),
         [PermissionFeatures.Menu] = new PermissionTemplate(canView: true, canCreate: true, canUpdate: true, canDelete: true),
         [PermissionFeatures.KhachHang] = new PermissionTemplate(canView: true, canCreate: true, canUpdate: true, canDelete: true),

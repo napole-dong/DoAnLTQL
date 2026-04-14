@@ -67,7 +67,7 @@ namespace QuanLyQuanCaPhe.Services.Permission
                 ["frmNhanVien"] = new()
                 {
                     [UserRole.Admin] = new[] { PermissionAction.Full },
-                    [UserRole.Manager] = new[] { PermissionAction.View, PermissionAction.LimitedEdit },
+                    [UserRole.Manager] = new[] { PermissionAction.View },
                     [UserRole.Staff] = new[] { PermissionAction.None }
                 },
 

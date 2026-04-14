@@ -1,10 +1,12 @@
 {
   "ExpandedNodes": [
     "",
-    "\\DoAnLTQL_GD8",
+    "\\DoAnLTQL_GD10",
+    "\\DoAnLTQL_GD10\\QuanLyQuanCaPhe",
+    "\\DoAnLTQL_GD10\\QuanLyQuanCaPhe\\Forms",
     "\\DoAnLTQL_GD8\\QuanLyQuanCaPhe",
     "\\DoAnLTQL_GD8\\QuanLyQuanCaPhe\\Forms"
   ],
-  "SelectedNode": "\\DoAnLTQL_GD8\\README.md",
+  "SelectedNode": "\\DoAnLTQL_GD10\\QuanLyQuanCaPhe\\QuanLyQuanCaPhe.slnx",
   "PreviewInSolutionExplorer": false
 }

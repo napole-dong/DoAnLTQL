@@ -134,13 +134,17 @@ namespace QuanLyQuanCaPhe.Forms
 
         private void ApDungPhanQuyenLenUI()
         {
+            var laManager = _permissionBUS.IsManager();
             var coQuyenXemNhanVien = _formPermission.CanView
                                      && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.View);
-            var coQuyenThemNhanVien = _formPermission.CanAdd
+            var coQuyenThemNhanVien = !laManager
+                                      && _formPermission.CanAdd
                                       && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Create);
-            var coQuyenCapNhatNhanVien = _formPermission.CanEdit
+            var coQuyenCapNhatNhanVien = !laManager
+                                         && _formPermission.CanEdit
                                          && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Update);
-            var coQuyenXoaNhanVien = _formPermission.CanDelete
+            var coQuyenXoaNhanVien = !laManager
+                                     && _formPermission.CanDelete
                                      && _permissionBUS.CheckPermission(PermissionFeatures.NhanVien, PermissionActions.Delete);
 
             btnThemNhanVien.Visible = coQuyenThemNhanVien;
@@ -162,6 +166,10 @@ namespace QuanLyQuanCaPhe.Forms
             var coTheSuaRoleVaMatKhau = !_formPermission.HasLimitedEdit;
             cboQuyenHan.Enabled = coTheSuaRoleVaMatKhau && (coQuyenThemNhanVien || coQuyenCapNhatNhanVien);
             txtMatKhau.Enabled = coTheSuaRoleVaMatKhau && (coQuyenThemNhanVien || coQuyenCapNhatNhanVien);
+            txtHoVaTen.ReadOnly = laManager;
+            txtDienThoai.ReadOnly = laManager;
+            txtDiaChi.ReadOnly = laManager;
+            txtTenDangNhap.ReadOnly = laManager;
             if (_formPermission.HasLimitedEdit)
             {
                 txtMatKhau.Clear();
@@ -520,8 +528,15 @@ namespace QuanLyQuanCaPhe.Forms
             txtTenDangNhap.Text = nhanVien.TenDangNhap;
             txtMatKhau.Clear();
 
-            var quyenHanIndex = cboQuyenHan.FindStringExact(nhanVien.QuyenHan);
-            cboQuyenHan.SelectedIndex = quyenHanIndex >= 0 ? quyenHanIndex : 0;
+            if (cboQuyenHan.Items.Count > 0)
+            {
+                var quyenHanIndex = cboQuyenHan.FindStringExact(nhanVien.QuyenHan);
+                cboQuyenHan.SelectedIndex = quyenHanIndex >= 0 ? quyenHanIndex : 0;
+            }
+            else
+            {
+                cboQuyenHan.Text = nhanVien.QuyenHan;
+            }
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
