@@ -28,8 +28,8 @@ namespace QuanLyQuanCaPhe.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
-            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
             panelSidebar = new Panel();
             btnDangXuat = new Button();
             flowSidebarMenu = new FlowLayoutPanel();
@@ -217,7 +217,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnCongThuc.Padding = new Padding(20, 0, 0, 0);
             btnCongThuc.Size = new Size(230, 48);
             btnCongThuc.TabIndex = 3;
-            btnCongThuc.Text = "🧪  Công thức";
+            btnCongThuc.Text = "\U0001f9ea  Công thức";
             btnCongThuc.TextAlign = ContentAlignment.MiddleLeft;
             btnCongThuc.UseVisualStyleBackColor = true;
             // 
@@ -375,28 +375,28 @@ namespace QuanLyQuanCaPhe.Forms
             dgvOrder.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvOrder.BackgroundColor = Color.White;
             dgvOrder.BorderStyle = BorderStyle.None;
-            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle1.BackColor = Color.FromArgb(248, 245, 241);
-            dataGridViewCellStyle1.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
-            dataGridViewCellStyle1.ForeColor = Color.FromArgb(84, 62, 48);
-            dataGridViewCellStyle1.SelectionBackColor = Color.FromArgb(248, 245, 241);
-            dataGridViewCellStyle1.SelectionForeColor = Color.FromArgb(84, 62, 48);
-            dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
-            dgvOrder.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = Color.FromArgb(248, 245, 241);
+            dataGridViewCellStyle3.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            dataGridViewCellStyle3.ForeColor = Color.FromArgb(84, 62, 48);
+            dataGridViewCellStyle3.SelectionBackColor = Color.FromArgb(248, 245, 241);
+            dataGridViewCellStyle3.SelectionForeColor = Color.FromArgb(84, 62, 48);
+            dataGridViewCellStyle3.WrapMode = DataGridViewTriState.True;
+            dgvOrder.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle3;
             dgvOrder.ColumnHeadersHeight = 38;
             dgvOrder.Columns.AddRange(new DataGridViewColumn[] { colTenMon, colSoLuong, colDonGia, colThanhTien, colXoa });
-            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle2.BackColor = Color.White;
-            dataGridViewCellStyle2.Font = new Font("Segoe UI", 9F);
-            dataGridViewCellStyle2.ForeColor = Color.FromArgb(64, 64, 64);
-            dataGridViewCellStyle2.SelectionBackColor = Color.FromArgb(245, 238, 230);
-            dataGridViewCellStyle2.SelectionForeColor = Color.FromArgb(64, 64, 64);
-            dataGridViewCellStyle2.WrapMode = DataGridViewTriState.False;
-            dgvOrder.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle4.Alignment = DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = Color.White;
+            dataGridViewCellStyle4.Font = new Font("Segoe UI", 9F);
+            dataGridViewCellStyle4.ForeColor = Color.FromArgb(64, 64, 64);
+            dataGridViewCellStyle4.SelectionBackColor = Color.FromArgb(245, 238, 230);
+            dataGridViewCellStyle4.SelectionForeColor = Color.FromArgb(64, 64, 64);
+            dataGridViewCellStyle4.WrapMode = DataGridViewTriState.False;
+            dgvOrder.DefaultCellStyle = dataGridViewCellStyle4;
             dgvOrder.Dock = DockStyle.Fill;
             dgvOrder.EnableHeadersVisualStyles = false;
             dgvOrder.GridColor = Color.FromArgb(236, 229, 221);
-            dgvOrder.Location = new Point(12, 244);
+            dgvOrder.Location = new Point(12, 278);
             dgvOrder.MultiSelect = false;
             dgvOrder.Name = "dgvOrder";
             dgvOrder.ReadOnly = true;
@@ -404,7 +404,7 @@ namespace QuanLyQuanCaPhe.Forms
             dgvOrder.RowHeadersWidth = 51;
             dgvOrder.RowTemplate.Height = 32;
             dgvOrder.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvOrder.Size = new Size(576, 178);
+            dgvOrder.Size = new Size(576, 144);
             dgvOrder.TabIndex = 1;
             // 
             // colTenMon
@@ -630,7 +630,7 @@ namespace QuanLyQuanCaPhe.Forms
             lblKhachHang.ForeColor = Color.FromArgb(130, 112, 96);
             lblKhachHang.Location = new Point(4, 66);
             lblKhachHang.Name = "lblKhachHang";
-            lblKhachHang.Size = new Size(84, 20);
+            lblKhachHang.Size = new Size(86, 20);
             lblKhachHang.TabIndex = 4;
             lblKhachHang.Text = "Khách hàng";
             // 
@@ -883,7 +883,7 @@ namespace QuanLyQuanCaPhe.Forms
             btnLamMoi.FlatStyle = FlatStyle.Flat;
             btnLamMoi.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
             btnLamMoi.ForeColor = Color.FromArgb(65, 48, 39);
-            btnLamMoi.Location = new Point(531, 23);
+            btnLamMoi.Location = new Point(215, 22);
             btnLamMoi.Name = "btnLamMoi";
             btnLamMoi.Size = new Size(95, 30);
             btnLamMoi.TabIndex = 2;
@@ -897,7 +897,7 @@ namespace QuanLyQuanCaPhe.Forms
             txtSearch.BorderStyle = BorderStyle.FixedSingle;
             txtSearch.Font = new Font("Segoe UI", 10F);
             txtSearch.ForeColor = Color.DimGray;
-            txtSearch.Location = new Point(245, 23);
+            txtSearch.Location = new Point(338, 22);
             txtSearch.Name = "txtSearch";
             txtSearch.PlaceholderText = "🔍  Tìm bàn hoặc món";
             txtSearch.Size = new Size(280, 30);
